@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "saju-study"
+version = "1.0.0"
+description = "사주팔자로 공부 성향과 두뇌 직업 적성을 분석합니다"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+keywords = ["saju", "bazi", "사주", "명리", "적성", "진로"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Natural Language :: Korean",
+    "Topic :: Games/Entertainment :: Fortune Cookies",
+]
+dependencies = []
+
+[project.optional-dependencies]
+# 절기 시각을 1초 이내로 정확히 계산합니다. 없으면 내장 급수로 대체합니다.
+precise = ["ephem>=4.1"]
+dev = ["pytest>=7", "ephem>=4.1"]
+
+[project.scripts]
+saju = "saju.cli:main"
+
+[tool.setuptools]
+packages = ["saju"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
