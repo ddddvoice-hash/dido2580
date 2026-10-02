@@ -218,19 +218,20 @@
     var item = { id: 'item-' + (max + 1), situation: draft.situation, answers: draft.answers };
     if (draft.test_only === true) item.test_only = true;
     if (draft.source) item.source = draft.source;
+    if (draft.test_item_id) item.test_item_id = draft.test_item_id;
     state.items.push(item);
     return item;
   }
 
   /* ---------- 등록 구역 ---------- */
 
-  // 테스트 문항 불러오기로 채운 칸일 때만 테스트용 표시를 붙입니다
+  // 테스트 문항으로 채운 칸이면, 본문을 고쳐도 테스트용 표시와 출처를 유지합니다.
+  // 표시는 폼을 비우는 동작(새 문항 시작·예시 불러오기)에서만 사라집니다.
   function markDraftTest(draft) {
-    var t = formTestIndex != null ? testItems[formTestIndex] : null;
-    if (t && t.test_only && t.situation === draft.situation && t.answers.length === draft.answers.length &&
-        t.answers.every(function (a, i) { return a.text === draft.answers[i].text; })) {
+    if (formTest) {
       draft.test_only = true;
-      draft.source = t.source;
+      if (formTest.source) draft.source = formTest.source;
+      if (formTest.id) draft.test_item_id = formTest.id;
     }
     return draft;
   }
@@ -262,14 +263,13 @@
     row.appendChild(el('label'));
     var ta = el('textarea');
     ta.value = text || '';
-    ta.addEventListener('input', function () { formTestIndex = null; refreshRegisterTotals(); });
+    ta.addEventListener('input', function () { refreshRegisterTotals(); });
     row.appendChild(ta);
     var line = el('div', { 'class': 'row' });
     var rm = el('button', { type: 'button' }, '이 답변 빼기');
     rm.addEventListener('click', function () {
       if ($('answers-list').children.length <= 1) { say('답변은 하나 이상 있어야 합니다.'); return; }
       row.remove();
-      formTestIndex = null;
       renumberAnswerRows();
       refreshRegisterTotals();
     });
@@ -284,7 +284,7 @@
     var rows = $('answers-list').querySelectorAll('textarea');
     var texts = [];
     for (var i = 0; i < rows.length; i++) texts.push(rows[i].value);
-    state.draft = { situation: $('situation').value, answers: texts };
+    state.draft = { situation: $('situation').value, answers: texts, test: formTest };
     save();
   }
 
@@ -319,7 +319,8 @@
 
   function loadExample() {
     if (!rubric) { say('기준표를 먼저 불러오세요.'); return; }
-    formTestIndex = null;
+    formTest = null;
+    closeScoring();
     var ex = rubric.examples && rubric.examples[0];
     if (!ex) { say('기준표에 예시가 없습니다.'); return; }
     state.rater = EXAMPLE_RATER;
@@ -353,12 +354,33 @@
   }
 
   var testItems = [];
-  var formTestIndex = null; // 칸이 테스트 문항으로 채워진 상태일 때 그 번호
+  var formTest = null; // 칸이 테스트 문항으로 채워졌으면 {id, source}. 칸을 고쳐도 유지됩니다.
+
+  // 채점 화면을 닫습니다 (평가자·문항이 바뀌어 화면과 기록이 어긋나는 것을 막음)
+  function closeScoring() {
+    if ($('scoring-section').hidden) return;
+    $('scoring-section').hidden = true;
+    state.current = null;
+    selectedCriterion = null;
+    evidenceTarget = null;
+    enterConfirm = false;
+    save();
+  }
+
+  function newItem() {
+    formTest = null;
+    $('situation').value = '';
+    setAnswerRows(['', '']);
+    $('example-warning').textContent = '';
+    refreshRegisterTotals();
+    $('situation').focus();
+    say('새 문항을 시작합니다. 칸을 비웠습니다.');
+  }
 
   function fillFormFromTestItem(i) {
     var t = testItems[i];
     if (!t) return;
-    formTestIndex = i;
+    formTest = { id: t.id, source: t.source };
     $('situation').value = t.situation;
     setAnswerRows(t.answers.map(function (a) { return a.text; }));
     $('example-warning').textContent = '';
@@ -395,6 +417,7 @@
     });
     $('test-item-wrap').hidden = false;
     $('test-notice').textContent = data.notice || '';
+    closeScoring();
     fillFormFromTestItem(0);
     say('테스트 문항 ' + testItems.length + '개를 불러왔습니다. 채점 시작을 누르세요.');
   }
@@ -826,8 +849,9 @@
       refreshRegisterTotals();
       if (rubric && !$('scoring-section').hidden) updateScoringView();
     });
-    $('situation').addEventListener('input', function () { formTestIndex = null; refreshRegisterTotals(); });
-    $('add-answer').addEventListener('click', function () { formTestIndex = null; addAnswerRow('').focus(); saveDraft(); });
+    $('situation').addEventListener('input', function () { refreshRegisterTotals(); });
+    $('add-answer').addEventListener('click', function () { addAnswerRow('').focus(); saveDraft(); });
+    $('new-item').addEventListener('click', newItem);
     $('load-example').addEventListener('click', loadExample);
     $('load-test-items').addEventListener('click', loadTestItems);
     $('test-item-select').addEventListener('change', function () { fillFormFromTestItem(parseInt($('test-item-select').value, 10)); });
@@ -859,6 +883,7 @@
     });
     document.addEventListener('keydown', onKey);
     if (state.draft) {
+      formTest = state.draft.test && typeof state.draft.test === 'object' ? state.draft.test : null;
       $('situation').value = typeof state.draft.situation === 'string' ? state.draft.situation : '';
       setAnswerRows(state.draft.answers.length ? state.draft.answers.map(String) : ['', '']);
     } else {

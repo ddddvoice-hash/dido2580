@@ -195,6 +195,25 @@ try {
   const exRecs = recs.filter((o) => o.rater === '예시');
   ok('테스트 문항을 불러와도 예시 채점에 test_only 없음', exRecs.length === 3 && exRecs.every((o) => !('test_only' in o)), `예시 ${exRecs.length}줄, test_only ${exRecs.filter((o) => o.test_only).length}줄`);
 
+  // GPT 2차 리뷰 9번: 채점 화면이 열린 채로 예시를 불러오면 채점 화면을 닫음
+  const openBefore = await ev(`!document.getElementById('scoring-section').hidden`);
+  await ev(`document.getElementById('load-example').click()`); await sleep(300);
+  const openAfter = await ev(`!document.getElementById('scoring-section').hidden`);
+  ok('채점 중 예시 불러오기 → 채점 화면 닫힘', openBefore === true && openAfter === false, `열림 ${openBefore} → ${openAfter}`);
+
+  // GPT 2차 리뷰 2번: 테스트 문항 본문을 고쳐도 테스트 표시 유지, 새 문항은 표시 없음
+  await ev(`document.getElementById('load-test-items').click()`); await sleep(500);
+  await ev(`(()=>{const s=document.getElementById('test-item-select');s.selectedIndex=1;s.dispatchEvent(new Event('change'));
+    const t=document.querySelector('#answers-list textarea');t.value=t.value+' (고친 문장)';t.dispatchEvent(new Event('input'));
+    document.getElementById('start-scoring').click();})()`); await sleep(300);
+  const badgeEdited = await ev(`!document.getElementById('test-badge').hidden`);
+  await ev(`(()=>{document.getElementById('new-item').click();
+    document.getElementById('situation').value='직접 쓴 상황입니다.';document.getElementById('situation').dispatchEvent(new Event('input'));
+    const t=document.querySelector('#answers-list textarea');t.value='직접 쓴 답변입니다.';t.dispatchEvent(new Event('input'));
+    document.getElementById('start-scoring').click();})()`); await sleep(300);
+  const badgeNew = await ev(`!document.getElementById('test-badge').hidden`);
+  ok('테스트 문항 본문을 고쳐도 배지 유지, 새 문항은 배지 없음', badgeEdited === true && badgeNew === false, `고친 테스트 문항 ${badgeEdited}, 새 문항 ${badgeNew}`);
+
   // 9. file:// 모드
   await goto(FILEURL);
   const fileStatus = await txt('#rubric-status');
