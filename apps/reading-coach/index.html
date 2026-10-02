@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>낭독 따라 읽기 코치</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --text: #1d1d1f; --muted: #5f6368; --line: #dadce0;
+    --accent: #1f5fbf; --accent-text: #ffffff; --demo: #1f5fbf; --mine: #2e7d32;
+    --miss: #c62828; --extra: #b26a00; --rec: #c62828;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121214; --card: #1d1d20; --text: #ececee; --muted: #a0a3a8; --line: #36363b;
+      --accent: #7aa7ff; --accent-text: #0b1530; --demo: #7aa7ff; --mine: #74c77a;
+      --miss: #ff7a7a; --extra: #f0b453; --rec: #ff6b6b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 17px/1.6 system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1.1rem; margin: 0 0 12px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+            padding: 20px; margin-bottom: 16px; }
+  select, button { font: inherit; }
+  select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--line);
+           background: var(--card); color: var(--text); }
+  .sentence { font-size: 1.35rem; line-height: 1.8; margin: 16px 0 0; word-break: keep-all; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button { min-height: 48px; padding: 0 18px; border-radius: 10px; cursor: pointer;
+           border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button.rec { background: var(--rec); color: #fff; border-color: var(--rec); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .status { color: var(--muted); min-height: 1.6em; margin-top: 8px; }
+  .score { font-size: 2.4rem; font-weight: 700; margin: 0; }
+  #feedback { margin: 8px 0 0; padding-left: 20px; }
+  canvas { width: 100%; height: 200px; display: block; margin-top: 16px;
+           border: 1px solid var(--line); border-radius: 8px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: .9rem; margin-top: 8px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  label { display: block; padding: 6px 0; }
+  input[type=checkbox] { width: 20px; height: 20px; vertical-align: -4px; margin-right: 8px; }
+  details summary { cursor: pointer; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>낭독 따라 읽기 코치</h1>
+  <p class="sub">시범 낭독을 듣고 따라 읽으면, 속도와 쉬는 자리를 시범과 비교해 드립니다.</p>
+
+  <section aria-labelledby="h-sentence">
+    <h2 id="h-sentence">1. 문장 고르기</h2>
+    <label for="sentence-select" class="hidden">연습 문장</label>
+    <select id="sentence-select"></select>
+    <p class="sentence" id="sentence-text"></p>
+  </section>
+
+  <section aria-labelledby="h-demo">
+    <h2 id="h-demo">2. 시범 듣기</h2>
+    <div class="row">
+      <button id="demo-play" class="primary">시범 듣기</button>
+    </div>
+    <p class="status" id="demo-status"></p>
+    <details>
+      <summary>선생님 모드 — 시범 녹음 넣기</summary>
+      <div class="row" style="margin-top:12px">
+        <button id="demo-rec">시범 녹음 시작</button>
+        <label style="padding:0">
+          <span class="hidden">시범 파일 올리기</span>
+          <input type="file" id="demo-file" accept="audio/*">
+        </label>
+        <button id="demo-delete">시범 지우기</button>
+      </div>
+    </details>
+  </section>
+
+  <section aria-labelledby="h-mine">
+    <h2 id="h-mine">3. 따라 읽기</h2>
+    <div class="row">
+      <button id="mine-rec" class="rec">녹음 시작</button>
+      <button id="mine-play" disabled>내 녹음 듣기</button>
+    </div>
+    <p class="status" id="mine-status" aria-live="polite"></p>
+  </section>
+
+  <section aria-labelledby="h-result" id="result" class="hidden">
+    <h2 id="h-result">4. 결과</h2>
+    <p class="score" id="score"></p>
+    <ul id="feedback" aria-live="polite"></ul>
+    <canvas id="chart" width="1600" height="400"
+            aria-label="시범과 내 낭독의 소리 크기 그래프. 위가 시범, 아래가 내 낭독입니다."></canvas>
+    <div class="legend">
+      <span><i style="background:var(--demo)"></i>시범</span>
+      <span><i style="background:var(--mine)"></i>내 낭독 · 같은 자리 쉼</span>
+      <span><i style="background:var(--miss)"></i>놓친 쉼</span>
+      <span><i style="background:var(--extra)"></i>시범에 없는 쉼</span>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-check">
+    <h2 id="h-check">5. 스스로 점검</h2>
+    <div id="checklist"></div>
+    <div class="row" style="margin-top:12px">
+      <button id="save">이번 연습 기록하기</button>
+    </div>
+    <p class="status" id="save-status" aria-live="polite"></p>
+  </section>
+
+  <section aria-labelledby="h-history">
+    <h2 id="h-history">연습 기록</h2>
+    <table>
+      <thead><tr><th>날짜</th><th>문장</th><th>점수</th><th>속도</th><th>점검</th></tr></thead>
+      <tbody id="history"></tbody>
+    </table>
+  </section>
+</main>
+
+<script src="analysis.js"></script>
+<script>
+"use strict";
+
+// 연습 문장. 쉼 자리가 다른 문장을 섞었다. 원하는 문장으로 바꿔 쓰면 된다.
+const SENTENCES = [
+  "안녕하세요. 오늘도 함께 읽어 보겠습니다.",
+  "봄비가 내리는 아침, 창밖의 나무가 조용히 젖어 갑니다.",
+  "천천히 읽어도 괜찮습니다. 중요한 것은 끝까지 전하는 마음입니다.",
+  "버스가 정류장에 멈추자, 기다리던 사람들이 한 줄로 올라탔습니다.",
+  "오늘의 날씨는 맑겠고, 낮 최고 기온은 이십삼 도로 예상됩니다.",
+  "작은 상자를 열어 보니, 그 안에는 오래된 편지 한 장이 들어 있었습니다.",
+  "여러분, 지금부터 안전 교육을 시작하겠습니다. 휴대전화는 잠시 넣어 주세요.",
+  "아이는 문 앞에서 잠시 망설이다가, 크게 숨을 쉬고 손잡이를 돌렸습니다.",
+  "고객님, 기다려 주셔서 감사합니다. 지금 연결해 드리겠습니다.",
+  "바람이 멈추고, 파도가 잦아들고, 바다는 다시 고요해졌습니다.",
+  "이 길을 따라 오십 미터쯤 가시면, 오른쪽에 하얀 건물이 보입니다.",
+  "우리는 서로 다른 속도로 걷지만, 같은 곳을 향해 가고 있습니다.",
+];
+
+const CHECKS = [
+  "문장 끝을 흐리지 않고 끝까지 또렷하게 읽었다",
+  "쉼표에서 숨을 고르고, 마침표에서 충분히 쉬었다",
+  "중요한 낱말에 힘을 주었다",
+  "받침과 이어지는 소리를 정확하게 냈다",
+  "듣는 사람에게 말하듯 읽었다",
+];
+
+const $ = (id) => document.getElementById(id);
+const A = window.ReadingAnalysis;
+let audioCtx = null;
+let current = 0;
+let demoResult = null;
+let mineBlob = null;
+let lastCompare = null;
+let lastMine = null;
+
+function ctx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+// ---------- 저장소: 시범 녹음은 IndexedDB, 연습 기록은 localStorage ----------
+const DB_NAME = "reading-coach";
+function db() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore("demos");
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function dbDo(mode, fn) {
+  const d = await db();
+  return new Promise((resolve, reject) => {
+    const tx = d.transaction("demos", mode);
+    const req = fn(tx.objectStore("demos"));
+    tx.oncomplete = () => resolve(req && req.result);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+const getDemo = (i) => dbDo("readonly", (s) => s.get(i)).catch(() => null);
+const putDemo = (i, blob) => dbDo("readwrite", (s) => s.put(blob, i));
+const delDemo = (i) => dbDo("readwrite", (s) => s.delete(i));
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem("reading-coach-history") || "[]"); }
+  catch { return []; }
+}
+function saveHistory(list) {
+  try { localStorage.setItem("reading-coach-history", JSON.stringify(list.slice(-200))); }
+  catch { /* 저장이 막힌 환경에서는 기록만 생략 */ }
+}
+
+// ---------- 녹음 ----------
+function recorder(button, onDone, labels) {
+  let rec = null;
+  let chunks = [];
+  button.addEventListener("click", async () => {
+    if (rec && rec.state === "recording") { rec.stop(); return; }
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      onDone(null, "마이크를 쓸 수 없습니다. 브라우저 주소창의 마이크 권한을 확인해 주세요.");
+      return;
+    }
+    chunks = [];
+    rec = new MediaRecorder(stream);
+    rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    rec.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      button.textContent = labels.idle;
+      onDone(new Blob(chunks, { type: rec.mimeType || "audio/webm" }));
+    };
+    rec.start();
+    button.textContent = labels.recording;
+  });
+}
+
+async function decode(blob) {
+  const buf = await blob.arrayBuffer();
+  const audio = await ctx().decodeAudioData(buf);
+  return A.analyze(audio.getChannelData(0), audio.sampleRate);
+}
+
+function play(blob) {
+  const url = URL.createObjectURL(blob);
+  const el = new Audio(url);
+  el.onended = () => URL.revokeObjectURL(url);
+  el.play();
+}
+
+// ---------- 화면 ----------
+function renderSentences() {
+  const sel = $("sentence-select");
+  sel.innerHTML = SENTENCES.map((s, i) => `<option value="${i}">${i + 1}. ${s}</option>`).join("");
+  sel.addEventListener("change", () => selectSentence(Number(sel.value)));
+}
+
+async function selectSentence(i) {
+  current = i;
+  $("sentence-text").textContent = SENTENCES[i];
+  mineBlob = null;
+  lastCompare = null;
+  $("mine-play").disabled = true;
+  $("mine-status").textContent = "";
+  $("result").classList.add("hidden");
+  renderChecklist();
+  const blob = await getDemo(i);
+  demoResult = blob ? await decode(blob).catch(() => null) : null;
+  $("demo-play").disabled = !blob;
+  $("demo-status").textContent = blob
+    ? `시범 길이 ${demoResult ? demoResult.duration.toFixed(1) : "?"}초, 쉼 ${demoResult ? demoResult.pauses.length : "?"}곳`
+    : "이 문장에는 아직 시범 녹음이 없습니다. 선생님 모드에서 넣어 주세요.";
+}
+
+function renderChecklist() {
+  $("checklist").innerHTML = CHECKS.map((c, i) =>
+    `<label><input type="checkbox" data-i="${i}">${c}</label>`).join("");
+}
+
+function renderHistory() {
+  const rows = loadHistory().slice().reverse().slice(0, 30);
+  $("history").innerHTML = rows.length
+    ? rows.map((r) => `<tr><td>${r.date}</td><td>${r.sentence + 1}번</td><td>${r.score ?? "-"}</td>
+        <td>${r.speed ?? "-"}</td><td>${r.checks}/${CHECKS.length}</td></tr>`).join("")
+    : `<tr><td colspan="5">아직 기록이 없습니다.</td></tr>`;
+}
+
+function color(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+// 위: 시범, 아래: 내 낭독. 가로축은 말소리 시작~끝을 0~1로 맞춰 두 녹음을 나란히 비교한다.
+function drawChart(demo, mine, cmp) {
+  const c = $("chart");
+  const g = c.getContext("2d");
+  const W = c.width, H = c.height, half = H / 2, pad = 24;
+  g.clearRect(0, 0, W, H);
+  g.font = "26px system-ui, sans-serif";
+
+  function lane(res, top, fill, label) {
+    const f0 = Math.round(res.speechStart * 1000 / A.FRAME_MS);
+    const f1 = Math.round(res.speechEnd * 1000 / A.FRAME_MS);
+    const span = Math.max(1, f1 - f0);
+    let max = 0;
+    for (let f = f0; f < f1; f++) max = Math.max(max, res.env[f]);
+    const mid = top + half / 2;
+    const amp = half / 2 - pad;
+    g.fillStyle = fill;
+    for (let x = 0; x < W; x += 3) {
+      const f = f0 + Math.floor((x / W) * span);
+      const v = max ? res.env[f] / max : 0;
+      g.fillRect(x, mid - v * amp, 2, Math.max(1, v * amp * 2));
+    }
+    g.fillStyle = color("--card");
+    g.fillRect(4, top + 6, g.measureText(label).width + 12, 32);
+    g.fillStyle = color("--text");
+    g.fillText(label, 10, top + 31);
+  }
+
+  function marker(at, top, col) {
+    g.fillStyle = col;
+    g.fillRect(at * W - 4, top + 8, 8, half - 16);
+  }
+
+  lane(demo, 0, color("--demo"), "시범");
+  lane(mine, half, color("--mine"), "내 낭독");
+  g.fillStyle = color("--line");
+  g.fillRect(0, half - 1, W, 2);
+
+  cmp.matched.forEach((m) => { marker(m.demo.at, 0, color("--demo")); marker(m.mine.at, half, color("--mine")); });
+  cmp.missing.forEach((p) => marker(p.at, 0, color("--miss")));
+  cmp.extra.forEach((p) => marker(p.at, half, color("--extra")));
+}
+
+async function onMineRecorded(blob, error) {
+  if (!blob) { $("mine-status").textContent = error; return; }
+  mineBlob = blob;
+  $("mine-play").disabled = false;
+  $("mine-status").textContent = "분석하는 중입니다…";
+  try {
+    lastMine = await decode(blob);
+  } catch {
+    $("mine-status").textContent = "녹음을 읽지 못했습니다. 다시 녹음해 주세요.";
+    return;
+  }
+  if (!lastMine.duration) {
+    $("mine-status").textContent = "말소리를 찾지 못했습니다. 마이크 가까이에서 다시 녹음해 보세요.";
+    return;
+  }
+  if (!demoResult) {
+    $("mine-status").textContent =
+      `내 낭독 ${lastMine.duration.toFixed(1)}초, 쉼 ${lastMine.pauses.length}곳. 시범 녹음이 있어야 비교할 수 있습니다.`;
+    return;
+  }
+  lastCompare = A.compare(demoResult, lastMine);
+  $("mine-status").textContent = "분석이 끝났습니다. 결과를 확인하세요.";
+  $("result").classList.remove("hidden");
+  $("score").textContent = lastCompare.ok ? `${lastCompare.score}점` : "다시 녹음";
+  $("feedback").innerHTML = A.feedback(lastCompare).map((l) => `<li>${l}</li>`).join("");
+  if (lastCompare.ok) drawChart(demoResult, lastMine, lastCompare);
+}
+
+// ---------- 연결 ----------
+recorder($("mine-rec"), onMineRecorded, { idle: "녹음 시작", recording: "녹음 멈추기" });
+recorder($("demo-rec"), async (blob, error) => {
+  if (!blob) { $("demo-status").textContent = error; return; }
+  await putDemo(current, blob);
+  selectSentence(current);
+}, { idle: "시범 녹음 시작", recording: "시범 녹음 멈추기" });
+
+$("demo-file").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  await putDemo(current, file);
+  e.target.value = "";
+  selectSentence(current);
+});
+$("demo-delete").addEventListener("click", async () => { await delDemo(current); selectSentence(current); });
+$("demo-play").addEventListener("click", async () => { const b = await getDemo(current); if (b) play(b); });
+$("mine-play").addEventListener("click", () => mineBlob && play(mineBlob));
+
+$("save").addEventListener("click", () => {
+  const checks = document.querySelectorAll("#checklist input:checked").length;
+  const list = loadHistory();
+  list.push({
+    date: new Date().toLocaleDateString("ko-KR"),
+    sentence: current,
+    score: lastCompare && lastCompare.ok ? lastCompare.score : null,
+    speed: lastCompare && lastCompare.ok ? `${Math.round(lastCompare.speedRatio * 100)}%` : null,
+    checks,
+  });
+  saveHistory(list);
+  renderHistory();
+  $("save-status").textContent = "기록했습니다.";
+});
+
+renderSentences();
+renderHistory();
+selectSentence(0);
+</script>
+</body>
+</html>
