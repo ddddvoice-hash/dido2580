@@ -138,6 +138,11 @@ try {
   const posAfterCb = await txt('#answer-position');
   ok('체크박스에서 Space는 체크만 함', cbChecked === true && posBeforeCb === posAfterCb, `checked=${cbChecked}, ${posBeforeCb} → ${posAfterCb}`);
   await keys([' ']); // 체크 해제
+  // GPT 리뷰 4번: 체크박스에서 Enter는 다음 답변으로 넘어가지 않음
+  await ev(`document.getElementById('penalty-flattery').focus()`);
+  const posBeforeEnter = await txt('#answer-position');
+  await keys(['Enter']); await keys(['Enter']);
+  ok('체크박스에서 Enter는 다음 답변으로 안 넘어감', posBeforeEnter === (await txt('#answer-position')), posBeforeEnter);
   // Tab으로 감점 체크박스에 도달 가능
   await ev(`document.getElementById('answer-text').focus()`);
   let reached = false;
@@ -182,6 +187,13 @@ try {
   const badgeShown = await ev(`!document.getElementById('test-badge').hidden && document.getElementById('test-badge').offsetParent!==null`);
   ok('테스트 문항 30세트 불러오기', optCount >= 30, `option ${optCount}개, notice="${notice.trim()}"`);
   ok("테스트 문항 채점 시 '테스트용, 채점 기준 아님' 배지", badgeShown && (await txt('#test-badge')).includes('테스트용, 채점 기준 아님'), await txt('#test-badge'));
+
+  // GPT 리뷰 1번: 테스트 문항을 불러와도 예시 채점에 test_only가 붙지 않음
+  await ev('window.__exports.length=0');
+  await ev(`document.getElementById('export-jsonl').click()`); await sleep(400);
+  const recs = (await ev('window.__exports.join("")')).split(String.fromCharCode(10)).filter(Boolean).map((l) => JSON.parse(l));
+  const exRecs = recs.filter((o) => o.rater === '예시');
+  ok('테스트 문항을 불러와도 예시 채점에 test_only 없음', exRecs.length === 3 && exRecs.every((o) => !('test_only' in o)), `예시 ${exRecs.length}줄, test_only ${exRecs.filter((o) => o.test_only).length}줄`);
 
   // 9. file:// 모드
   await goto(FILEURL);

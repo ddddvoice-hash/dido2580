@@ -98,7 +98,7 @@
             total: sc.total,
             rater: sc.rater,
             date: sc.date,
-            rubric_version: rubric.version
+            rubric_version: sc.rubric_version || rubric.version
           };
           if (item.test_only === true) rec.test_only = true;
           out.push(rec);
@@ -158,7 +158,13 @@
   /* ---------- 저장 ---------- */
 
   function save() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* 저장 불가 */ }
+    var w = document.getElementById('save-warning');
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      if (w) w.textContent = '';
+    } catch (e) {
+      if (w) w.textContent = '이 브라우저에 저장하지 못했습니다. 지금까지 채점한 것을 바로 JSONL로 내보내 두세요.';
+    }
   }
 
   function load() {
@@ -170,6 +176,7 @@
       state.items = Array.isArray(s.items) ? s.items : [];
       state.scorings = Array.isArray(s.scorings) ? s.scorings : [];
       state.current = s.current || null;
+      state.draft = (s.draft && Array.isArray(s.draft.answers)) ? s.draft : null;
     } catch (e) { /* 깨진 저장은 무시 */ }
   }
 
@@ -189,6 +196,7 @@
   }
 
   function sameContent(item, draft) {
+    if ((item.test_only === true) !== (draft.test_only === true)) return false; // 실제 문항과 테스트 문항은 별개
     if (item.situation !== draft.situation || item.answers.length !== draft.answers.length) return false;
     for (var i = 0; i < draft.answers.length; i++) {
       if (item.answers[i].text !== draft.answers[i].text) return false;
@@ -215,6 +223,17 @@
   }
 
   /* ---------- 등록 구역 ---------- */
+
+  // 테스트 문항 불러오기로 채운 칸일 때만 테스트용 표시를 붙입니다
+  function markDraftTest(draft) {
+    var t = formTestIndex != null ? testItems[formTestIndex] : null;
+    if (t && t.test_only && t.situation === draft.situation && t.answers.length === draft.answers.length &&
+        t.answers.every(function (a, i) { return a.text === draft.answers[i].text; })) {
+      draft.test_only = true;
+      draft.source = t.source;
+    }
+    return draft;
+  }
 
   function readDraft() {
     var answers = [];
@@ -243,13 +262,14 @@
     row.appendChild(el('label'));
     var ta = el('textarea');
     ta.value = text || '';
-    ta.addEventListener('input', refreshRegisterTotals);
+    ta.addEventListener('input', function () { formTestIndex = null; refreshRegisterTotals(); });
     row.appendChild(ta);
     var line = el('div', { 'class': 'row' });
     var rm = el('button', { type: 'button' }, '이 답변 빼기');
     rm.addEventListener('click', function () {
       if ($('answers-list').children.length <= 1) { say('답변은 하나 이상 있어야 합니다.'); return; }
       row.remove();
+      formTestIndex = null;
       renumberAnswerRows();
       refreshRegisterTotals();
     });
@@ -258,6 +278,14 @@
     $('answers-list').appendChild(row);
     renumberAnswerRows();
     return ta;
+  }
+
+  function saveDraft() {
+    var rows = $('answers-list').querySelectorAll('textarea');
+    var texts = [];
+    for (var i = 0; i < rows.length; i++) texts.push(rows[i].value);
+    state.draft = { situation: $('situation').value, answers: texts };
+    save();
   }
 
   function setAnswerRows(texts) {
@@ -284,12 +312,14 @@
   }
 
   function refreshRegisterTotals() {
-    var item = findItemByDraft(readDraft());
+    var item = findItemByDraft(markDraftTest(readDraft()));
     renderAnswerTotals('answer-totals', 'total-', item);
+    saveDraft();
   }
 
   function loadExample() {
     if (!rubric) { say('기준표를 먼저 불러오세요.'); return; }
+    formTestIndex = null;
     var ex = rubric.examples && rubric.examples[0];
     if (!ex) { say('기준표에 예시가 없습니다.'); return; }
     state.rater = EXAMPLE_RATER;
@@ -302,7 +332,7 @@
     ex.answers.forEach(function (a) {
       var sc = findScoring(item.id, a.id, EXAMPLE_RATER);
       if (!sc) {
-        sc = { item_id: item.id, answer_id: a.id, scores: {}, evidence: {}, penalties: [], total: null, rater: EXAMPLE_RATER, date: now };
+        sc = { item_id: item.id, answer_id: a.id, scores: {}, evidence: {}, penalties: [], total: null, rater: EXAMPLE_RATER, date: now, rubric_version: rubric.version };
         state.scorings.push(sc);
       }
       sc.scores = JSON.parse(JSON.stringify(a.scores));
@@ -323,10 +353,12 @@
   }
 
   var testItems = [];
+  var formTestIndex = null; // 칸이 테스트 문항으로 채워진 상태일 때 그 번호
 
   function fillFormFromTestItem(i) {
     var t = testItems[i];
     if (!t) return;
+    formTestIndex = i;
     $('situation').value = t.situation;
     setAnswerRows(t.answers.map(function (a) { return a.text; }));
     $('example-warning').textContent = '';
@@ -353,8 +385,7 @@
     });
     testItems.forEach(function (t) {
       var found = findItemByDraft(t);
-      if (found) { if (t.test_only) found.test_only = true; }
-      else addItem(t);
+      if (!found) addItem(t); // 같은 내용의 기존(실제) 문항은 건드리지 않음
     });
     save();
     var sel = $('test-item-select');
@@ -382,12 +413,10 @@
     if (!rubric) { say('기준표를 먼저 불러오세요.'); return; }
     if (!state.rater.trim()) { say('평가자 이름을 입력하세요.'); $('rater').focus(); return; }
     var draft = readDraft();
-    var tsel = testItems.filter(function (t) { return sameContent(t, draft); })[0];
-    if (tsel) { draft.test_only = tsel.test_only; draft.source = tsel.source; }
+    markDraftTest(draft);
     if (!draft.situation) { say('상황을 입력하세요.'); $('situation').focus(); return; }
     if (!draft.answers.length) { say('AI 답변을 하나 이상 입력하세요.'); return; }
     var item = findItemByDraft(draft) || addItem(draft);
-    if (draft.test_only) item.test_only = true;
     state.current = { itemId: item.id, answerIndex: 0 };
     save();
     refreshRegisterTotals();
@@ -454,7 +483,7 @@
     if (!it || !ans) return null;
     var sc = findScoring(it.id, ans.id, state.rater);
     if (!sc && create) {
-      sc = { item_id: it.id, answer_id: ans.id, scores: {}, evidence: {}, penalties: [], total: null, rater: state.rater, date: nowKstIso() };
+      sc = { item_id: it.id, answer_id: ans.id, scores: {}, evidence: {}, penalties: [], total: null, rater: state.rater, date: nowKstIso(), rubric_version: rubric.version };
       rubric.criteria.forEach(function (c) { sc.evidence[c.id] = []; });
       state.scorings.push(sc);
     }
@@ -524,6 +553,9 @@
     if (!sc || !sc.evidence[cid]) return;
     sc.evidence[cid].splice(index, 1);
     touch(sc);
+    var left = sc.evidence[cid].length;
+    var next = left ? document.querySelector('[data-evidence-delete="' + cid + '"][data-index="' + Math.min(index, left - 1) + '"]') : $('select-' + cid);
+    if (next) next.focus();
     say('근거를 삭제했습니다.');
   }
 
@@ -545,8 +577,9 @@
       var list = (sc && sc.evidence && sc.evidence[c.id]) || [];
       list.forEach(function (t, i) {
         var li = el('li');
-        li.appendChild(el('span', null, '근거: ' + t));
-        var del = el('button', { type: 'button', 'data-evidence-delete': c.id, 'data-index': String(i), 'aria-label': c.name + ' 근거 삭제' }, '삭제');
+        var tid = 'evidence-text-' + c.id + '-' + i;
+        li.appendChild(el('span', { id: tid }, '근거: ' + t));
+        var del = el('button', { type: 'button', 'data-evidence-delete': c.id, 'data-index': String(i), 'aria-label': c.name + ' 근거 ' + (i + 1) + ' 삭제', 'aria-describedby': tid }, '삭제');
         del.addEventListener('click', function () { deleteEvidence(c.id, i); });
         li.appendChild(del);
         ul.appendChild(li);
@@ -620,7 +653,7 @@
     var noEv = rubric.criteria.filter(function (c) { return !sc.evidence || !sc.evidence[c.id] || !sc.evidence[c.id].length; });
     if (noEv.length && !enterConfirm) {
       enterConfirm = true;
-      say('근거가 없는 항목: ' + noEv.map(function (c) { return c.name; }).join(', ') + '. 그래도 넘어가려면 Enter를 한 번 더 누르세요.');
+      say('근거가 없는 항목: ' + noEv.map(function (c) { return c.name; }).join(', ') + '. 그래도 넘어가려면 Enter나 Space를 한 번 더 누르세요.');
       return;
     }
     enterConfirm = false;
@@ -699,33 +732,41 @@
     var digit = null;
     if (/^[0-9]$/.test(key)) digit = parseInt(key, 10);
     else if (/^(Digit|Numpad)[0-9]$/.test(code)) digit = parseInt(code.slice(-1), 10);
+    var rep = !!ev.repeat; // 길게 누른 반복은 채점·이동에 쓰지 않음
     var zeroKey = digit === 0 || code === 'Backquote' || key === '`';
 
     if (selectedCriterion && (digit === 0 || digit === 1 || digit === 2 || zeroKey)) {
       ev.preventDefault();
+      if (rep) return;
       setScore(selectedCriterion, zeroKey ? 0 : digit);
       return;
     }
     if (digit >= 1 && digit <= rubric.criteria.length) {
       ev.preventDefault();
+      if (rep) return;
       selectCriterion(rubric.criteria[digit - 1].id);
       return;
     }
     if (zeroKey || digit === 0) {
       ev.preventDefault();
+      if (rep) return;
       say('먼저 항목을 고르세요 (1~5).');
       return;
     }
     if (key === 'e' || key === 'E' || code === 'KeyE') {
       ev.preventDefault();
+      if (rep) return;
       saveEvidence();
       return;
     }
     if (key === 'Escape') {
-      if (selectedCriterion) {
+      if (selectedCriterion || evidenceTarget) {
         selectedCriterion = null;
+        evidenceTarget = null;
         updateScoringView();
         say('항목 선택을 취소했습니다.');
+      } else {
+        say('항목을 고르세요 (1~5).');
       }
       return;
     }
@@ -733,12 +774,14 @@
       // 버튼·체크박스·링크·select 등에서는 브라우저 기본 동작(누르기)을 둡니다
       if (tag === 'BUTTON' || tag === 'A' || tag === 'SUMMARY' || tag === 'INPUT' || tag === 'SELECT') return;
       ev.preventDefault();
+      if (rep) return;
       goNext(true);
       return;
     }
     if (key === 'Enter') {
-      if (tag === 'BUTTON' || tag === 'A' || tag === 'SUMMARY') return; // 버튼은 기본 동작
+      if (tag === 'BUTTON' || tag === 'A' || tag === 'SUMMARY' || tag === 'INPUT' || tag === 'SELECT') return; // 기본 동작을 둡니다
       ev.preventDefault();
+      if (rep) return;
       goNext(true);
     }
   }
@@ -776,12 +819,15 @@
     $('rater').value = state.rater;
     $('rater').addEventListener('input', function () {
       state.rater = $('rater').value.trim();
+      selectedCriterion = null;
+      evidenceTarget = null;
+      enterConfirm = false;
       save();
       refreshRegisterTotals();
       if (rubric && !$('scoring-section').hidden) updateScoringView();
     });
-    $('situation').addEventListener('input', refreshRegisterTotals);
-    $('add-answer').addEventListener('click', function () { addAnswerRow('').focus(); });
+    $('situation').addEventListener('input', function () { formTestIndex = null; refreshRegisterTotals(); });
+    $('add-answer').addEventListener('click', function () { formTestIndex = null; addAnswerRow('').focus(); saveDraft(); });
     $('load-example').addEventListener('click', loadExample);
     $('load-test-items').addEventListener('click', loadTestItems);
     $('test-item-select').addEventListener('change', function () { fillFormFromTestItem(parseInt($('test-item-select').value, 10)); });
@@ -812,7 +858,12 @@
       reader.readAsText(f, 'UTF-8');
     });
     document.addEventListener('keydown', onKey);
-    setAnswerRows(['', '']);
+    if (state.draft) {
+      $('situation').value = typeof state.draft.situation === 'string' ? state.draft.situation : '';
+      setAnswerRows(state.draft.answers.length ? state.draft.answers.map(String) : ['', '']);
+    } else {
+      setAnswerRows(['', '']);
+    }
     renderSavedCount();
     loadRubric();
   }
