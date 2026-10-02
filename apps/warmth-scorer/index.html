@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 답변 따뜻함 채점기</title>
+<style>
+  :root { --fg:#1a1a1a; --bg:#fafaf7; --card:#ffffff; --line:#b8b8b0; --accent:#0b3d91; --focus:#c2410c; --bad:#b00020; --sel:#fff3c4; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif; font-size:18px; line-height:1.6; color:var(--fg); background:var(--bg); }
+  header.top { position:sticky; top:0; z-index:10; background:#12294f; color:#fff; padding:8px 16px; }
+  header.top h1 { margin:0; font-size:20px; }
+  #message { min-height:1.6em; margin:2px 0 0; font-weight:bold; color:#ffe9a6; }
+  main { max-width:960px; margin:0 auto; padding:16px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin:0 0 20px; }
+  h2 { margin:0 0 12px; font-size:22px; }
+  h3 { margin:16px 0 8px; font-size:19px; }
+  label { display:block; font-weight:bold; margin:10px 0 4px; }
+  input[type="text"], textarea { width:100%; font:inherit; padding:8px 10px; border:2px solid var(--line); border-radius:6px; background:#fff; color:var(--fg); }
+  input[type="text"] { min-height:48px; }
+  textarea { min-height:96px; resize:vertical; }
+  textarea[readonly] { background:#f1f1ec; }
+  button, .btn { font:inherit; min-height:48px; padding:8px 18px; border:2px solid var(--accent); border-radius:8px; background:#fff; color:var(--accent); cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; }
+  button.danger { border-color:var(--bad); color:var(--bad); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible {
+    outline:3px solid var(--focus); outline-offset:2px;
+  }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:10px 0; }
+  .answer-row { margin:0 0 10px; }
+  .answer-row .row { margin:4px 0 0; }
+  .warn { color:var(--bad); font-weight:bold; }
+  .small { font-size:16px; color:#444; }
+  .criterion { border:2px solid var(--line); border-radius:8px; padding:10px; margin:0 0 12px; }
+  .criterion.selected { border-color:var(--focus); background:var(--sel); }
+  .criterion .head { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .criterion .head button { text-align:left; font-weight:bold; }
+  .scores { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin:8px 0; }
+  .scores button { text-align:left; min-height:72px; }
+  .scores button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  .scores button b { display:block; }
+  ul.evidence { margin:6px 0 0; padding:0; list-style:none; }
+  ul.evidence li { display:flex; gap:8px; align-items:center; margin:4px 0; background:#eef3fb; padding:4px 8px; border-radius:6px; }
+  ul.evidence li span { flex:1; }
+  .penalty { display:flex; gap:10px; align-items:flex-start; min-height:48px; padding:6px 8px; margin:0 0 6px; border:1px solid var(--line); border-radius:6px; font-weight:normal; }
+  .penalty input { width:28px; height:28px; margin-top:4px; flex:none; }
+  .penalty small { display:block; color:#444; font-size:16px; }
+  .penalty .zero { color:var(--bad); font-weight:bold; margin-left:6px; }
+  #mode-banner { padding:8px 12px; border-radius:6px; background:#e8e8e2; font-weight:bold; margin:8px 0; }
+  #mode-banner.active { background:var(--sel); border:2px solid var(--focus); }
+  #total { font-size:26px; font-weight:bold; padding:10px 14px; border:2px solid var(--accent); border-radius:8px; margin:12px 0; }
+  .totals span { display:inline-block; margin:0 14px 0 0; font-weight:bold; }
+  .help { font-size:16px; }
+  .help kbd { border:1px solid #666; border-radius:4px; padding:0 6px; background:#f4f4f4; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>AI 답변 따뜻함 채점기</h1>
+  <p id="message" aria-live="polite" role="status"></p>
+</header>
+<main>
+
+<section id="register-section" aria-labelledby="h-register">
+  <h2 id="h-register">1. 문항 등록</h2>
+
+  <label for="rater">평가자 이름</label>
+  <input type="text" id="rater" autocomplete="name">
+
+  <p id="rubric-status" class="small">기준표를 불러오는 중입니다.</p>
+  <div id="rubric-file-wrap" hidden>
+    <label for="rubric-file">기준표 파일 열기 (rubric.json)</label>
+    <input type="file" id="rubric-file" accept=".json,application/json">
+  </div>
+
+  <label for="situation">상황 (사용자가 한 말)</label>
+  <textarea id="situation"></textarea>
+
+  <h3>AI 답변</h3>
+  <div id="answers-list"></div>
+  <div class="row">
+    <button type="button" id="add-answer">답변 추가</button>
+    <button type="button" id="load-example">예시 불러오기</button>
+    <button type="button" id="load-test-items">테스트 문항 불러오기</button>
+    <button type="button" id="start-scoring" class="primary">채점 시작</button>
+  </div>
+
+  <div id="test-items-file-wrap" hidden>
+    <label for="test-items-file">테스트 문항 파일 열기 (test-items.json)</label>
+    <input type="file" id="test-items-file" accept=".json,application/json">
+  </div>
+  <div id="test-item-wrap" hidden>
+    <label for="test-item-select">테스트 문항 고르기</label>
+    <select id="test-item-select" style="min-height:48px;font:inherit;max-width:100%"></select>
+    <p id="test-notice" class="small"></p>
+  </div>
+
+  <p id="example-warning" class="warn" role="alert"></p>
+  <div id="answer-totals" class="totals" aria-label="답변별 합계"></div>
+</section>
+
+<section id="scoring-section" aria-labelledby="h-scoring" hidden>
+  <h2 id="h-scoring">2. 채점</h2>
+  <p id="test-badge" class="warn" hidden>테스트용, 채점 기준 아님</p>
+  <p class="help">
+    키보드: <kbd>1</kbd>~<kbd>5</kbd> 항목 고르기, 이어서 <kbd>0</kbd>·<kbd>1</kbd>·<kbd>2</kbd> 점수 (0은 <kbd>`</kbd>도 됩니다).
+    <kbd>E</kbd> 근거 저장, <kbd>Esc</kbd> 취소, <kbd>Enter</kbd> 다음 답변.
+  </p>
+  <div id="mode-banner" aria-live="polite">항목을 고르세요 (1~5)</div>
+
+  <h3>상황</h3>
+  <p id="scoring-situation"></p>
+  <h3 id="answer-position">답변</h3>
+  <label for="answer-text">답변 본문 (문장을 고른 뒤 E 키)</label>
+  <textarea id="answer-text" readonly></textarea>
+  <div class="row">
+    <button type="button" id="save-evidence">근거로 저장</button>
+  </div>
+
+  <h3>항목</h3>
+  <div id="criteria-list"></div>
+
+  <h3>감점 신호</h3>
+  <div id="penalties-list"></div>
+
+  <div id="total" aria-live="polite" role="status">채점 중 (0/5)</div>
+  <div id="answer-totals-scoring" class="totals" aria-label="답변별 합계"></div>
+
+  <div class="row">
+    <button type="button" id="prev-answer">이전 답변</button>
+    <button type="button" id="next-answer" class="primary">다음 답변</button>
+  </div>
+</section>
+
+<section id="export-section" aria-labelledby="h-export">
+  <h2 id="h-export">3. 저장·내보내기</h2>
+  <p>저장된 채점: <strong id="saved-count">0</strong>건</p>
+  <div class="row">
+    <button type="button" id="export-jsonl" class="primary">JSONL 내보내기</button>
+    <button type="button" id="clear-all" class="danger">전체 삭제</button>
+  </div>
+</section>
+
+</main>
+<script src="app.js"></script>
+</body>
+</html>

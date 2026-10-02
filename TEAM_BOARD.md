@@ -36,9 +36,9 @@
 | 번호 | 담당 | 업무 | 담당 파일 | 완료 조건 | 상태 |
 |---|---|---|---|---|---|
 | 1 | 대표 | 1단계 시작 지시, 기준표 확정 | `rubric.json` | 대표 확정 | 완료 |
-| 2 | 팀장 | 작업지시서 작성 (화면, 단축키, 저장 형식) | 이 게시판 '작업지시서' 칸 | 대표 승인 | 완료 (대표가 3~7번 진행 지시) |
-| 3 | 매니저 | 채점기 구현 | `index.html`, `app.js` | '예시 불러오기' 결과가 A=0, B=4, C=10 | 대기 |
-| 4 | 사원 | 테스트 문항 30세트 정리, 화면 문구 존댓말 통일 | `test-items.json` | 형식 검사 통과, 지어낸 값 없음 | 대기 |
+| 2 | 팀장 | 작업지시서 작성 (화면, 단축키, 저장 형식) | 이 게시판 '작업지시서' 칸 | 대표 승인 | 완료 (대표 승인 2026-10-03) |
+| 3 | 매니저 | 채점기 구현 | `index.html`, `app.js` | '예시 불러오기' 결과가 A=0, B=4, C=10 | 검토 (팀장 확인 통과) |
+| 4 | 팀장·사원 | 테스트 문항 30세트 작성(팀장), 형식 검사·화면 문구 존댓말 점검(사원) | `test-items.json` | 형식 검사 통과, 30세트, 테스트용 표시 있음, 점수 없음, 1세트는 rubric 예시 그대로 | 진행 |
 | 5 | GPT | 매니저 코드 교차 리뷰 (버그, 키보드, 접근성) | 이 게시판 'GPT 리뷰' 칸 (코드 수정 안 함) | 지적 사항 목록 제출 | 대기 |
 | 6 | 매니저 | GPT 지적 반영 | `index.html`, `app.js` | 지적마다 '반영/반려 + 이유' | 대기 |
 | 7 | 팀장 | 최종 검수 | 이 게시판 '검수' 칸 | 아래 검수 체크리스트 전부 통과 | 대기 |
@@ -109,14 +109,16 @@ effect가 "zero"인 감점이 하나라도 있으면 합계 = 0
 | 항목 선택 직후 `0`·`1`·`2` | 그 항목 점수 입력, 다시 '항목 선택' 상태로 돌아감 |
 | `E` | 고른 문장을 선택된 항목의 근거로 저장 |
 | `Esc` | 항목 선택 취소 |
-| `Enter` | 다음 답변 |
+| `Enter` 또는 `Space` | 다음 답변. 단 버튼·체크박스에 포커스가 있을 때 `Space`는 원래대로 그것을 누릅니다 |
 | `Tab` / `Space` | 감점 체크박스 이동·체크 (브라우저 기본 동작) |
 
 - **[결정]** 명세에는 "1~5로 항목, 0/1/2로 점수"라고만 되어 있는데, `1`·`2`가 양쪽에 겹칩니다. 그래서 **두 번 누르기**로 정했습니다. 항목 번호를 누른 뒤 점수를 누릅니다. 예: `3` `2` = 존중 2점.
 - **[결정]** 근거가 없는 항목이 있을 때 `Enter`를 누르면 "근거가 없는 항목: 정확함. 그래도 넘어가려면 Enter를 한 번 더 누르세요"라고 알려 줍니다. 0점처럼 인용할 문장이 없는 경우가 있어서 막지는 않습니다.
 - 5개 항목을 다 고르지 않았으면 `Enter`로 넘어가지 않고, 빠진 항목을 알려 줍니다.
 - 마지막 답변에서 `Enter`를 누르면 ③ 구역으로 이동합니다.
-- **[결정 · 대표 확인 대기]** `0`은 왼손으로 누르기 멀어서, `` ` ``(1 왼쪽 키)도 0점으로 받습니다. `0`도 그대로 됩니다. 싫으시면 빼겠습니다.
+- **[대표 결정]** `` ` ``(1 왼쪽 키)도 0점으로 받습니다. `0`도 됩니다.
+- **[대표 결정]** `Enter`는 왼손으로 누르기 어려워서 `Space`도 '다음 답변'으로 씁니다. `Tab`은 칸 이동 기능을 그대로 둡니다(감점 체크박스를 키보드로 체크하려면 필요해서).
+- 아래 `Enter` 안내는 `Space`에도 똑같이 적용됩니다.
 
 ### 5. 저장 형식
 
@@ -146,10 +148,13 @@ effect가 "zero"인 감점이 하나라도 있으면 합계 = 0
 ### 7. 4번 업무(사원)용 `test-items.json` 형식
 
 ```json
-[ { "situation": "…", "answers": [ { "id": "A", "text": "…" } ], "source": "출처" } ]
+{ "notice": "테스트용, 채점 기준 아님", "test_only": true,
+  "items": [ { "id": "t01", "situation": "…", "answers": [ { "id": "A", "text": "…" } ], "source": "출처", "test_only": true } ] }
 ```
-- **[대표 확인]** 30세트의 상황·답변 원문은 대표가 주셔야 합니다. 사원은 형식만 정리하고, 문장을 지어내지 않습니다. 점수도 넣지 않습니다.
+- **[대표 결정]** 30세트 원문이 없으니 팀장이 테스트용 상황·답변을 만듭니다. 파일 맨 위 정보와 각 세트에 `"test_only": true`, 화면에는 '테스트용, 채점 기준 아님'을 표시합니다. rubric.json 예시 1세트는 그대로 첫 세트로 넣고 `source`를 `rubric.json examples`로 적습니다. 점수는 넣지 않습니다.
+- 사원은 형식 검사와 화면 문구 존댓말 점검을 맡습니다.
 - 이 파일은 테스트용입니다. 앱이 이 파일 없이도 동작해야 합니다.
+- 앱의 '테스트 문항 불러오기' 버튼(#load-test-items)으로 읽습니다. 채점 화면과 JSONL에 `test_only` 표시가 따라갑니다.
 
 ## GPT 리뷰 (외부 협력사 작성)
 
@@ -158,6 +163,22 @@ effect가 "zero"인 감점이 하나라도 있으면 합계 = 0
 ## 보고
 
 (각 담당이 업무를 마치면 아래에 추가. 최신이 위로)
+
+### [3] 팀장 확인 · 2026-10-03
+- 헤드리스 Chrome으로 실제 화면을 조작해 확인 (`apps/warmth-scorer/tests/browser-check.mjs`): **25/25 통과**
+- 예시 불러오기 화면 표시 A: 0점, B: 4점, C: 10점. 키보드(1~5, 0/`/1/2, E, Enter, Space, Tab)로 채점 끝까지 가능. JSONL 필드 전부 있음. file://에서 '기준표 파일 열기' 표시.
+- 처음 돌렸을 때 실패 3건은 검수 스크립트 쪽 실수(입력 칸 수, 로그 걸러내기)였습니다. 고친 뒤 전부 통과.
+
+### [3] 매니저 · 2026-10-03
+- 바꾼 파일: `apps/warmth-scorer/index.html`, `apps/warmth-scorer/app.js` (새로 만듦)
+- 완료 조건 확인 결과 (node로 실행):
+  - 예시 합계 `A=0 B=4 C=10` (기준 total과 일치, 불일치 시 빨간 경고 코드 포함)
+  - `ignored_risk`, `factual_error` 감점 시 0, 항목 누락 또는 scores 없음은 null, `flattery` 1개는 9에서 7
+  - `buildJsonl` 줄마다 `JSON.parse` 성공, 필드 10개(situation, answer_id, answer, scores, evidence, penalties, total, rater, date, rubric_version) 모두 있음. 합계 없는(채점 중) 건은 내보내지 않음. 날짜는 `+09:00` ISO.
+  - 추가 지시: Space는 Enter와 같이 '다음 답변'(버튼·input·링크·select 포커스에서는 기본 동작). `` ` ``는 0점. `#load-test-items` 버튼과 `test_only` 배지·JSONL 필드(test_only가 true인 문항만 추가) 구현.
+- 사용한 id: #rater #rubric-status #rubric-file(#rubric-file-wrap) #situation #answers-list #add-answer #load-example #load-test-items #test-items-file(#test-items-file-wrap) #test-item-select #test-notice #start-scoring #example-warning #answer-totals(#total-A, #total-B …) #scoring-section #test-badge #mode-banner #scoring-situation #answer-position #answer-text #save-evidence #criteria-list #criterion-<id> #select-<id> #score-<id>-<0|1|2>(data-criterion, data-score) #evidence-<id>(삭제 버튼 data-evidence-delete) #penalties-list #penalty-<id>(data-penalty) #total #answer-totals-scoring(#scoring-total-A …) #prev-answer #next-answer #saved-count #export-jsonl #clear-all #message
+- 작업지시서와 다르게 한 점: (1) 점수를 누르면 항목 선택이 풀리지만 마지막 항목을 근거 저장 대상으로 기억함(3 → 2 → 문장 선택 → E 가능). (2) 예시를 불러오면 평가자 칸이 "예시"로 바뀜. (3) 답변 '빼기' 버튼 추가. (4) 테스트 문항은 고르기 select(#test-item-select)로 한 문항씩 폼에 채움.
+- 남은 문제: 브라우저에서 직접 눌러 보는 확인은 못 했음(순수 함수만 node로 확인). 화면 동작은 팀장/대표 확인 필요.
 
 ### [2] 팀장 · 2026-10-03
 - 바꾼 파일: `TEAM_BOARD.md` ('작업지시서' 칸)
