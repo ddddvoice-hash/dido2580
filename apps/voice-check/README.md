@@ -44,3 +44,21 @@ node apps/voice-check/check.js <폴더나 파일...> [--json out.json] [--csv ou
 - 16/24/32bit PCM과 32bit float만 읽습니다. 8bit, 64bit float, 압축 WAV는 "읽기 실패"입니다.
 - 한 파일에 여러 줄이 이어진 긴 녹음은 마지막 말소리 뒤 여백만 V05로 봅니다.
 - 샘플 전체를 Float32Array 하나로 올리므로 메모리는 샘플 수 x 4바이트 정도 씁니다.
+
+## 대본 줄과 녹음 맞추기 (align.js)
+
+```
+node apps/voice-check/align.js <wav> <script.json> --csv <out.csv> [--min-pause 1.0]
+```
+
+- 대본은 `{"lines":[{"no","key","direction","text"}, ...]}` 형식 JSON입니다.
+- 1초(`--min-pause`) 이상 쉬는 곳으로 말소리 덩어리를 나누고, 대본 순서대로 줄에 배정합니다. 덩어리 수와 줄 수가 다르면 줄의 한글 음절 수와 덩어리 길이 비율이 고르게 되도록 동적 계획법으로 맞춥니다.
+- CSV(UTF-8 BOM, 엑셀용) 칸: no, key, text, start_sec, end_sec, dur_sec, syllables, syl_per_sec, chunks, uncertain, reason.
+- 불확실(uncertain=Y) 기준: 덩어리를 합친 줄, 덩어리를 쪼갠 줄, 초당 음절 수가 중간값의 0.5배 미만 또는 2배 초과, 앞뒤 줄과의 쉼이 1.2초 미만. 이유는 reason 칸에 적힙니다.
+- 테스트: `node apps/voice-check/test-align.js`
+
+한계
+- 음성 인식을 하지 않습니다. 줄 내용이 맞는지는 모르고 순서와 길이 비율만 봅니다. 불확실 줄은 직접 들어 확인해 주세요.
+- 덩어리가 줄보다 많으면 합치기만, 적으면 쪼개기만 합니다. 한 녹음에 두 경우가 섞이면 어긋날 수 있습니다.
+- 한 덩어리를 나눈 줄의 경계는 글자 수 비율로 추정합니다(안쪽 쉼이 가까우면 거기에 맞춤).
+- 음절 수는 한글만 셉니다. 숫자·영문은 세지 않습니다.

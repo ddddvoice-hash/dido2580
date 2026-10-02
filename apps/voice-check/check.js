@@ -283,4 +283,4 @@ function main(argv) {
 function finiteOrNull(x) { return Number.isFinite(x) ? x : null; }
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
-module.exports = { inspect, main };
+module.exports = { inspect, main, parseHeader, readSamples };
