@@ -6,7 +6,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { align } = require("./align.js");
+const { align, countSyllables, orderProblems } = require("./align.js");
 
 const RATE = 16000;
 let failed = 0;
@@ -83,6 +83,55 @@ try {
     ok(/쪼갬/.test(r.rows[1].reasons.join()) && /쪼갬/.test(r.rows[2].reasons.join()), "(c) 이유에 쪼갬이 적힘");
     ok(near(r.rows[1].start, 4.5) && near(r.rows[1].end, 8.5) && near(r.rows[2].start, 8.5) && near(r.rows[2].end, 12.5), "(c) 글자 수 비율로 반씩 나뉨");
     ok(!r.rows[0].uncertain && !r.rows[3].uncertain, "(c) 나머지 줄은 확실");
+  }
+
+  // (d) 한 덩어리를 세 줄로 나눌 때 같은 쉼을 다시 쓰지 않는다 (1~11초 덩어리, 5.8~6.2초 쉼)
+  {
+    const parts = [{ tone: 4.8 }, { gap: 0.4 }, { tone: 4.8 }];
+    for (const n of [3, 4]) {
+      const sc = { lines: Array.from({ length: n }, (_, i) => ({ no: String(i + 1).padStart(3, "0"), key: "k" + i, text: "", syllables: 10 })) };
+      const r = align(build(parts), RATE, sc, 1.0);
+      ok(r.chunks.length === 1 && r.rows.length === n, `(d) 덩어리 1개를 ${n}줄로 나눔`);
+      ok(r.rows.every((x) => x.end - x.start > 0), `(d) ${n}줄: 모든 줄의 길이가 양수 (${r.rows.map((x) => (x.end - x.start).toFixed(2))})`);
+      ok(r.rows.every((x, i) => i === 0 || x.start >= r.rows[i - 1].end - 1e-9), `(d) ${n}줄: 시간 순서가 앞에서 뒤로 이어짐`);
+      ok(orderProblems(r.rows).length === 0, `(d) ${n}줄: orderProblems 없음`);
+      ok(near(r.rows[0].start, 1) && near(r.rows[n - 1].end, 11), `(d) ${n}줄: 덩어리 처음과 끝에 맞음`);
+    }
+    ok(orderProblems([{ no: "1", start: 5, end: 6 }, { no: "2", start: 6.2, end: 5.8 }]).join() === "2", "(d) orderProblems가 음수 길이를 찾아냄");
+    ok(orderProblems([{ no: "1", start: 5, end: 7 }, { no: "2", start: 6, end: 8 }]).join() === "2", "(d) orderProblems가 겹침을 찾아냄");
+  }
+
+  // (e) 경계 쉼 1.2초 기준: 1.2초는 확실, 1.18초는 불확실
+  {
+    const sc = { lines: [{ no: "001", key: "a", text: "", syllables: 5 }, { no: "002", key: "b", text: "", syllables: 5 }] };
+    const edge = align(build([{ tone: 2 }, { gap: 1.2 }, { tone: 2 }]), RATE, sc, 1.0);
+    ok(edge.rows.every((x) => !x.uncertain), `(e) 쉼 1.2초는 불확실 아님 (${edge.rows.map((x) => x.reasons)})`);
+    const under = align(build([{ tone: 2 }, { gap: 1.18 }, { tone: 2 }]), RATE, sc, 1.0);
+    ok(under.rows.every((x) => x.uncertain && /쉼 1\.18/.test(x.reasons.join())), `(e) 쉼 1.18초는 두 줄 모두 불확실 (${under.rows.map((x) => x.reasons)})`);
+  }
+
+  // (f) 속도 비율 기준: 중간값의 0.5배 / 2배 경계는 확실, 넘으면 불확실 (초당 5음절 3줄이 중간값)
+  {
+    const mkRows = (durs) => {
+      const parts = [];
+      durs.forEach((d, i) => { if (i) parts.push({ gap: 1.5 }); parts.push({ tone: d }); });
+      const sc = { lines: durs.map((_, i) => ({ no: String(i + 1).padStart(3, "0"), key: "k" + i, text: "", syllables: 5 })) };
+      return align(build(parts), RATE, sc, 1.0).rows;
+    };
+    const edge = mkRows([1, 1, 1, 2, 0.5]);   // 5, 5, 5, 2.5(정확히 0.5배), 10(정확히 2배)
+    ok(edge.every((x) => !x.uncertain), `(f) 정확히 0.5배와 2배는 불확실 아님 (${edge.map((x) => x.rate.toFixed(2) + ":" + x.reasons)})`);
+    const out = mkRows([1, 1, 1, 2.1, 0.48]); // 2.38(0.5배 미만), 10.4(2배 초과)
+    ok(out.slice(0, 3).every((x) => !x.uncertain), "(f) 보통 속도 줄은 확실");
+    ok(/0\.5배 미만/.test(out[3].reasons.join()), "(f) 0.5배 미만이면 불확실 + 이유");
+    ok(/2배 초과/.test(out[4].reasons.join()), "(f) 2배 초과면 불확실 + 이유");
+  }
+
+  // (g) 음절 수: NFD로 분해한 한글도 같게 센다, syllables 값이 있으면 그 값을 쓴다
+  {
+    ok(countSyllables("가나다") === 3 && countSyllables("가나다".normalize("NFD")) === 3, "(g) NFC/NFD 같은 음절 수");
+    const sc = { lines: [{ no: "001", key: "a", text: "ABC 123", syllables: 4 }, { no: "002", key: "b", text: "가나다" }] };
+    const r = align(build([{ tone: 2 }, { gap: 1.5 }, { tone: 2 }]), RATE, sc, 1.0);
+    ok(r.rows[0].syllables === 4 && r.rows[1].syllables === 3, "(g) 수동 음절 수(syllables)가 우선");
   }
 
   // CLI: CSV 칸, BOM

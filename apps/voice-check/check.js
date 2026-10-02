@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // 목소리 원본 녹음 자동 검사기. 외부 패키지 없음.
 // 사용: node apps/voice-check/check.js <폴더나 파일...> [--json out.json] [--csv out.csv]
-// 반려 코드(V02, V05, V08)가 하나라도 있으면 종료 코드 1, 읽기 실패만 있으면 2, 아니면 0.
+// 반려 코드(V02, V05, V08)가 하나라도 있으면 종료 코드 1, 읽기 실패나 저장 실패만 있으면 2, 아니면 0.
+// 결과 저장에 실패하면 반려가 있어도 종료 코드 2.
 "use strict";
 
 const fs = require("fs");
@@ -16,7 +17,10 @@ const TAIL_MIN = 0.3;        // V05: 뒤 여백(초) 범위
 const TAIL_MAX = 1.0;
 const ROOM_SEC = 10.0;       // ROOM: 첫 말소리가 이보다 앞이면 경고
 const NOISE_DB = -60;        // NOISE: 앞 10초 평균 크기 한계
-const ZERO_RUN_MS = 10;      // V08: 완전 0이 이만큼 이어지면 가공 흔적 (48kHz에서 480샘플)
+const ZERO_RUN_SAMPLES = 480; // V08: 한 채널에서 완전 0이 이만큼(샘플 수 고정, 샘플레이트와 상관없음) 이어지면 가공 흔적
+const TOL = 1e-6;            // 경계값 비교 허용 오차(초)
+const TAIL_EDGE_SEC = 0.02;  // 뒤 여백이 경계(0.3, 1.0초)에서 이 안쪽이면 TAIL_EDGE 경고(프레임이 20ms 단위라 판정이 흔들릴 수 있음)
+const PCM_GUID_TAIL = Buffer.from([0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71]);
 const NAME_RE = /^\d{3}_[a-z0-9_]+_take\d{2}\.wav$/i;
 const CHUNK_BYTES = 4 * 1024 * 1024;
 
@@ -24,11 +28,25 @@ const toDb = (x) => (x > 0 ? 20 * Math.log10(x) : -Infinity);
 
 // ---- WAV 읽기 ----------------------------------------------------------
 
+function validateFmt(f) {
+  if (!(f.rate > 0)) throw new Error(`샘플레이트가 ${f.rate}Hz입니다`);
+  if (f.channels < 1 || f.channels > 2) throw new Error(`채널 ${f.channels}개는 지원하지 않습니다`);
+  const okPcm = f.format === 1 && [16, 24, 32].includes(f.bits);
+  const okFloat = f.format === 3 && f.bits === 32;
+  if (!okPcm && !okFloat) throw new Error(`지원하지 않는 형식입니다 (코드 ${f.format}, ${f.bits}bit)`);
+  if (f.blockAlign !== f.channels * f.bits / 8) {
+    throw new Error(`블록 크기(${f.blockAlign})가 채널 수 x 비트 수와 다릅니다`);
+  }
+}
+
+// 헤더를 읽고 fmt 검증까지 한다. check.js와 align.js가 같이 쓴다.
+// info.truncated: data 청크 크기가 0/0xFFFFFFFF이거나 파일보다 큼(녹음이 끊긴 흔적).
 function parseHeader(fd, fileSize) {
   const head = Buffer.alloc(12);
   if (fs.readSync(fd, head, 0, 12, 0) < 12) throw new Error("파일이 너무 짧습니다");
   const tag = head.toString("latin1", 0, 4);
-  if ((tag !== "RIFF" && tag !== "RF64") || head.toString("latin1", 8, 12) !== "WAVE") {
+  if (tag === "RF64") throw new Error("RF64(4GB 넘는 WAV)는 지원하지 않습니다");
+  if (tag !== "RIFF" || head.toString("latin1", 8, 12) !== "WAVE") {
     throw new Error("WAV 헤더가 아닙니다");
   }
   let pos = 12;
@@ -40,39 +58,55 @@ function parseHeader(fd, fileSize) {
     let size = ch.readUInt32LE(4);
     const body = pos + 8;
     if (id === "fmt ") {
+      if (size < 16) throw new Error("fmt 청크가 너무 짧습니다");
       const b = Buffer.alloc(Math.min(size, 40));
-      fs.readSync(fd, b, 0, b.length, body);
+      const got = fs.readSync(fd, b, 0, b.length, body);
+      if (got < b.length) throw new Error("fmt 청크가 잘렸습니다");
       let format = b.readUInt16LE(0);
-      if (format === 0xfffe && b.length >= 26) format = b.readUInt16LE(24); // WAVE_FORMAT_EXTENSIBLE
+      if (format === 0xfffe) { // WAVE_FORMAT_EXTENSIBLE: 길이, 확장 크기, SubFormat GUID 전체 확인
+        if (b.length < 40 || b.readUInt16LE(16) < 22) throw new Error("EXTENSIBLE fmt 청크가 올바르지 않습니다");
+        if (!b.subarray(26, 40).equals(PCM_GUID_TAIL)) throw new Error("EXTENSIBLE SubFormat GUID가 올바르지 않습니다");
+        format = b.readUInt16LE(24);
+      }
       fmt = {
         format,
         channels: b.readUInt16LE(2),
         rate: b.readUInt32LE(4),
+        blockAlign: b.readUInt16LE(12),
         bits: b.readUInt16LE(14),
       };
     } else if (id === "data") {
       if (!fmt) throw new Error("fmt 청크가 data보다 뒤에 있습니다");
-      // 크기가 0이거나 0xFFFFFFFF이거나 파일보다 크면(녹음이 중간에 끊긴 경우) 남은 길이만큼만 읽는다.
+      validateFmt(fmt);
+      // 크기가 0이거나 0xFFFFFFFF이거나 파일보다 크면(녹음이 중간에 끊긴 경우) 남은 길이만큼만 읽고 truncated로 표시한다.
       const remain = fileSize - body;
-      if (size === 0 || size === 0xffffffff || size > remain) size = remain;
-      return { fmt, dataStart: body, dataBytes: size };
+      let truncated = false;
+      if (size === 0 || size === 0xffffffff || size > remain) { size = remain; truncated = true; }
+      return { fmt, dataStart: body, dataBytes: size, truncated };
     }
     pos = body + size + (size % 2);
   }
   throw new Error("data 청크를 찾지 못했습니다");
 }
 
-// 샘플을 Float32Array 하나로 읽는다. 스테레오는 평균.
-function readSamples(fd, info) {
+// 샘플을 읽는다. 전체를 메모리에 올린다(샘플 수 x 4바이트).
+// samples: 분석용 Float32Array. 스테레오는 채널 에너지를 합친 크기(sqrt(제곱 평균))라서 채널끼리 상쇄되지 않는다.
+// peak: 모든 채널 샘플의 절댓값 최대.
+// zeroRuns: 채널별 완전 0 연속 구간 [{channel, start, length}] (ZERO_RUN_SAMPLES 이상만).
+function readAudio(fd, info) {
   const { fmt } = info;
   const bps = fmt.bits / 8;
-  const frameBytes = bps * fmt.channels;
+  const C = fmt.channels;
+  const frameBytes = bps * C;
   const frames = Math.floor(info.dataBytes / frameBytes);
   const out = new Float32Array(frames);
   const perChunk = Math.max(1, Math.floor(CHUNK_BYTES / frameBytes));
   const buf = Buffer.alloc(perChunk * frameBytes);
   const isFloat = fmt.format === 3;
-  const C = fmt.channels;
+  const runLen = new Array(C).fill(0);
+  const runStart = new Array(C).fill(0);
+  const zeroRuns = [];
+  let peak = 0;
   let done = 0;
   while (done < frames) {
     const n = Math.min(perChunk, frames - done);
@@ -80,67 +114,66 @@ function readSamples(fd, info) {
     const gotFrames = Math.floor(got / frameBytes);
     if (gotFrames === 0) break;
     for (let i = 0; i < gotFrames; i++) {
-      let sum = 0;
+      let sq = 0;
+      let only = 0;
       const base = i * frameBytes;
       for (let c = 0; c < C; c++) {
         const o = base + c * bps;
         let v;
-        if (isFloat) v = buf.readFloatLE(o);
-        else if (fmt.bits === 16) v = buf.readInt16LE(o) / 32768;
+        if (isFloat) {
+          v = buf.readFloatLE(o);
+          if (!Number.isFinite(v)) {
+            throw new Error(`유한하지 않은 샘플(NaN/Infinity)이 있습니다 (프레임 ${done + i}, 채널 ${c + 1})`);
+          }
+        } else if (fmt.bits === 16) v = buf.readInt16LE(o) / 32768;
         else if (fmt.bits === 24) v = buf.readIntLE(o, 3) / 8388608;
         else v = buf.readInt32LE(o) / 2147483648;
-        sum += v;
+        const a = v < 0 ? -v : v;
+        if (a > peak) peak = a;
+        sq += v * v;
+        only = v;
+        if (v === 0) {
+          if (runLen[c] === 0) runStart[c] = done + i;
+          runLen[c]++;
+        } else if (runLen[c] > 0) {
+          if (runLen[c] >= ZERO_RUN_SAMPLES) zeroRuns.push({ channel: c, start: runStart[c], length: runLen[c] });
+          runLen[c] = 0;
+        }
       }
-      out[done + i] = C === 1 ? sum : sum / C;
+      out[done + i] = C === 1 ? only : Math.sqrt(sq / C);
     }
     done += gotFrames;
     if (gotFrames < n) break;
   }
-  return done < frames ? out.subarray(0, done) : out;
+  for (let c = 0; c < C; c++) {
+    if (runLen[c] >= ZERO_RUN_SAMPLES) zeroRuns.push({ channel: c, start: runStart[c], length: runLen[c] });
+  }
+  return { samples: done < frames ? out.subarray(0, done) : out, peak, zeroRuns };
 }
+
+function readSamples(fd, info) { return readAudio(fd, info).samples; }
 
 // ---- 분석 ---------------------------------------------------------------
 
 function inspect(file) {
   const name = path.basename(file);
   const fd = fs.openSync(file, "r");
-  let info, samples;
+  let info, audio;
   try {
-    const size = fs.fstatSync(fd).size;
-    info = parseHeader(fd, size);
-    const f = info.fmt;
-    const okPcm = f.format === 1 && [16, 24, 32].includes(f.bits);
-    const okFloat = f.format === 3 && f.bits === 32;
-    if (!okPcm && !okFloat) throw new Error(`지원하지 않는 형식입니다 (코드 ${f.format}, ${f.bits}bit)`);
-    if (f.channels < 1 || f.channels > 2) throw new Error(`채널 ${f.channels}개는 지원하지 않습니다`);
-    samples = readSamples(fd, info);
+    info = parseHeader(fd, fs.fstatSync(fd).size);
+    audio = readAudio(fd, info);
   } finally {
     fs.closeSync(fd);
   }
+  const samples = audio.samples;
   const { fmt } = info;
   const rate = fmt.rate;
   const n = samples.length;
   const duration = n / rate;
 
-  // 최대값, 완전 0 구간
-  let peak = 0;
-  const minRun = Math.max(1, Math.round(rate * ZERO_RUN_MS / 1000));
-  const zeroRuns = []; // [start, length]
-  let runStart = -1;
-  for (let i = 0; i <= n; i++) {
-    const v = i < n ? samples[i] : 1;
-    if (i < n) {
-      const a = v < 0 ? -v : v;
-      if (a > peak) peak = a;
-    }
-    if (v === 0) {
-      if (runStart < 0) runStart = i;
-    } else if (runStart >= 0) {
-      if (i - runStart >= minRun) zeroRuns.push([runStart, i - runStart]);
-      runStart = -1;
-    }
-  }
-  const peakDb = toDb(peak);
+  // 최대값과 완전 0 구간은 원래 채널별 샘플로 쟀다(어느 채널이든 걸리면 반려).
+  const zeroRuns = audio.zeroRuns;
+  const peakDb = toDb(audio.peak);
 
   // 말소리 구간 (analysis.js 재사용)
   const FR = analysis.FRAME_MS;
@@ -176,15 +209,19 @@ function inspect(file) {
   const reject = [];
   const warn = [];
   if (peakDb >= CLIP_DB) reject.push("V02");
-  if (hasSpeech && (tail < TAIL_MIN || tail > TAIL_MAX)) reject.push("V05");
+  if (hasSpeech && (tail < TAIL_MIN - TOL || tail > TAIL_MAX + TOL)) reject.push("V05");
   if (zeroRuns.length > 0) reject.push("V08");
 
   if (!NAME_RE.test(name)) warn.push("NAME");
   if (fmt.rate !== REQUIRED.rate || fmt.bits !== REQUIRED.bits || fmt.channels !== REQUIRED.channels ||
       fmt.format === 3) warn.push("FORMAT");
   if (peakDb < PEAK_MIN_DB || peakDb > PEAK_MAX_DB) warn.push("PEAK");
+  if (info.truncated) warn.push("TRUNC");
   if (!hasSpeech) warn.push("NOSPEECH");
-  else if (speechStart < ROOM_SEC) warn.push("ROOM");
+  else {
+    if (speechStart < ROOM_SEC) warn.push("ROOM");
+    if (Math.abs(tail - TAIL_MIN) <= TAIL_EDGE_SEC || Math.abs(tail - TAIL_MAX) <= TAIL_EDGE_SEC) warn.push("TAIL_EDGE");
+  }
   if (roomDb > NOISE_DB) warn.push("NOISE");
 
   return {
@@ -225,17 +262,17 @@ function line(r) {
 
 function csvCell(v) {
   const s = v === null || v === undefined ? "" : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 function toCsv(results) {
   const cols = ["file", "status", "reject", "warn", "duration_s", "format", "peak_dbfs",
-    "speech_start_s", "tail_s", "room_rms_dbfs", "zero_runs", "zero_pct_nonspeech"];
+    "speech_start_s", "tail_s", "room_rms_dbfs", "zero_runs", "zero_pct_nonspeech", "error"];
   const rows = results.map((r) => r.error
-    ? [r.file, "읽기 실패", "", "", "", "", "", "", "", "", "", r.error]
+    ? [r.file, "읽기 실패", "", "", "", "", "", "", "", "", "", "", r.error]
     : [r.file, r.status, r.reject.join(" "), r.warn.join(" "), r.duration.toFixed(3), r.format,
       fmtNum(r.peakDb, 2), fmtNum(r.speechStart, 2), fmtNum(r.tail, 3), fmtNum(r.roomDb, 2),
-      r.zeroRuns, r.zeroPct.toFixed(3)]);
+      r.zeroRuns, r.zeroPct.toFixed(3), ""]);
   return "﻿" + [cols, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }
 
@@ -275,12 +312,16 @@ function main(argv) {
     `반려 ${rejected}개 | 읽기 실패 ${errors}개 | WAV 아님 ${skipped.length}개`);
 
   const stamp = results.map((r) => (r.error ? r : { ...r, peakDb: finiteOrNull(r.peakDb), roomDb: finiteOrNull(r.roomDb) }));
-  if (jsonOut) fs.writeFileSync(jsonOut, JSON.stringify({ results: stamp, skipped }, null, 2));
-  if (csvOut) fs.writeFileSync(csvOut, toCsv(results));
-  return rejected ? 1 : errors ? 2 : 0;
+  let saveFailed = false;
+  const save = (p, text) => {
+    try { fs.writeFileSync(p, text); } catch (e) { saveFailed = true; console.error(`저장 실패: ${p} (${e.message})`); }
+  };
+  if (jsonOut) save(jsonOut, JSON.stringify({ results: stamp, skipped }, null, 2));
+  if (csvOut) save(csvOut, toCsv(results));
+  return saveFailed ? 2 : rejected ? 1 : errors ? 2 : 0;
 }
 
 function finiteOrNull(x) { return Number.isFinite(x) ? x : null; }
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
-module.exports = { inspect, main, parseHeader, readSamples };
+module.exports = { inspect, main, parseHeader, readSamples, readAudio, toCsv, csvCell };

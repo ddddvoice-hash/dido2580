@@ -13,18 +13,15 @@ const RATE_HIGH = 2;        // 이 배수 초과여도 불확실
 const MERGE_PENALTY = 0.05; // 덩어리를 합치거나 쪼개는 것을 살짝 꺼리는 값
 
 function countSyllables(text) {
-  const m = String(text).match(/[가-힣]/g);
+  const m = String(text).normalize("NFC").match(/[가-힣]/g);
   return m ? m.length : 0;
 }
 
 function readWav(file) {
   const fd = fs.openSync(file, "r");
   try {
-    const info = check.parseHeader(fd, fs.fstatSync(fd).size);
-    const f = info.fmt;
-    const ok = (f.format === 1 && [16, 24, 32].includes(f.bits)) || (f.format === 3 && f.bits === 32);
-    if (!ok) throw new Error("지원하지 않는 WAV 형식입니다");
-    return { samples: check.readSamples(fd, info), rate: f.rate };
+    const info = check.parseHeader(fd, fs.fstatSync(fd).size); // 헤더 검증은 check.js와 같은 함수
+    return { samples: check.readSamples(fd, info), rate: info.fmt.rate };
   } finally {
     fs.closeSync(fd);
   }
@@ -110,33 +107,52 @@ function median(arr) {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
-// 덩어리 하나를 줄 여러 개로 쪼갠다. 글자 수 비율 위치 가까이(덩어리 길이의 20% 이내)에 안쪽 쉼이 있으면 거기에 맞춘다.
+// 덩어리 하나를 줄 여러 개로 쪼갠다. 경계를 앞에서부터 차례로 고른다.
+// 글자 수 비율 위치 가까이(덩어리 길이의 20% 이내)에 안쪽 쉼이 있으면 거기에 맞추고, 쉼 하나는 한 번만 쓴다.
+// 모든 줄은 최소 길이(minSeg)를 보장해서 길이가 항상 양수이고 시간 순서가 유지된다.
 function splitChunk(chunk, sylList) {
   const total = sylList.reduce((a, b) => a + Math.max(b, 1), 0);
   const len = chunk.end - chunk.start;
-  const cuts = [];
+  const minSeg = Math.min(0.02, len / (sylList.length * 2));
+  const segs = [];
+  let s = chunk.start;
   let acc = 0;
   for (let k = 0; k < sylList.length - 1; k++) {
     acc += Math.max(sylList[k], 1);
     const t = chunk.start + len * (acc / total);
+    const left = sylList.length - 1 - k;                 // 이 줄 뒤에 남는 줄 수
+    const maxNext = chunk.end - left * minSeg;           // 다음 줄이 시작할 수 있는 가장 늦은 시각
     let best = null;
     for (const g of chunk.inner) {
+      if (g.from < s + minSeg || g.to > maxNext) continue; // 앞 경계 뒤이고 뒤 줄 자리가 남는 쉼만
       const mid = (g.from + g.to) / 2;
       if (Math.abs(mid - t) <= len * 0.2 && (!best || Math.abs(mid - t) < Math.abs(best.mid - t))) best = { mid, g };
     }
-    cuts.push(best ? best.g : { from: t, to: t });
+    let from, to;
+    if (best) { from = best.g.from; to = best.g.to; }
+    else { from = to = Math.min(Math.max(t, s + minSeg), maxNext); }
+    segs.push([s, from]);
+    s = to;
   }
-  const segs = [];
-  let s = chunk.start;
-  for (const c of cuts) { segs.push([s, c.from]); s = c.to; }
   segs.push([s, chunk.end]);
   return segs;
+}
+
+// 모든 줄의 길이가 양수이고 시간 순서가 앞에서 뒤로 이어지는지 확인한다. 어긋난 줄 번호 목록을 돌려준다.
+function orderProblems(rows) {
+  const bad = [];
+  rows.forEach((r, i) => {
+    if (r.start == null || r.end == null) return;
+    if (!(r.end > r.start) || (i > 0 && rows[i - 1].end != null && r.start < rows[i - 1].end - 1e-9)) bad.push(r.no);
+  });
+  return bad;
 }
 
 function align(samples, rate, script, minPause) {
   const lines = script.lines;
   const chunks = findChunks(samples, rate, minPause);
-  const syl = lines.map((l) => countSyllables(l.text));
+  // 대본 줄에 syllables(양의 정수)가 있으면 그 값을 쓴다(숫자·영문 줄 수동 입력용).
+  const syl = lines.map((l) => (Number.isInteger(l.syllables) && l.syllables > 0 ? l.syllables : countSyllables(l.text)));
   const totalSyl = syl.reduce((a, b) => a + Math.max(b, 1), 0);
   const totalDur = chunks.reduce((a, c) => a + (c.end - c.start), 0);
   const perSyl = totalDur / Math.max(totalSyl, 1);
@@ -171,18 +187,19 @@ function align(samples, rate, script, minPause) {
   rows.forEach((r) => { r.dur = r.end - r.start; r.rate = r.syllables / r.dur; });
   const med = median(rows.map((r) => r.rate));
   rows.forEach((r, i) => {
-    if (med > 0 && r.rate < med * RATE_LOW) r.reasons.push(`초당 음절 ${r.rate.toFixed(1)} (중간값 ${med.toFixed(1)}의 0.5배 미만)`);
-    if (med > 0 && r.rate > med * RATE_HIGH) r.reasons.push(`초당 음절 ${r.rate.toFixed(1)} (중간값 ${med.toFixed(1)}의 2배 초과)`);
+    if (med > 0 && r.rate < med * RATE_LOW - 1e-9) r.reasons.push(`초당 음절 ${r.rate.toFixed(1)} (중간값 ${med.toFixed(1)}의 0.5배 미만)`);
+    if (med > 0 && r.rate > med * RATE_HIGH + 1e-9) r.reasons.push(`초당 음절 ${r.rate.toFixed(1)} (중간값 ${med.toFixed(1)}의 2배 초과)`);
     if (i > 0) {
       const g = r.start - rows[i - 1].end;
-      if (g < BOUNDARY_MIN) r.reasons.push(`앞 줄과 쉼 ${g.toFixed(2)}초`);
+      if (g < BOUNDARY_MIN - 1e-9) r.reasons.push(`앞 줄과 쉼 ${g.toFixed(2)}초`);
     }
     if (i < rows.length - 1) {
       const g = rows[i + 1].start - r.end;
-      if (g < BOUNDARY_MIN) r.reasons.push(`뒤 줄과 쉼 ${g.toFixed(2)}초`);
+      if (g < BOUNDARY_MIN - 1e-9) r.reasons.push(`뒤 줄과 쉼 ${g.toFixed(2)}초`);
     }
-    r.uncertain = r.reasons.length > 0;
   });
+  for (const no of orderProblems(rows)) rows.find((r) => r.no === no).reasons.push("길이 또는 시간 순서 이상");
+  rows.forEach((r) => { r.uncertain = r.reasons.length > 0; });
   return { chunks, rows, mode, median: med };
 }
 
@@ -232,4 +249,4 @@ function main(argv) {
 }
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
-module.exports = { align, findChunks, countSyllables, toCsv, main };
+module.exports = { align, findChunks, countSyllables, orderProblems, toCsv, main };
