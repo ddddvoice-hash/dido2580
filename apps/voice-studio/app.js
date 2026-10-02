@@ -481,8 +481,15 @@
   drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
   drop.addEventListener("dragleave", () => drop.classList.remove("over"));
   drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); });
-  $("exportNotes").addEventListener("click", () => download(`city-dominion-annotation-${stamp()}.csv`, notesCsv()));
-  $("exportChecks").addEventListener("click", () => download(`voice-check-${stamp()}.csv`, checksCsv()));
+  // 파일 저장이 막힌 곳(웹 미리보기)에서는 저장 버튼을 복사 버튼으로 바꾼다.
+  if (window.VOICE_STUDIO_NO_DOWNLOAD) {
+    $("exportNotes").hidden = true;
+    $("exportChecks").textContent = "검사 결과 CSV 복사";
+    $("exportChecks").addEventListener("click", () => copy(checksCsv(), "검사 결과 CSV"));
+  } else {
+    $("exportNotes").addEventListener("click", () => download(`city-dominion-annotation-${stamp()}.csv`, notesCsv()));
+    $("exportChecks").addEventListener("click", () => download(`voice-check-${stamp()}.csv`, checksCsv()));
+  }
   $("copyNotes").addEventListener("click", () => copy(notesCsv(), "연기 메모 CSV"));
 
   const rows = $("codeRows");
