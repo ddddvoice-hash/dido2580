@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>디도 녹음 부스</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 레이아웃: 왼쪽은 대본 96줄 큐 시트, 오른쪽은 지금 줄의 큐 카드 → 연기 메모 → 테이크(파형) 순서. 휴대폰에서는 한 줄로 쌓는다. */
+:root {
+  --bg: #f2f5fa; --surface: #ffffff; --surface-2: #e8edf6; --ink: #172038; --muted: #5a6480; --line: #d5dcea;
+  --accent: #0e8c7e; --accent-ink: #ffffff; --onair: #e5484d; --onair-glow: rgba(229, 72, 77, .35); --sun: #f4b400;
+  --pass: #1f9d55; --warn: #b36b00; --reject: #d93a3e; --pass-bg: #e3f5ea; --warn-bg: #fff2d9; --reject-bg: #fde7e7;
+  --wave: #3b4a6b; --wave-speech: #0e8c7e; --room-band: #fff1c7; --zero-mark: #d93a3e; --focus: #3a6fd8;
+  --fam-energy: #e4572e; --fam-spark: #d99400; --fam-calm: #2e9d6e; --fam-clear: #3a6fd8;
+  --font-display: "Jua", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10162a; --surface: #182039; --surface-2: #212a47; --ink: #ecf0fa; --muted: #9aa5c3; --line: #2c3657;
+    --accent: #35c9b5; --accent-ink: #08201c; --onair: #ff5c61; --onair-glow: rgba(255, 92, 97, .45); --sun: #ffc83d;
+    --pass: #45c97e; --warn: #f0a43a; --reject: #ff6b6e; --pass-bg: #163a2a; --warn-bg: #3a2c12; --reject-bg: #3d1c22;
+    --wave: #8fa0cc; --wave-speech: #35c9b5; --room-band: #2e2a16; --zero-mark: #ff6b6e; --focus: #8fb3ff;
+    --fam-energy: #ff7a52; --fam-spark: #f5c042; --fam-calm: #4fc48e; --fam-clear: #6f9bff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10162a; --surface: #182039; --surface-2: #212a47; --ink: #ecf0fa; --muted: #9aa5c3; --line: #2c3657;
+  --accent: #35c9b5; --accent-ink: #08201c; --onair: #ff5c61; --onair-glow: rgba(255, 92, 97, .45); --sun: #ffc83d;
+  --pass: #45c97e; --warn: #f0a43a; --reject: #ff6b6e; --pass-bg: #163a2a; --warn-bg: #3a2c12; --reject-bg: #3d1c22;
+  --wave: #8fa0cc; --wave-speech: #35c9b5; --room-band: #2e2a16; --zero-mark: #ff6b6e; --focus: #8fb3ff;
+  --fam-energy: #ff7a52; --fam-spark: #f5c042; --fam-calm: #4fc48e; --fam-clear: #6f9bff;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 400 15px/1.55 var(--font-body); -webkit-font-smoothing: antialiased; }
+button, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* 상단 */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top-in { max-width: 1280px; margin: 0 auto; padding: 10px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.brand h1 { margin: 0; font: 400 26px/1 var(--font-display); letter-spacing: .5px; white-space: nowrap; }
+@media (max-width: 560px) { .brand span { display: none; } }
+.brand span { color: var(--muted); font-size: 13px; }
+.progress { flex: 1 1 260px; display: grid; gap: 4px; min-width: 0; }
+.progress-label { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.progress-label b { color: var(--ink); font-weight: 600; }
+.bar { height: 10px; border-radius: 99px; background: var(--surface-2); overflow: hidden; display: flex; }
+.bar i { display: block; height: 100%; transition: width .3s ease; }
+.bar .done { background: var(--sun); }
+.bar .retake { background: var(--reject); opacity: .55; }
+.onair { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 8px; border: 2px solid var(--line);
+  font: 500 13px/1 var(--font-mono); letter-spacing: 2px; color: var(--muted); background: var(--surface-2); transition: all .2s; }
+.onair::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.onair.live { color: var(--onair); border-color: var(--onair); box-shadow: 0 0 0 4px var(--onair-glow); }
+.onair.live::before { background: var(--onair); animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .onair.live::before { animation: none; } .bar i { transition: none; } }
+
+/* 본문 */
+.wrap { max-width: 1280px; margin: 0 auto; padding: 18px 16px 40px; display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .wrap { grid-template-columns: minmax(0, 1fr); } }
+
+/* 큐 시트 */
+.sheet { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 84px); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+@media (max-width: 900px) { .sheet { position: static; } }
+.sheet-head { padding: 12px 14px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sheet-head h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.legend { display: flex; gap: 10px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.list { list-style: none; margin: 0; padding: 4px 0; max-height: calc(100vh - 170px); overflow-y: auto; }
+@media (max-width: 900px) { .list { max-height: 240px; } }
+.list .scene { padding: 10px 14px 4px; font-size: 11.5px; letter-spacing: .6px; color: var(--muted); font-weight: 600; }
+.row { width: 100%; min-height: 48px; display: grid; grid-template-columns: 34px 10px minmax(0, 1fr); align-items: center; gap: 8px;
+  padding: 6px 14px; border: 0; background: none; text-align: left; cursor: pointer; }
+.row:hover { background: var(--surface-2); }
+.row[aria-current="true"] { background: var(--surface-2); box-shadow: inset 4px 0 0 var(--accent); }
+.row .no { font: 500 12.5px var(--font-mono); color: var(--muted); }
+.row .txt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); }
+.dot.pass { background: var(--pass); border-color: var(--pass); }
+.dot.retake { background: var(--reject); border-color: var(--reject); }
+.dot.noted { border-color: var(--accent); }
+
+/* 큐 카드 */
+.main { display: grid; gap: 18px; min-width: 0; }
+.cue { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 22px 24px; display: grid; gap: 14px; position: relative; overflow: hidden; }
+.cue::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 6px; background: var(--fam, var(--accent)); }
+.cue-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.cue-no { font: 400 44px/1 var(--font-display); color: var(--fam, var(--accent)); font-variant-numeric: tabular-nums; }
+.cue-meta { display: grid; gap: 2px; min-width: 0; }
+.cue-meta .scene { font-size: 12.5px; color: var(--muted); letter-spacing: .4px; }
+.cue-meta .key { font: 500 13px var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px; font-size: 14px; font-weight: 600;
+  background: var(--surface-2); color: var(--ink); }
+.chip::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--fam, var(--accent)); }
+.chip small { font-weight: 400; color: var(--muted); }
+.cue-text { margin: 0; font: 600 clamp(22px, 3.2vw, 32px)/1.4 var(--font-body); text-wrap: balance; word-break: keep-all; }
+.cue-foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.fname { display: inline-flex; align-items: center; gap: 8px; padding: 0 6px 0 14px; min-height: 48px; border-radius: 10px; background: var(--surface-2); max-width: 100%; }
+.fname code { font: 500 14px var(--font-mono); overflow-wrap: anywhere; min-width: 0; }
+.fname-label { font-size: 12px; color: var(--muted); }
+
+/* 버튼 */
+.btn { white-space: nowrap; flex-shrink: 0; min-height: 48px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 500; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.small { min-height: 48px; padding: 0 12px; font-size: 14px; }
+.kbd { font: 500 11.5px var(--font-mono); padding: 1px 6px; border-radius: 5px; border: 1px solid currentColor; opacity: .7; }
+.nav { display: flex; gap: 8px; margin-left: auto; }
+
+/* 연기 메모 */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 20px; display: grid; gap: 14px; }
+.panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 12px; }
+.panel h2 { margin: 0; font: 400 20px/1.2 var(--font-display); }
+.panel-head p { margin: 0; font-size: 13px; color: var(--muted); }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 560px) { .fields { grid-template-columns: minmax(0, 1fr); } }
+.field { display: grid; gap: 4px; }
+.field label, .field .lab { font-size: 13px; font-weight: 600; }
+.field label small, .field .lab small { font-weight: 400; color: var(--muted); }
+.field input, .field textarea { min-height: 48px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); width: 100%; }
+.field textarea { min-height: 72px; resize: vertical; }
+.field.wide { grid-column: 1 / -1; }
+.scale { position: relative; display: grid; grid-template-columns: repeat(5, minmax(48px, 1fr)); gap: 6px; }
+.scale input { position: absolute; left: 0; top: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+.scale label { min-height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); display: grid; place-items: center;
+  cursor: pointer; font: 400 20px var(--font-display); }
+.scale input:checked + label { background: var(--fam, var(--accent)); border-color: var(--fam, var(--accent)); color: var(--surface); }
+.scale input:focus-visible + label { outline: 3px solid var(--focus); outline-offset: 2px; }
+.saved { font-size: 12.5px; color: var(--muted); }
+
+/* 테이크 */
+.drop { border: 2px dashed var(--line); border-radius: 12px; padding: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: var(--bg); }
+.drop.over { border-color: var(--accent); background: var(--surface-2); }
+.drop p { margin: 0; font-size: 13.5px; color: var(--muted); flex: 1 1 240px; }
+.takes { display: grid; gap: 12px; }
+.take { border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 10px; background: var(--bg); }
+.take-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.take-name { font: 500 14px var(--font-mono); overflow-wrap: anywhere; min-width: 0; }
+.pill { padding: 3px 10px; border-radius: 99px; font-size: 13px; font-weight: 600; }
+.pill.pass { background: var(--pass-bg); color: var(--pass); }
+.pill.reject { background: var(--reject-bg); color: var(--reject); }
+.pill.example { background: var(--surface-2); color: var(--muted); font-weight: 500; }
+.take-actions { margin-left: auto; display: flex; gap: 6px; }
+.codes { display: flex; flex-wrap: wrap; gap: 6px; }
+.code { display: inline-flex; gap: 6px; align-items: baseline; padding: 4px 10px; border-radius: 8px; font-size: 13px; }
+.code b { font: 600 12.5px var(--font-mono); }
+.code.reject { background: var(--reject-bg); color: var(--reject); }
+.code.warn { background: var(--warn-bg); color: var(--warn); }
+.code.ok { background: var(--pass-bg); color: var(--pass); }
+.wave { width: 100%; height: 92px; display: block; border-radius: 8px; background: var(--surface); }
+.metrics { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 13px; color: var(--muted); }
+.metrics b { color: var(--ink); font-weight: 500; }
+.wave-key { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); }
+.wave-key span { display: inline-flex; align-items: center; gap: 5px; }
+.wave-key i { width: 14px; height: 8px; border-radius: 2px; display: inline-block; }
+.empty { padding: 18px; text-align: center; color: var(--muted); font-size: 14px; border-radius: 12px; background: var(--bg); }
+
+/* 바닥 */
+.bottom { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.codes-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.codes-table td { padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+.codes-table td:first-child { font: 600 13px var(--font-mono); white-space: nowrap; }
+.codes-table td:last-child { color: var(--muted); white-space: nowrap; }
+.keys { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; margin: 0; font-size: 14px; }
+.keys dt { text-align: right; }
+.keys dd { margin: 0; color: var(--muted); }
+.export { display: flex; flex-wrap: wrap; gap: 8px; }
+.guide-link { color: var(--accent); font-weight: 500; }
+.unmatched { display: grid; gap: 12px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><h1>디도 녹음 부스</h1><span>시티 도미니언 · 밝고 귀여운 모험 안내자</span></div>
+    <div class="progress" aria-label="녹음 진행률">
+      <div class="progress-label"><span>통과한 줄 <b id="doneCount">0</b> / 96</span><span id="retakeLabel"></span></div>
+      <div class="bar" aria-hidden="true"><i class="done" id="barDone" style="width:0"></i><i class="retake" id="barRetake" style="width:0"></i></div>
+    </div>
+    <div class="onair" id="onair" role="status" aria-label="재생 상태">ON AIR</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="sheet" aria-label="대본 줄 목록">
+    <div class="sheet-head">
+      <h2>큐 시트</h2>
+      <div class="legend" aria-hidden="true"><span><i class="dot pass"></i>통과</span><span><i class="dot retake"></i>다시</span><span><i class="dot"></i>대기</span></div>
+    </div>
+    <ul class="list" id="list"></ul>
+  </nav>
+
+  <main class="main">
+    <section class="cue" id="cue" tabindex="-1" aria-labelledby="cueText">
+      <div class="cue-top">
+        <div class="cue-no" id="cueNo">001</div>
+        <div class="cue-meta"><span class="scene" id="cueScene"></span><span class="key" id="cueKey"></span></div>
+        <span class="chip" id="cueDir"></span>
+        <div class="nav">
+          <button class="btn small" id="prevBtn" type="button">이전 줄 <span class="kbd">Q</span></button>
+          <button class="btn small" id="nextBtn" type="button">다음 줄 <span class="kbd">E</span></button>
+        </div>
+      </div>
+      <p class="cue-text" id="cueText"></p>
+      <div class="cue-foot">
+        <div class="fname"><span class="fname-label">다음 파일 이름</span><code id="fname"></code>
+          <button class="btn small" id="copyName" type="button">복사 <span class="kbd">C</span></button></div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="takeTitle">
+      <div class="panel-head"><h2 id="takeTitle">테이크</h2><p>WAV를 올리면 바로 검사합니다. 파일은 이 컴퓨터 밖으로 나가지 않습니다.</p></div>
+      <div class="drop" id="drop">
+        <button class="btn primary" id="pickBtn" type="button">WAV 올리기 <span class="kbd">A</span></button>
+        <input type="file" id="fileInput" accept=".wav,audio/wav,audio/x-wav" multiple class="sr" tabindex="-1">
+        <p>여러 개를 한 번에 올려도 됩니다. 파일 이름 앞 세 자리 숫자로 줄을 찾아 넣습니다. 여기에 끌어다 놓아도 됩니다.</p>
+      </div>
+      <div class="wave-key" aria-hidden="true">
+        <span><i style="background:var(--room-band)"></i>앞 10초 룸톤 자리</span>
+        <span><i style="background:var(--wave-speech)"></i>말소리</span>
+        <span><i style="background:var(--zero-mark)"></i>완전 0 구간(V08)</span>
+      </div>
+      <div class="takes" id="takes"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="noteTitle">
+      <div class="panel-head"><h2 id="noteTitle">연기 메모</h2><p>소리로는 안 남는 것을 적어 둡니다. <span class="saved" id="saved" aria-live="polite"></span></p></div>
+      <div class="fields">
+        <div class="field"><label for="f_gaze">시선 <small>어디를 보며</small></label><input id="f_gaze" autocomplete="off" placeholder="예: 화면 속 친구들 쪽, 살짝 위"></div>
+        <div class="field"><label for="f_move">동선 <small>몸의 이동</small></label><input id="f_move" autocomplete="off" placeholder="예: 마이크 쪽으로 반 걸음"></div>
+        <div class="field"><label for="f_breath">호흡 <small>들숨·멈춤</small></label><input id="f_breath" autocomplete="off" placeholder="예: 짧게 들이쉬고 바로"></div>
+        <div class="field"><label for="f_action">동작 <small>손·얼굴</small></label><input id="f_action" autocomplete="off" placeholder="예: 손 흔들며 미소"></div>
+        <div class="field wide"><span class="lab" id="scaleLab">감정 세기 <small>1 잔잔 ~ 5 최고조 · 숫자키 1–5</small></span>
+          <div class="scale" role="radiogroup" aria-labelledby="scaleLab" id="scale"></div></div>
+        <div class="field wide"><label for="f_memo">메모</label><textarea id="f_memo" placeholder="예: 두 번째 테이크가 더 밝음"></textarea></div>
+      </div>
+    </section>
+
+    <section class="panel" id="unmatchedPanel" aria-labelledby="unTitle" hidden>
+      <div class="panel-head"><h2 id="unTitle">줄 번호가 없는 파일</h2><p>평소 목소리 세트나 이름 규칙에 안 맞는 파일입니다. 검사는 똑같이 합니다.</p></div>
+      <div class="unmatched" id="unmatched"></div>
+    </section>
+
+    <div class="bottom">
+      <section class="panel" aria-labelledby="codeTitle">
+        <div class="panel-head"><h2 id="codeTitle">반려 코드</h2><p><a class="guide-link" href="https://claude.ai/code/artifact/2ef7ef05-e60f-487a-99b6-09a0b37be4e2" target="_blank" rel="noopener">목소리 원본 가이드</a> 기준</p></div>
+        <table class="codes-table"><tbody id="codeRows"></tbody></table>
+      </section>
+      <section class="panel" aria-labelledby="keyTitle">
+        <div class="panel-head"><h2 id="keyTitle">왼손 단축키</h2><p>글 쓰는 칸에서는 Esc로 빠져나옵니다.</p></div>
+        <dl class="keys">
+          <dt><span class="kbd">Q</span> <span class="kbd">E</span></dt><dd>이전 줄 · 다음 줄</dd>
+          <dt><span class="kbd">1</span>–<span class="kbd">5</span></dt><dd>감정 세기</dd>
+          <dt><span class="kbd">Space</span></dt><dd>마지막 테이크 듣기 · 멈춤</dd>
+          <dt><span class="kbd">A</span></dt><dd>WAV 올리기</dd>
+          <dt><span class="kbd">W</span></dt><dd>시선 칸으로 (Tab으로 다음 칸)</dd>
+          <dt><span class="kbd">C</span></dt><dd>다음 파일 이름 복사</dd>
+          <dt><span class="kbd">R</span></dt><dd>다음 반려 줄로 이동</dd>
+          <dt><span class="kbd">Esc</span></dt><dd>입력 칸에서 나오기</dd>
+        </dl>
+        <div class="export">
+          <button class="btn" id="exportNotes" type="button">연기 메모 CSV 저장</button>
+          <button class="btn" id="exportChecks" type="button">검사 결과 CSV 저장</button>
+          <button class="btn" id="copyNotes" type="button">연기 메모 CSV 복사</button>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="sr" id="live" aria-live="polite"></div>
+
+<script src="../reading-coach/analysis.js"></script>
+<script src="wav-check.js"></script>
+<script src="lines.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
