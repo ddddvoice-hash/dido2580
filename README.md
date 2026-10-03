@@ -257,3 +257,17 @@ python tools/calibrate.py 3000      # 축 기준선 다시 뽑기
 | `report.py` | 텍스트 리포트와 JSON 출력 |
 | `korean.py` | 받침에 맞춘 조사 선택 |
 | `cli.py` | 명령줄 인터페이스 |
+
+## 이 저장소의 다른 앱
+
+사주 패키지 말고도 목소리·낭독 작업용 앱이 `apps/` 아래에 있습니다. 모두 녹음 파일을 저장소에 올리지 않고, 외부 AI API를 부르지 않습니다.
+
+| 앱 | 하는 일 | 여는 법 (Windows PowerShell) |
+|---|---|---|
+| `apps/voice-studio` 디도 녹음 부스 | 대본 96줄 녹음, WAV 바로 검사, 시선·동선·호흡·동작 메모 | `start apps/voice-studio/index.html` |
+| `apps/voice-persona` 보이스 페르소나 실험실 | 안내 원문 사실 보존, 같은 원고 A/B 녹음의 말소리·쉼 비교 (Streamlit) | `cd apps/voice-persona; if ($?) { python -m streamlit run app.py }` |
+| `apps/voice-check` 녹음 검사기 | 반려 코드(V02·V05·V08), 기준 프로필, 일괄 검사, AI 음성 비교 (Node) | `node apps/voice-check/check.js <폴더>` |
+| `apps/reading-coach` 낭독 따라 읽기 코치 | 시범 낭독과 따라 읽기의 속도·쉼 비교 | `start apps/reading-coach/index.html` |
+| `apps/warmth-scorer` 따뜻함 채점기 | AI 답변을 기준표(`rubric.json`)로 채점, JSONL 내보내기 | `start apps/warmth-scorer/index.html` |
+
+푸시할 때마다 GitHub Actions(`.github/workflows/tests.yml`)가 사주 패키지, 보이스 페르소나, 녹음 검사기·녹음 부스 테스트를 모두 돌립니다.

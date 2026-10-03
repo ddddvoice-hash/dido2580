@@ -1,0 +1,55 @@
+# 푸시할 때마다 저장소의 모든 테스트를 돌린다. 녹음 파일이나 API 키는 쓰지 않는다(전부 합성 데이터).
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  saju:
+    name: 사주 패키지 (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest tests/ -q
+
+  voice-persona:
+    name: 보이스 페르소나 실험실 (Streamlit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/voice-persona
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -p "test_*.py" -v
+
+  voice-node:
+    name: 녹음 검사기·녹음 부스 (Node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: 녹음 검사기
+        run: |
+          node apps/voice-check/test.js
+          node apps/voice-check/test-align.js
+          node apps/voice-check/test-profile.js
+          node apps/voice-check/test-screen.js
+          node apps/voice-check/test-compare-ai.js
+      - name: 녹음 부스 (팀 검사기와 판정 일치, 대본 96줄 일치)
+        run: |
+          node apps/voice-studio/tests/parity.test.js
+          node apps/voice-studio/tests/lines.test.js
