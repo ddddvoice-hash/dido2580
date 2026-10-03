@@ -18,15 +18,20 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const prof = mkdtempSync(join(tmpdir(), 'wscheck-'));
 // 리눅스 root(클라우드·CI)에서는 샌드박스 없이만 뜬다. 윈도우에서는 해당 없음.
 const EXTRA = typeof process.getuid === 'function' && process.getuid() === 0 ? ['--no-sandbox'] : [];
-const chrome = spawn(CHROME, [...EXTRA, '--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${prof}`, '--no-first-run', '--window-size=1280,900', 'about:blank'], { stdio: 'ignore' });
+const chrome = spawn(CHROME, [...EXTRA, '--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${prof}`, '--no-first-run', '--window-size=1280,900', 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
+// 처음 뜨는 CI 러너에서는 크롬이 10초 넘게 걸릴 수 있어 30초까지 기다린다. 크롬이 먼저 죽으면 그 이유를 같이 알린다.
+let chromeErr = '', chromeExit = null;
+chrome.stderr.on('data', (d) => { chromeErr = (chromeErr + d).slice(-800); });
+chrome.on('exit', (c) => { chromeExit = c; });
+chrome.on('error', (e) => { chromeExit = -1; chromeErr = e.message; });
 
 let ws, id = 0; const pending = new Map(); const events = [];
 async function connect() {
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 150 && chromeExit === null; i++) {
     try { const t = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json(); const p = t.find((x) => x.type === 'page'); if (p) return p.webSocketDebuggerUrl; } catch {}
     await sleep(200);
   }
-  throw new Error('chrome not reachable');
+  throw new Error('chrome not reachable' + (chromeExit !== null ? ` (크롬 종료 코드 ${chromeExit}) ${chromeErr}` : ' (30초 대기)'));
 }
 function send(method, params = {}) {
   return new Promise((res, rej) => { const i = ++id; pending.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params })); });
