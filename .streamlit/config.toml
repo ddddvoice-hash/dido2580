@@ -1,0 +1,13 @@
+# Streamlit Community Cloud는 저장소 맨 위의 이 파일만 읽습니다(apps/voice-persona/.streamlit/config.toml과 같은 내용 유지).
+[theme]
+primaryColor = "#176B67"
+backgroundColor = "#F3F6F7"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#142B34"
+font = "sans serif"
+
+[server]
+maxUploadSize = 48
+
+[browser]
+gatherUsageStats = false

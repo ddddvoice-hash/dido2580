@@ -33,6 +33,9 @@ jobs:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - run: python -m unittest discover -s tests -p "test_*.py" -v
+      - name: 배포용 설정(저장소 맨 위)과 앱 설정이 같은지
+        run: diff <(tail -n +2 ../../.streamlit/config.toml) .streamlit/config.toml
+        shell: bash
 
   voice-node:
     name: 녹음 검사기·녹음 부스 (Node)

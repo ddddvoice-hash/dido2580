@@ -37,3 +37,13 @@ core 52개(JS 비교 2개는 node가 있을 때) + Streamlit AppTest 6개 = 58�
 ## 화면 흐름 (2026-10-03 개편)
 
 위쪽 단계 표시(1 읽을 문장 넣기 → 2 원고 확인 → 3 두 가지로 녹음 → 4 비교하고 기록 → 5 저장)가 지금 어디인지 보여 줍니다. 예문 버튼으로 바로 해 볼 수 있고, 녹음 단계에 읽을 원고가 크게 다시 나와 위로 올라가지 않아도 됩니다. 비교 단계는 '한눈에 보기'에서 말한 시간·쉼 차이를 한 문장씩 알려 주고, 자세한 값은 표로 보여 줍니다. 기술 정보(JSON)는 맨 아래 '개발자용 정보'로 옮겼습니다.
+
+## Streamlit Community Cloud에 올리기
+
+1. share.streamlit.io에서 앱 설정을 엽니다(기존 앱이면 Settings, 새 앱이면 Create app).
+2. 저장소 `ddddvoice-hash/dido2580`, 브랜치는 이 작업이 있는 브랜치, **Main file path는 `apps/voice-persona/app.py`**로 정합니다.
+3. 패키지는 이 폴더의 `requirements.txt`(streamlit 1.50.0)를 씁니다. Python은 3.11 이상을 고르세요.
+4. Community Cloud는 저장소 **맨 위의 `.streamlit/config.toml`만** 읽습니다. 그래서 같은 내용을 맨 위에도 두었고, CI가 두 파일이 같은지 확인합니다. 색이나 업로드 한도를 바꿀 때는 두 파일을 함께 바꿔 주세요.
+5. Cloud는 저장소 맨 위에서 앱을 실행합니다. 2026-10-03에 같은 방식(`streamlit run apps/voice-persona/app.py`)으로 띄워 첫 화면과 원고 만들기까지 오류 없음을 확인했습니다.
+
+API 키는 필요 없습니다. 나중에 AI를 붙이더라도 키는 Cloud의 Secrets에만 넣고 코드에는 넣지 않습니다(HANDOFF.md).
