@@ -204,6 +204,8 @@
       ["앞 10초 평균", fmt(t.roomDb, 1, " dBFS")], ["완전0 구간", t.zeroRuns + "개"],
     ].map(([k, v]) => `<span>${k} <b>${v}</b></span>`).join("");
     card.append(m);
+    const cmp = where === "line" ? compareBox(t) : null;
+    if (cmp) card.append(cmp);
     return card;
   }
 
@@ -239,6 +241,47 @@
     say(`${t.name} 지움`);
   }
 
+  // 음높이(팀 검사기 profile.js와 같은 계산)와 말한 길이. 원래 녹음과 비교할 때 쓴다. 실패해도 검사는 그대로 둔다.
+  function measureVoice(r) {
+    try {
+      const prof = window.VoiceProfile ? window.VoiceProfile.profile(r.samples, r.rate, Math.pow(10, r.peakDb / 20)) : null;
+      const an = window.ReadingAnalysis.analyze(r.samples, r.rate);
+      return {
+        hz: prof && prof.pitch.medianHz ? Math.round(prof.pitch.medianHz) : null,
+        rangeSt: prof && prof.pitch.rangeSemitones != null ? +prof.pitch.rangeSemitones.toFixed(1) : null,
+        speechSec: an.duration ? +an.duration.toFixed(2) : null,
+      };
+    } catch (e) { return null; }
+  }
+
+  // 원래 녹음의 같은 줄과 나란히 보여 준다. 점수가 아니라 차이만 말한다.
+  function compareBox(t) {
+    const ref = (window.CITY_REFERENCE || {})[t.line];
+    if (!ref || !t.voice) return null;
+    const box = document.createElement("div");
+    box.className = "compare";
+    const parts = [];
+    let far = false;
+    if (t.voice.hz && ref.hz) {
+      const st = 12 * Math.log2(t.voice.hz / ref.hz);
+      far = far || Math.abs(st) > 3;
+      const how = Math.abs(st) < 0.5 ? "거의 같음" : `${Math.abs(st).toFixed(1)}반음 ${st > 0 ? "높음" : "낮음"}`;
+      parts.push(`음높이 <b>${t.voice.hz}Hz</b> (원래 ${ref.hz}Hz, ${how})`);
+    }
+    if (t.voice.speechSec && ref.speechSec) {
+      const pct = Math.round((t.voice.speechSec / ref.speechSec - 1) * 100);
+      far = far || Math.abs(pct) > 25;
+      const how = Math.abs(pct) < 5 ? "거의 같음" : `${Math.abs(pct)}% ${pct > 0 ? "김" : "짧음"}`;
+      parts.push(`말한 길이 <b>${t.voice.speechSec.toFixed(2)}초</b> (원래 ${ref.speechSec.toFixed(2)}초, ${how})`);
+    }
+    if (!parts.length) return null;
+    box.innerHTML = `<b class="compare-title">원래 녹음과 비교</b><span>${parts.join(" · ")}</span>` +
+      (ref.uncertain ? `<span class="compare-note">원래 녹음의 이 줄은 자동으로 나눈 경계가 불확실해서 참고만 하세요.</span>` :
+        far ? `<span class="compare-note">원래 녹음과 차이가 큽니다(음높이 3반음 또는 길이 25% 넘게). 의도한 연기인지 들어 보세요.</span>` : "");
+    if (far && !ref.uncertain) box.classList.add("far");
+    return box;
+  }
+
   let uidSeq = 0;
   async function addFiles(files) {
     const wavs = Array.from(files).filter((f) => /\.wav$/i.test(f.name));
@@ -252,6 +295,7 @@
         const r = inspectBuffer(await f.arrayBuffer(), f.name);
         audio.set(uid, { samples: r.samples, rate: r.rate, speech: r.speech, zeroMarks: r.zeroMarks, duration: r.duration });
         t = { ...r, samples: undefined, speech: undefined, zeroMarks: undefined };
+        t.voice = measureVoice(r);
       } catch (e) {
         t = { name: f.name, error: e.message, status: "읽기 실패", reject: [], warn: [] };
       }
@@ -388,7 +432,7 @@
     const r = inspectBuffer(buf, name);
     const uid = "example";
     audio.set(uid, { samples: r.samples, rate: r.rate, speech: r.speech, zeroMarks: r.zeroMarks, duration: r.duration });
-    state.takes["001"] = [{ ...r, samples: undefined, speech: undefined, zeroMarks: undefined, uid, line: "001", example: true }];
+    state.takes["001"] = [{ ...r, samples: undefined, speech: undefined, zeroMarks: undefined, uid, line: "001", example: true, voice: measureVoice(r) }];
   }
 
   // ---- CSV --------------------------------------------------------------

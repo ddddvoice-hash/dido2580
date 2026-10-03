@@ -98,6 +98,8 @@ const T = (sec, amp = 0.5) => ({ tone: true, sec, amp });
   ok("006 44.1kHz → 통과 + FORMAT 경고", st.t006[0] && st.t006[0][0] === "통과" && st.t006[0][2].includes("FORMAT"), JSON.stringify(st.t006));
   ok("base_001은 줄 번호 없는 파일로", st.other.length === 1 && st.other[0] === "base_001_take01.wav");
   ok("진행률: 통과 2줄, 다시 3줄", await page.textContent("#doneCount") === "2" && (await page.textContent("#retakeLabel")).includes("3"));
+  const cmpText = await page.textContent("#takes");
+  ok("원래 녹음과 비교 표시 (음높이 220Hz 근처)", cmpText.includes("원래 녹음과 비교") && /음높이 2[12]\dHz/.test(cmpText), cmpText.match(/원래 녹음과 비교[^]*?(?=형식|$)/)?.[0]?.slice(0, 120));
   ok("다음 파일 이름이 take02로", await page.textContent("#fname") === "002_adventure_start_take02.wav");
   ok("알림(aria-live)에 결과 요약", (await page.textContent("#live")).includes("WAV가 아니라 건너뜀 1개"));
 
