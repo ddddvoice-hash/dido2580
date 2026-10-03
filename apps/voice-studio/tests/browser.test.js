@@ -101,7 +101,9 @@ const T = (sec, amp = 0.5) => ({ tone: true, sec, amp });
   const cmpText = await page.textContent("#takes");
   ok("원래 녹음과 비교 표시 (음높이 220Hz 근처)", cmpText.includes("원래 녹음과 비교") && /음높이 2[12]\dHz/.test(cmpText), cmpText.match(/원래 녹음과 비교[^]*?(?=형식|$)/)?.[0]?.slice(0, 120));
   ok("다음 파일 이름이 take02로", await page.textContent("#fname") === "002_adventure_start_take02.wav");
-  ok("알림(aria-live)에 결과 요약", (await page.textContent("#live")).includes("WAV가 아니라 건너뜀 1개"));
+  // say()는 화면 읽기 프로그램이 다시 읽도록 알림을 비웠다가 30ms 뒤에 채운다. 채워질 때까지 기다린다.
+  const liveOk = await page.waitForFunction(() => document.getElementById("live").textContent.includes("WAV가 아니라 건너뜀 1개"), null, { timeout: 3000 }).then(() => true, () => false);
+  ok("알림(aria-live)에 결과 요약", liveOk, await page.textContent("#live"));
 
   await page.locator("#cue").focus();
   await page.keyboard.press("r");
