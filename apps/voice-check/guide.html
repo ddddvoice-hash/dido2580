@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>녹음 검사기 사용법</title>
+<style>
+/* 녹음 검사기(명령 창용) 쉬운 안내. 자세한 규칙은 README.md에 있다. */
+:root {
+  --bg: #f3f6f7; --card: #ffffff; --ink: #142b34; --muted: #4b6068; --line: #d3dfe2;
+  --accent: #176b67; --accent-ink: #ffffff; --code: #eef3f4; --focus: #1f5fbf;
+  --reject: #b42328; --warn: #8a5300;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0f1c21; --card: #172a31; --ink: #e9f1f3; --muted: #a9bcc2; --line: #2a4049;
+          --accent: #4cc3b5; --accent-ink: #062320; --code: #0f2026; --focus: #8fb7ff;
+          --reject: #ff8a8f; --warn: #f2c26b; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 400 18px/1.6 "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 32px 16px 56px; }
+h1 { margin: 0 0 6px; font-size: 1.8rem; line-height: 1.3; }
+h2 { font-size: 1.2rem; margin: 32px 0 10px; }
+.lead, .muted { color: var(--muted); }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+ol.steps { padding-left: 1.4rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.cmd { display: flex; gap: 8px; align-items: stretch; margin-top: 6px; }
+.cmd code { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px 14px; border-radius: 10px;
+  background: var(--code); border: 1px solid var(--line); font: 500 .9rem/1.5 ui-monospace, Consolas, monospace; }
+button { min-height: 48px; min-width: 80px; padding: 0 16px; border-radius: 10px; border: 0; cursor: pointer;
+  background: var(--accent); color: var(--accent-ink); font: inherit; font-weight: 600; }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; background: var(--card); border-radius: 10px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .9rem; color: var(--muted); }
+td.code { font: 700 .95rem ui-monospace, Consolas, monospace; width: 5.5rem; }
+table { word-break: keep-all; overflow-wrap: anywhere; }
+.reject { color: var(--reject); } .warn { color: var(--warn); }
+.note { margin-top: 28px; padding: 14px 18px; border-radius: 12px; border: 1px dashed var(--line); color: var(--muted); font-size: .95rem; }
+</style>
+</head>
+<body>
+<main>
+  <p><a href="../index.html">← 작업실 첫 화면</a></p>
+  <h1>녹음 폴더 한꺼번에 검사하기</h1>
+  <p class="lead">녹음 검사기는 브라우저가 아니라 PowerShell 창에서 씁니다. 아래 명령을 <strong>복사</strong> 버튼으로 복사해 PowerShell에 붙여 넣고 <kbd>Enter</kbd> 한 번이면 됩니다. 녹음 파일은 읽기만 하고 고치지 않습니다.</p>
+
+  <h2>순서</h2>
+  <ol class="steps">
+    <li>PowerShell을 엽니다(<kbd>Win</kbd> 키 → <code>powershell</code> 입력 → <kbd>Enter</kbd>).</li>
+    <li>폴더 전체 검사: 녹음 폴더가 <code>(내 사용자 폴더)\voice-raw\base</code>일 때입니다. 다른 폴더면 따옴표 안만 바꾸세요.
+      <div class="cmd"><code id="c1">cd ~/dido2580; if ($?) { node apps/voice-check/check.js "$HOME\voice-raw\base" --csv "$HOME\voice-raw\_work\검사결과.csv" }</code><button type="button" data-copy="c1" aria-label="폴더 전체 검사 명령 복사">복사</button></div>
+      <p class="muted">결과는 화면에 표로 나오고, 엑셀로 열 수 있는 <code>검사결과.csv</code>도 <code>_work</code> 폴더에 생깁니다.</p>
+    </li>
+    <li>기준 목소리 프로필(음높이·빠르기·쉼): 파일 하나를 봅니다.
+      <div class="cmd"><code id="c2">cd ~/dido2580; if ($?) { node apps/voice-check/profile.js "$HOME\voice-raw\base\속리산.wav" }</code><button type="button" data-copy="c2" aria-label="기준 프로필 명령 복사">복사</button></div>
+    </li>
+  </ol>
+  <p class="muted" id="copy-status" aria-live="polite"></p>
+
+  <h2>결과 읽는 법</h2>
+  <div class="tbl" tabindex="0" role="region" aria-label="결과 표시 뜻 표">
+  <table>
+    <thead><tr><th scope="col">표시</th><th scope="col">뜻</th><th scope="col">어떻게 하나</th></tr></thead>
+    <tbody>
+      <tr><td class="code reject">V02</td><td>소리가 찢어짐(너무 큼)</td><td>입력 크기를 낮춰 다시 녹음</td></tr>
+      <tr><td class="code reject">V05</td><td>끝 여백이 0.3초보다 짧거나 1초보다 김</td><td>길면 자르기로 해결, 짧으면 다시 녹음</td></tr>
+      <tr><td class="code reject">V08</td><td>소리가 완전히 끊긴 구간(잡음 제거 같은 가공 흔적)</td><td>가공하지 않은 원본으로 다시 저장</td></tr>
+      <tr><td class="code warn">PEAK</td><td>가장 큰 소리가 권장(-6 ~ -3 dB) 밖</td><td>참고만, 다음 녹음 때 조절</td></tr>
+      <tr><td class="code warn">ROOM<br>NOISE</td><td>앞 10초 조용한 구간이 없거나 시끄러움</td><td>녹음 시작 뒤 10초 기다렸다 말하기</td></tr>
+      <tr><td class="code warn">NAME</td><td>파일 이름이 <code>001_키_take01.wav</code> 형식이 아님</td><td>이름만 바꾸면 됨</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="muted">빨간 표시(V로 시작)가 하나라도 있으면 그 파일은 다시 녹음하거나 손봐야 합니다. 노란 표시는 참고용입니다.</p>
+
+  <p class="note">컴퓨터에 Node가 없으면 명령이 실행되지 않습니다. 자세한 규칙과 다른 도구(대본 줄 맞추기, 여백 자르기, 새 녹음 한 번에 검사)는 저장소의 <code>apps/voice-check/README.md</code>에 있습니다.</p>
+</main>
+<script>
+// 복사 버튼: 클립보드가 막혀 있으면 명령 글자를 선택해 두어 Ctrl+C로 복사할 수 있게 한다.
+document.querySelectorAll('button[data-copy]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var el = document.getElementById(btn.dataset.copy), status = document.getElementById('copy-status');
+    function selectIt() {
+      var r = document.createRange(); r.selectNodeContents(el);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      status.textContent = '명령을 선택해 두었습니다. Ctrl+C로 복사하세요.';
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(el.textContent).then(function () {
+        status.textContent = '복사했습니다. PowerShell에 붙여 넣고 Enter를 누르세요.';
+      }, selectIt);
+    } else { selectIt(); }
+  });
+});
+</script>
+</body>
+</html>

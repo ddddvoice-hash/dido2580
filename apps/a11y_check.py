@@ -15,6 +15,7 @@ AXE = os.environ.get("AXE", "node_modules/axe-core/axe.min.js")
 pages=[("시작 화면",(ROOT/"apps/index.html").as_uri(),None),
        ("녹음 부스",(ROOT/"apps/voice-studio/index.html").as_uri(),None),
        ("낭독 코치",(ROOT/"apps/reading-coach/index.html").as_uri(),None),
+       ("녹음 검사기 안내",(ROOT/"apps/voice-check/guide.html").as_uri(),None),
        ("따뜻함 채점기","http://127.0.0.1:8765/index.html","example"),
        ("페르소나 실험실","http://127.0.0.1:8502","persona")]
 with sync_playwright() as p:

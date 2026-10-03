@@ -260,7 +260,7 @@ python tools/calibrate.py 3000      # 축 기준선 다시 뽑기
 
 ## 이 저장소의 다른 앱
 
-사주 패키지 말고도 목소리·낭독 작업용 앱이 `apps/` 아래에 있습니다. 처음이라면 시작 화면부터 여세요: `start apps/index.html` (하고 싶은 일을 고르면 맞는 앱이 열립니다). 모두 녹음 파일을 저장소에 올리지 않고, 외부 AI API를 부르지 않습니다.
+사주 패키지 말고도 목소리·낭독 작업용 앱이 `apps/` 아래에 있습니다. 처음이라면 탐색기에서 `apps/start.cmd`를 두 번 누르세요. 이 컴퓨터 안에서만 도는 작은 서버가 켜지고 시작 화면이 브라우저에 열립니다(하고 싶은 일을 고르면 맞는 앱이 열리고, 채점기 기준표도 자동으로 불러옵니다). 서버 없이 `start apps/index.html`로 열어도 됩니다. 두 방법은 브라우저 저장 공간이 따로라서, 문장 목록·채점 기록을 쓰던 쪽으로 계속 여세요. 모두 녹음 파일을 저장소에 올리지 않고, 외부 AI API를 부르지 않습니다.
 
 | 앱 | 하는 일 | 여는 법 (Windows PowerShell) |
 |---|---|---|
@@ -270,4 +270,4 @@ python tools/calibrate.py 3000      # 축 기준선 다시 뽑기
 | `apps/reading-coach` 낭독 따라 읽기 코치 | 시범 낭독과 따라 읽기의 속도·쉼 비교 | `start apps/reading-coach/index.html` |
 | `apps/warmth-scorer` 따뜻함 채점기 | AI 답변을 기준표(`rubric.json`)로 채점, JSONL 내보내기, 여러 평가자 JSONL을 모아 항목별 일치도·갈린 답변 보기 | `start apps/warmth-scorer/index.html` |
 
-푸시할 때마다 GitHub Actions(`.github/workflows/tests.yml`)가 사주 패키지, 보이스 페르소나, 녹음 검사기·녹음 부스 테스트를 모두 돌립니다.
+푸시할 때마다 GitHub Actions(`.github/workflows/tests.yml`)가 사주 패키지, 보이스 페르소나, 녹음 검사기·녹음 부스·낭독 코치, 따뜻함 채점기 테스트를 모두 돌립니다.
