@@ -66,6 +66,18 @@ function wav(file, parts, rate = 16000) {
   await page.focus("#mine-upload");
   ok("키보드로 '녹음 파일 올리기'에 갈 수 있음", await page.evaluate(() => document.activeElement.id === "mine-upload"));
 
+  // ---- 연기 연습 카드 ----
+  ok("카드 뽑기 전에는 녹음 버튼 꺼짐", !(await page.isEnabled("#card-rec")));
+  await page.click("#card-draw");
+  const cardText = await page.textContent("#card-status");
+  ok("카드 세 장과 읽을 안내", (await page.textContent("#card-who")) !== "—" && /읽어 보세요/.test(cardText) && !/[가-힣](이가|가이)\b/.test(cardText), cardText.slice(0, 60));
+  await page.setInputFiles("#card-file", same);
+  await page.waitForSelector("#card-check:not(.hidden)");
+  await page.check('#card-check input[data-c="0"]');
+  await page.click("#card-save");
+  const hist = await page.textContent("#history");
+  ok("카드 연습 기록(점수 없음, 점검 1/3)", hist.includes("카드:") && hist.includes("1/3"), hist.slice(0, 80));
+
   // ---- 선생님: 문장 관리 ----
   await page.fill("#sentence-new", "<b>굵게</b> 새 문장입니다. 천천히 읽어 보세요.");
   await page.click("#sentence-add");

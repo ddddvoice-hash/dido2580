@@ -45,6 +45,11 @@
   .legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: .9rem; margin-top: 8px; }
   .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
   label { display: block; padding: 6px 0; }
+  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+  @media (max-width: 520px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--bg); display: grid; gap: 2px; }
+  .card span { font-size: .8rem; color: var(--muted); }
+  .card b { font-size: 1.05rem; }
   .segment { margin-top: 14px; display: grid; gap: 6px; }
   .segment input[type=range] { width: 100%; min-height: 48px; accent-color: var(--accent, #1a73e8); }
   #chart { cursor: pointer; }
@@ -152,6 +157,31 @@
         <button id="seg-play">이 위치 번갈아 듣기</button>
       </div>
     </div>
+  </section>
+
+  <section aria-labelledby="h-cards">
+    <h2 id="h-cards">연기 연습 카드</h2>
+    <p class="hint" style="margin-top:0">카드 세 장을 뽑아 지금 문장을 그 조합으로 읽어 봅니다. 점수 없이 녹음하고 스스로 들어 봅니다.</p>
+    <div class="cards" aria-live="polite">
+      <div class="card"><span>누구</span><b id="card-who">—</b></div>
+      <div class="card"><span>감정</span><b id="card-feel">—</b></div>
+      <div class="card"><span>상황</span><b id="card-where">—</b></div>
+    </div>
+    <div class="row">
+      <button id="card-draw" class="primary">카드 뽑기</button>
+      <button id="card-rec" class="rec" disabled>이 카드로 녹음</button>
+      <button id="card-upload" disabled>녹음 파일 올리기</button>
+      <input type="file" id="card-file" accept="audio/*" class="sr-only" tabindex="-1" aria-label="카드 연습 녹음 파일">
+      <button id="card-play" disabled>들어 보기</button>
+    </div>
+    <div id="card-check" class="hidden">
+      <p class="sub-h" style="margin-top:12px">들어 보고 체크하세요</p>
+      <label><input type="checkbox" data-c="0">누구인지 목소리로 느껴진다</label>
+      <label><input type="checkbox" data-c="1">감정이 문장 끝까지 이어졌다</label>
+      <label><input type="checkbox" data-c="2">상황에 맞는 크기와 거리감이었다</label>
+      <div class="row"><button id="card-save">이 연습 기록하기</button></div>
+    </div>
+    <p class="status" id="card-status" aria-live="polite"></p>
   </section>
 
   <section aria-labelledby="h-check">
@@ -354,11 +384,13 @@ function sentenceLabel(id) {
   return i >= 0 ? `${i + 1}번` : "지운 문장";
 }
 
+const esc = (v) => String(v).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+
 function renderHistory() {
   const rows = loadHistory().slice().reverse().slice(0, 30);
   $("history").innerHTML = rows.length
-    ? rows.map((r) => `<tr><td>${r.date}</td><td>${sentenceLabel(r.sentence)}</td><td>${r.score ?? "-"}</td>
-        <td>${r.speed ?? "-"}</td><td>${r.checks}/${CHECKS.length}</td></tr>`).join("")
+    ? rows.map((r) => `<tr><td>${esc(r.date)}</td><td>${sentenceLabel(r.sentence)}</td><td>${r.score ?? "-"}</td>
+        <td>${esc(r.speed ?? "-")}</td><td>${r.checks}/${r.checkTotal || CHECKS.length}</td></tr>`).join("")
     : `<tr><td colspan="5">아직 기록이 없습니다.</td></tr>`;
 }
 
@@ -658,6 +690,56 @@ $("pack-apply").addEventListener("click", async () => {
   renderHistory();
   await selectSentence(0);
   $("pack-status").textContent = `시범 팩을 열었습니다. 문장 ${sentences.length}개, 시범 녹음 ${Object.keys(pack.demos).length}개.` + (ok ? "" : " 이 브라우저에 문장을 저장하지 못해, 새로고침하면 다시 열어야 합니다.");
+});
+
+// ---------- 연기 연습 카드 (점수 없음) ----------
+const CARD_WHO = ["다정한 할머니", "씩씩한 초등학생", "침착한 뉴스 앵커", "장난꾸러기 요정", "지친 회사원", "모험 안내자", "수줍은 신입 사원", "노련한 선장"];
+const CARD_FEEL = ["기쁨", "아쉬움", "놀람", "설렘", "단호함", "미안함", "자랑스러움", "걱정"];
+const CARD_WHERE = ["전화로", "귓속말로", "무대에서 관객에게", "아이에게 그림책 읽어 주듯", "급하게 뛰어가며", "잠들기 전 조용히", "라디오 생방송에서", "멀리 있는 친구를 부르듯"];
+let cardDraw = null, cardBlob = null;
+// 마지막 글자에 받침이 있으면 앞 조사(이·을), 없으면 뒤 조사(가·를).
+function josa(word, withFinal, without) {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  return word + (code >= 0 && code < 11172 && code % 28 ? withFinal : without);
+}
+const pick = (list, not) => { let v; do { v = list[Math.floor(Math.random() * list.length)]; } while (list.length > 1 && v === not); return v; };
+$("card-draw").addEventListener("click", () => {
+  cardDraw = { who: pick(CARD_WHO, cardDraw?.who), feel: pick(CARD_FEEL, cardDraw?.feel), where: pick(CARD_WHERE, cardDraw?.where) };
+  $("card-who").textContent = cardDraw.who;
+  $("card-feel").textContent = cardDraw.feel;
+  $("card-where").textContent = cardDraw.where;
+  cardBlob = null;
+  ["card-rec", "card-upload"].forEach((id) => { $(id).disabled = false; });
+  $("card-play").disabled = true;
+  $("card-check").classList.add("hidden");
+  $("card-check").querySelectorAll("input").forEach((c) => { c.checked = false; });
+  $("card-status").textContent = `${josa(cardDraw.who, "이", "가")} ${josa(cardDraw.feel, "을", "를")} 담아 ${cardDraw.where} 읽어 보세요: "${sentences[current].text}"`;
+});
+function onCardRecorded(blob, error) {
+  if (!blob) { $("card-status").textContent = error; return; }
+  cardBlob = blob;
+  $("card-play").disabled = false;
+  $("card-check").classList.remove("hidden");
+  $("card-status").textContent = "녹음했습니다. 들어 보고 아래를 체크하세요.";
+}
+recorder($("card-rec"), onCardRecorded, { idle: "이 카드로 녹음", recording: "녹음 멈추기" });
+$("card-upload").addEventListener("click", () => $("card-file").click());
+$("card-file").addEventListener("change", (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) onCardRecorded(f); });
+$("card-play").addEventListener("click", () => cardBlob && play(cardBlob));
+$("card-save").addEventListener("click", () => {
+  if (!cardDraw) return;
+  const list = loadHistory();
+  list.push({
+    date: new Date().toLocaleDateString("ko-KR"),
+    sentence: currentId(),
+    score: null,
+    speed: `카드: ${cardDraw.who}·${cardDraw.feel}·${cardDraw.where}`,
+    checks: $("card-check").querySelectorAll("input:checked").length,
+    checkTotal: 3,
+  });
+  saveHistory(list);
+  renderHistory();
+  $("card-status").textContent = "카드 연습을 기록했습니다.";
 });
 
 renderSentences();
