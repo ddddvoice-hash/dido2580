@@ -22,6 +22,8 @@ textarea,input,[data-baseweb="select"]{font-size:1rem!important}
 button,[data-testid="stDownloadButton"] button{min-height:48px!important;font-size:1rem!important;white-space:normal}
 [data-testid="stText"]{white-space:pre-wrap;overflow-wrap:anywhere}
 [data-testid="stMetricValue"]{font-size:1.4rem}
+[data-testid="stCaptionContainer"],[data-testid="stCaptionContainer"] p{color:#4b6068!important;opacity:1!important}
+[data-testid="stSidebarCollapsedControl"],[data-testid="stExpandSidebarButton"],[data-testid="stBaseButton-headerNoPadding"]{display:none!important}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #176b67!important;outline-offset:3px}
 [data-testid="stSidebar"]{display:none}
 [data-testid="stAudio"]{min-height:54px}

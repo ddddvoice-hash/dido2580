@@ -8,13 +8,13 @@
   :root {
     --bg: #f7f7f5; --card: #ffffff; --text: #1d1d1f; --muted: #5f6368; --line: #dadce0;
     --accent: #1f5fbf; --accent-text: #ffffff; --demo: #1f5fbf; --mine: #2e7d32;
-    --miss: #c62828; --extra: #b26a00; --rec: #c62828;
+    --miss: #c62828; --extra: #b26a00; --rec: #c62828; --rec-ink: #ffffff;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #121214; --card: #1d1d20; --text: #ececee; --muted: #a0a3a8; --line: #36363b;
       --accent: #7aa7ff; --accent-text: #0b1530; --demo: #7aa7ff; --mine: #74c77a;
-      --miss: #ff7a7a; --extra: #f0b453; --rec: #ff6b6b;
+      --miss: #ff7a7a; --extra: #f0b453; --rec: #ff6b6b; --rec-ink: #1f0606;
     }
   }
   * { box-sizing: border-box; }
@@ -34,7 +34,7 @@
   button { min-height: 48px; padding: 0 18px; border-radius: 10px; cursor: pointer;
            border: 1px solid var(--line); background: var(--card); color: var(--text); }
   button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-  button.rec { background: var(--rec); color: #fff; border-color: var(--rec); }
+  button.rec { background: var(--rec); color: var(--rec-ink); border-color: var(--rec); }
   button:disabled { opacity: .45; cursor: not-allowed; }
   button:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .status { color: var(--muted); min-height: 1.6em; margin-top: 8px; }
@@ -45,6 +45,7 @@
   .legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: .9rem; margin-top: 8px; }
   .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
   label { display: block; padding: 6px 0; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   input[type=checkbox] { width: 20px; height: 20px; vertical-align: -4px; margin-right: 8px; }
   details summary { cursor: pointer; color: var(--muted); }
   table { width: 100%; border-collapse: collapse; font-size: .95rem; }
@@ -59,7 +60,7 @@
 
   <section aria-labelledby="h-sentence">
     <h2 id="h-sentence">1. 문장 고르기</h2>
-    <label for="sentence-select" class="hidden">연습 문장</label>
+    <label for="sentence-select" class="sr-only">연습 문장</label>
     <select id="sentence-select"></select>
     <p class="sentence" id="sentence-text"></p>
   </section>

@@ -11,8 +11,8 @@
 /* 레이아웃: 왼쪽은 대본 96줄 큐 시트, 오른쪽은 지금 줄의 큐 카드 → 연기 메모 → 테이크(파형) 순서. 휴대폰에서는 한 줄로 쌓는다. */
 :root {
   --bg: #f2f5fa; --surface: #ffffff; --surface-2: #e8edf6; --ink: #172038; --muted: #5a6480; --line: #d5dcea;
-  --accent: #0e8c7e; --accent-ink: #ffffff; --onair: #e5484d; --onair-glow: rgba(229, 72, 77, .35); --sun: #f4b400;
-  --pass: #1f9d55; --warn: #b36b00; --reject: #d93a3e; --pass-bg: #e3f5ea; --warn-bg: #fff2d9; --reject-bg: #fde7e7;
+  --accent: #0b7a6e; --accent-ink: #ffffff; --onair: #e5484d; --onair-glow: rgba(229, 72, 77, .35); --sun: #f4b400;
+  --pass: #157a42; --warn: #8a5300; --reject: #b42328; --pass-bg: #e3f5ea; --warn-bg: #fff2d9; --reject-bg: #fde7e7;
   --wave: #3b4a6b; --wave-speech: #0e8c7e; --room-band: #fff1c7; --zero-mark: #d93a3e; --focus: #3a6fd8;
   --fam-energy: #e4572e; --fam-spark: #d99400; --fam-calm: #2e9d6e; --fam-clear: #3a6fd8;
   --font-display: "Jua", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
@@ -235,7 +235,7 @@ button, input, textarea { font: inherit; color: inherit; }
       <div class="panel-head"><h2 id="takeTitle">테이크</h2><p>WAV를 올리면 바로 검사합니다. 파일은 이 컴퓨터 밖으로 나가지 않습니다.</p></div>
       <div class="drop" id="drop">
         <button class="btn primary" id="pickBtn" type="button">WAV 올리기 <span class="kbd">A</span></button>
-        <input type="file" id="fileInput" accept=".wav,audio/wav,audio/x-wav" multiple class="sr" tabindex="-1">
+        <input type="file" id="fileInput" aria-label="WAV 파일 고르기" accept=".wav,audio/wav,audio/x-wav" multiple class="sr" tabindex="-1">
         <p>여러 개를 한 번에 올려도 됩니다. 파일 이름 앞 세 자리 숫자로 줄을 찾아 넣습니다. 여기에 끌어다 놓아도 됩니다.</p>
       </div>
       <div class="wave-key" aria-hidden="true">
