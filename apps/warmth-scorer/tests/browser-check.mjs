@@ -1,7 +1,7 @@
 // 팀장 검수: 헤드리스 Chrome을 DevTools 프로토콜로 조작해 체크리스트를 확인한다.
 // 사용: apps/warmth-scorer 폴더에서 python -m http.server 8765 를 켠 뒤
 //   node tests/browser-check.mjs http://127.0.0.1:8765 file:///<절대경로>/index.html rubric.json
-// Chrome(C:/Program Files/Google/Chrome)이 필요하다. 앱 파일은 바꾸지 않는다.
+// Chrome이 필요하다(윈도우 기본 경로, 다른 곳은 CHROME 환경변수로 지정). 앱 파일은 바꾸지 않는다.
 import { spawn } from 'node:child_process';
 import { readFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -9,14 +9,16 @@ import { join } from 'node:path';
 
 const [, , HTTP, FILEURL, RUBRIC] = process.argv;
 const rubric = JSON.parse(readFileSync(RUBRIC, 'utf8'));
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const CHROME = process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const PORT = 9333;
 const results = [];
 const ok = (name, pass, detail = '') => { results.push({ name, pass, detail }); console.log((pass ? 'PASS ' : 'FAIL ') + name + (detail ? '  — ' + detail : '')); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const prof = mkdtempSync(join(tmpdir(), 'wscheck-'));
-const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${prof}`, '--no-first-run', '--window-size=1280,900', 'about:blank'], { stdio: 'ignore' });
+// 리눅스 root(클라우드·CI)에서는 샌드박스 없이만 뜬다. 윈도우에서는 해당 없음.
+const EXTRA = typeof process.getuid === 'function' && process.getuid() === 0 ? ['--no-sandbox'] : [];
+const chrome = spawn(CHROME, [...EXTRA, '--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${prof}`, '--no-first-run', '--window-size=1280,900', 'about:blank'], { stdio: 'ignore' });
 
 let ws, id = 0; const pending = new Map(); const events = [];
 async function connect() {
