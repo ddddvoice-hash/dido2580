@@ -4,8 +4,8 @@ import hashlib
 import io
 import zipfile
 import streamlit as st
-from core import (MODES, PERSONAS, SCENARIOS, analyze_wav, build_result,
-                  load_bundle, make_bundle, result_is_current)
+from core import (MAX_SESSION_AUDIO, MODES, PERSONAS, SCENARIOS, analyze_wav, audio_total, build_result,
+                  drop_other_audio, load_bundle, make_bundle, result_is_current)
 
 st.set_page_config(page_title="보이스 페르소나 실험실", page_icon="🎙️", layout="wide",
                    initial_sidebar_state="collapsed")
@@ -35,7 +35,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 DEFAULT_SOURCE = "에러 코드 404: 지문 생체 인증에 3회 연속 실패하여 계정이 잠겼습니다. 고객센터로 문의하십시오."
 for key, value in {"source_input": DEFAULT_SOURCE, "persona_input": "senior", "scenario_input": "error",
                    "mode_input": "original", "rate_input": .85, "pause_input": 850,
-                   "result": None, "audio_by_result": {}, "checks_by_result": {}}.items():
+                   "result": None, "audio_by_result": {}, "checks_by_result": {}, "cleanup_notice": ""}.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
@@ -61,6 +61,23 @@ def persona_defaults():
     st.session_state.pause_input = persona.pause_ms
 
 
+def set_result(new):
+    """결과를 바꾼다. 다른 작업이 되면 이전 작업의 녹음·확인 표시·메모를 지워 서버 메모리에 쌓지 않는다."""
+    old = st.session_state.result
+    st.session_state.result = new
+    if old is None or old.fingerprint == new.fingerprint:
+        return
+    st.session_state.pop("export_cache", None)
+    dropped, count = drop_other_audio(st.session_state.audio_by_result, new.fingerprint)
+    for fp in dropped:
+        st.session_state.checks_by_result.pop(fp, None)
+    for fp in set(dropped) | {old.fingerprint}:
+        for key in [k for k in st.session_state if isinstance(k, str) and fp in k and k.startswith(("loaded_", "check_", "notes_"))]:
+            del st.session_state[key]
+    st.session_state.cleanup_notice = (f"이전 작업의 녹음 {count}개를 서버 메모리에서 지웠습니다. "
+                                       "필요하면 작업 JSON으로 먼저 저장해 두세요.") if count else ""
+
+
 def restore_workshop():
     uploaded = st.session_state.get("workshop_file")
     if uploaded is None or not st.session_state.get("replace_confirm"):
@@ -76,7 +93,7 @@ def restore_workshop():
         widget = {"source":"source_input", "persona":"persona_input", "scenario":"scenario_input",
                   "mode":"mode_input", "rate":"rate_input", "pause_ms":"pause_input"}[name]
         st.session_state[widget] = value
-    st.session_state.result = result
+    set_result(result)
     st.session_state.audio_by_result[result.fingerprint] = audio
     st.session_state.checks_by_result[result.fingerprint] = checks
     st.session_state[f"notes_{result.fingerprint}"] = notes
@@ -117,14 +134,14 @@ with st.expander("낭독 설계 조정 · 실제 청자의 선호에 맞춰 바�
     st.write(persona.breath)
     st.slider("기본 낭독 대비 속도 설계값", min_value=.6, max_value=1.3, step=.05, key="rate_input")
     st.slider("문장 사이 쉼 설계값 (ms)", min_value=250, max_value=1800, step=50, key="pause_input")
-    st.caption("설계값은 사람이 낭독할 때 참고하는 값입니다. 음성에 자동 적용되거나 청자의 이해도를 측정한 값이 아닙니다.")
+    st.caption("설계값은 사람이 낭독할 때 참고하는 값입니다. 음성에 자동 적용되거나 이해도를 측정한 값이 아닙니다.")
 
 inputs = {"source": st.session_state.source_input, "persona": st.session_state.persona_input,
           "scenario": st.session_state.scenario_input, "mode": st.session_state.mode_input,
           "rate": st.session_state.rate_input, "pause_ms": st.session_state.pause_input}
 if st.button("원문 확인하고 낭독 원고 준비", type="primary", key="prepare"):
     try:
-        st.session_state.result = build_result(inputs)
+        set_result(build_result(inputs))
     except ValueError as e:
         st.error(str(e))
 
@@ -151,7 +168,7 @@ if result.edits:
     with st.expander("바뀐 표현과 검사 범위"):
         for edit in result.edits:
             st.text(f"{edit.before} → {edit.after}")
-        st.caption("이 검사는 등록된 편집만 수행했는지 확인합니다. 일반적인 문장 의미 동등성이나 이해도를 자동 보증하지 않습니다.")
+        st.caption("이 검사는 등록된 편집만 수행했는지 확인합니다. 일반적인 문장 의미 동등성을 자동으로 보증하지는 않습니다.")
 else:
     st.success("원문 그대로 보존했습니다. 새 전화번호·위치·행동은 추가하지 않았습니다.")
     if inputs["mode"] == "terms":
@@ -166,7 +183,9 @@ with st.expander("낭독 설계 JSON · 실제 처리 결과와 구분"):
 
 st.header("3. 같은 원고로 A/B 녹음")
 st.write("A는 기본 낭독, B는 쉼·강조·속도를 조정한 낭독입니다. 두 녹음 모두 위의 같은 원고를 읽으세요.")
-st.caption("마이크는 HTTPS 또는 localhost에서 브라우저 권한이 필요합니다. 마이크 대신 WAV 파일을 올려도 됩니다(MP3·M4A는 WAV로 바꿔 올려 주세요). WAV는 각 10분 이하이고, 이 화면에서는 48MB까지 올릴 수 있습니다.")
+st.caption("마이크는 HTTPS 또는 localhost에서 브라우저 권한이 필요합니다. 마이크 대신 WAV 파일을 올려도 됩니다. MP3·M4A는 WAV로 바꿔 올려 주세요. WAV는 각 10분 이하이고, 이 화면에서는 48MB까지 올릴 수 있습니다.")
+if st.session_state.cleanup_notice:
+    st.info(st.session_state.cleanup_notice)
 current_audio = st.session_state.audio_by_result.setdefault(result.fingerprint, {})
 current_checks = st.session_state.checks_by_result.setdefault(result.fingerprint, {})
 
@@ -192,6 +211,9 @@ for slot, column in zip(("A", "B"), st.columns(2)):
                     st.error(st.session_state[error_key])
                 continue
             try:
+                # 세션 전체 녹음 용량을 넘지 않게 한다(이 슬롯의 기존 녹음은 교체되므로 뺀다).
+                if audio_total(st.session_state.audio_by_result) - len(current_audio.get(slot, b"")) + len(data) > MAX_SESSION_AUDIO:
+                    raise ValueError(f"세션에 둘 수 있는 녹음은 모두 {MAX_SESSION_AUDIO // 1_000_000}MB까지입니다.")
                 cached_meta(data)
             except ValueError as e:
                 message = f"새 {source_kind} 녹음을 적용하지 못했습니다: {e} 기존 유효 녹음은 유지됩니다."
@@ -224,7 +246,7 @@ if len(current_audio) == 2:
     meta_a, meta_b = cached_meta(current_audio["A"]), cached_meta(current_audio["B"])
     duration_a, duration_b = meta_a["duration"], meta_b["duration"]
     st.write(f"파일 길이: A {duration_a:.2f}초 / B {duration_b:.2f}초 · 차이 {duration_b-duration_a:+.2f}초")
-    st.caption("파일 길이에는 앞뒤 여백이 포함됩니다. 길이 차이만으로 말하기 속도나 이해도를 판단하지 않습니다.")
+    st.caption("파일 길이에는 앞뒤 여백이 포함됩니다. 길이 차이만으로 말하기 속도나 이해도를 판단할 수 없습니다.")
     sp_a, sp_b = meta_a["speech"], meta_b["speech"]
     for slot, sp in (("A", sp_a), ("B", sp_b)):
         if not sp["found"]:
@@ -248,7 +270,7 @@ if len(current_audio) == 2:
               "B": [cell(sp_b, "speech_start"), cell(sp_b, "speech_end"), cell(sp_b, "spoken"), count(sp_b),
                     pause_cell(sp_b, "pause_median"), pause_cell(sp_b, "pause_longest")],
               "B 설계값(참고)": ["-", "-", "-", "-", f"문장 사이 쉼 {design}", "-"]})
-    st.caption("말소리와 쉼은 녹음 소리 크기로 잰 값입니다. 약 0.25초 이상 이어진 무음만 쉼으로 셉니다. 문장 사이가 아닌 곳의 숨 고르기도 쉼에 들어갈 수 있고, 설계값은 참고용이라 맞고 틀림을 가리는 값이 아닙니다. 점수나 이해도가 아닙니다.")
+    st.caption("말소리와 쉼은 녹음 소리 크기로 잰 값입니다. 약 0.25초 이상 이어진 무음만 쉼으로 셉니다. 문장 사이가 아닌 곳의 숨 고르기도 쉼에 들어갑니다. 설계값은 참고용이라 맞고 틀림을 가리는 값이 아닙니다. 점수나 이해도도 아닙니다.")
     if all(current_checks.get(slot) for slot in ("A", "B")):
         st.success("같은 원고인지 직접 확인했습니다. 어떤 낭독이 더 잘 전달됐는지 이유를 남겨 주세요.")
 else:
@@ -257,19 +279,37 @@ notes = st.text_area("더 잘 전달된 낭독과 그 이유", key=f"notes_{resu
                    placeholder="예: B는 다음 행동 앞에서 쉬어 버튼 이름이 더 잘 들렸습니다.")
 
 st.header("5. 작업 보관")
-st.caption("입력·녹음은 현재 Streamlit 세션에 있습니다. 연결 종료·새로고침·서버 재시작으로 사라질 수 있으니 작업 JSON을 내려받으세요. 배포한 서버는 업로드한 음성을 처리합니다.")
-try:
-    bundle = make_bundle(result, current_audio, current_checks, notes)
+st.caption("입력·녹음은 현재 Streamlit 세션에 있습니다. 연결 종료·새로고침·서버 재시작으로 사라질 수 있습니다. 작업 JSON을 내려받으세요. 배포한 서버는 업로드한 녹음을 처리합니다.")
+def build_exports():
+    """작업 JSON과 ZIP. 녹음 해시·확인 표시·원문·메모가 같으면 다시 만들지 않는다(최근 1개만 보관)."""
+    key = (result.fingerprint, tuple((slot, cached_meta(d)["sha256"]) for slot, d in sorted(current_audio.items())),
+           tuple(sorted(current_checks.items())), notes)
+    cache = st.session_state.get("export_cache")
+    if cache and cache[0] == key:
+        return cache[1], cache[2], cache[3]
+    try:
+        bundle, error = make_bundle(result, current_audio, current_checks, notes), None
+    except ValueError as e:
+        bundle, error = None, str(e)
+    audio_zip = None
+    if current_audio:
+        buffer = io.BytesIO()
+        # WAV는 압축이 거의 안 되므로 그대로 담는다.
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_STORED) as archive:
+            for slot, data in current_audio.items():
+                archive.writestr(f"persona-{slot}.wav", data)
+            archive.writestr("script.txt", result.text)
+            archive.writestr("notes.txt", notes)
+        audio_zip = buffer.getvalue()
+    st.session_state.export_cache = (key, bundle, error, audio_zip)
+    return bundle, error, audio_zip
+
+
+bundle, bundle_error, audio_zip = build_exports()
+if bundle_error:
+    st.error(bundle_error)
+else:
     st.download_button("원문·설계·녹음·메모 전체 저장", data=bundle, file_name="voice-persona-workshop.json", mime="application/json")
-except ValueError as e:
-    st.error(str(e))
 st.download_button("낭독 원고 TXT 받기", data=result.text.encode(), file_name="narration-script.txt", mime="text/plain")
-if current_audio:
-    audio_zip = io.BytesIO()
-    # WAV는 압축이 거의 안 되므로 그대로 담는다(rerun마다 큰 파일을 압축하지 않게).
-    with zipfile.ZipFile(audio_zip, "w", zipfile.ZIP_STORED) as archive:
-        for slot, data in current_audio.items():
-            archive.writestr(f"persona-{slot}.wav", data)
-        archive.writestr("script.txt", result.text)
-        archive.writestr("notes.txt", notes)
-    st.download_button("녹음과 원고 ZIP 받기", data=audio_zip.getvalue(), file_name="persona-comparison.zip", mime="application/zip")
+if audio_zip:
+    st.download_button("녹음과 원고 ZIP 받기", data=audio_zip, file_name="persona-comparison.zip", mime="application/zip")

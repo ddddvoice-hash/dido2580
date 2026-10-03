@@ -4,6 +4,8 @@ from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from core import *
+from core import _frame_size as core_frame_size
+import shutil,subprocess
 
 def inputs(source="파일 업로드가 실패했습니다. 파일은 삭제되지 않았습니다. '다시 업로드'를 눌러 주세요.", **changes):
     return {"source":source,"persona":"senior","scenario":"error","mode":"original","rate":.85,"pause_ms":850,**changes}
@@ -225,5 +227,113 @@ class CacheTests(unittest.TestCase):
     def test_invalid_data_is_not_cached_as_valid(self):
         with self.assertRaises(ValueError):analyze_wav(b'not audio')
         with self.assertRaises(ValueError):analyze_wav(b'not audio')
+
+
+class ReviewFixTests(unittest.TestCase):
+    """6번 교차 리뷰 반영(2026-10-03). 기존 테스트는 그대로 두고 추가한다."""
+    def pad(self,seconds=.5,rate=24000):return [0.0]*round(seconds*rate)
+    def speech(self,values):return measure_speech(self.pad()+values+self.pad(),24000)
+
+    def test_blip_60ms_rejected_and_80ms_kept_with_real_threshold(self):
+        # 앞에 긴 소리가 있어 임계값 검사는 통과한다. 짧은 소리 필터만 결과를 가른다.
+        def run(blip):return measure_speech(sine(1,24000)+self.pad()+sine(blip,24000)+self.pad()+self.pad(),24000)
+        short,ok=run(.06),run(.08)
+        self.assertTrue(short['found']);self.assertEqual(short['pause_count'],0)
+        self.assertEqual(ok['pause_count'],1)  # 80ms 소리는 말소리로 남아 앞의 0.5초 쉼이 잡힌다
+
+    def test_pause_boundary_240_not_counted_260_counted(self):
+        self.assertEqual(self.speech(tone_pause_tone(.24))['pause_count'],0)
+        m=self.speech(tone_pause_tone(.26))
+        self.assertEqual(m['pause_count'],1);self.assertAlmostEqual(m['pause_longest'],.26,delta=.001)
+
+    def test_frame_size_rounds_half_up_like_js(self):
+        self.assertEqual(core_frame_size(8025),161);self.assertEqual(core_frame_size(8000),160)
+        self.assertEqual(core_frame_size(44100),882);self.assertEqual(core_frame_size(11025),221)
+
+    def test_riff_declared_size_checked(self):
+        good=riff(sine(.5,24000),16)
+        for size in (0,0xFFFFFFFF):  # 스트리밍 도구가 남기는 자리표시값은 허용
+            analyze_wav(good[:4]+struct.pack('<I',size)+good[8:])
+        with self.assertRaises(ValueError):analyze_wav(good[:4]+struct.pack('<I',4)+good[8:])
+        with self.assertRaises(ValueError):analyze_wav(good[:4]+struct.pack('<I',30)+good[8:])
+        analyze_wav(good+b'junk')  # 파일 끝에 덧붙은 바이트는 허용
+
+    def test_data_size_must_be_whole_frames(self):
+        body=encode(sine(.5,24000),16,1)
+        for declared in (len(body)-1,len(body)-3):  # 16bit 모노에서 샘플(2바이트)로 나누어 떨어지지 않는 크기
+            with self.assertRaises(ValueError):analyze_wav(riff(sine(.5,24000),16,declared=declared))
+        stereo=encode(sine(.5,24000),16,1)  # 스테레오는 4바이트 단위: 2바이트 어긋남도 거부
+        with self.assertRaises(ValueError):analyze_wav(riff(sine(.5,24000),16,channels=2,declared=len(stereo)-2))
+
+    def test_extensible_valid_bits_and_cbsize_checked(self):
+        good=riff(sine(.5,24000),32,rate=24000,extensible=True)
+        analyze_wav(good)
+        bad_bits=bytearray(good);bad_bits[38:40]=struct.pack('<H',33)   # 컨테이너 32bit에 유효 비트 33
+        with self.assertRaises(ValueError):analyze_wav(bytes(bad_bits))
+        bad_cb=bytearray(good);bad_cb[36:38]=struct.pack('<H',65535)    # fmt 청크 밖까지 선언한 확장 길이
+        with self.assertRaises(ValueError):analyze_wav(bytes(bad_cb))
+        ok_bits=bytearray(good);ok_bits[38:40]=struct.pack('<H',24)     # 32bit 컨테이너의 24bit 유효 비트는 정상
+        analyze_wav(bytes(ok_bits))
+
+    def test_deeply_nested_backup_is_user_error(self):
+        for raw in (b'['*20000+b']'*20000,b'{"a":'*20000+b'1'+b'}'*20000):
+            with self.assertRaises(ValueError) as e:load_bundle(raw)
+            self.assertIn('현재 작업은 유지',str(e.exception))
+
+    def test_decode_memory_does_not_scale_with_input(self):
+        import tracemalloc
+        n=48000*6*40  # 48kHz 24bit 스테레오 40초
+        head=riff([0.0]*2,24,rate=48000,channels=2,declared=n)[:-6]
+        data=head[:4]+struct.pack('<I',len(head)-8+n)+head[8:]+bytes(range(256))*(n//256)+bytes(n%256)
+        tracemalloc.start();base=tracemalloc.get_traced_memory()[0];tracemalloc.reset_peak()
+        analyze_wav(data);extra=tracemalloc.get_traced_memory()[1]-base;tracemalloc.stop()
+        self.assertLess(extra,len(data))  # 이전 구현은 입력의 약 2.75배였다
+
+    def test_session_audio_limit_and_cleanup_helpers(self):
+        self.assertGreaterEqual(MAX_SESSION_AUDIO,2*MAX_AUDIO)
+        store={'a':{'A':b'12','B':b'345'},'b':{'A':b'6'}}
+        self.assertEqual(audio_total(store),6)
+        dropped,count=drop_other_audio(store,'b')
+        self.assertEqual((dropped,count),(['a'],2));self.assertEqual(list(store),['b'])
+
+
+NODE=shutil.which('node');ANALYSIS_JS=Path(__file__).resolve().parents[2]/'reading-coach'/'analysis.js'
+JS_RUNNER="""const A=require(process.argv[1]);const cases=JSON.parse(require('fs').readFileSync(0,'utf8'));
+console.log(JSON.stringify(cases.map(c=>{const r=A.analyze(Float32Array.from(c.samples),c.rate);
+return {found:r.speechEnd>0,start:r.speechStart,end:r.speechEnd,spoken:r.spoken,pauses:r.pauses.length,longest:Math.max(0,...r.pauses.map(p=>p.length))};})));"""
+
+@unittest.skipUnless(NODE and ANALYSIS_JS.exists(),'node가 없어 JS 비교는 건너뜁니다')
+class JsParityTests(unittest.TestCase):
+    """apps/reading-coach/analysis.js를 node로 실제 돌려 같은 합성음에서 결과가 같은지 비교한다."""
+    def js(self,cases):
+        out=subprocess.run([NODE,'-e',JS_RUNNER,str(ANALYSIS_JS)],input=json.dumps([{'samples':s,'rate':r} for s,r in cases]),capture_output=True,text=True,encoding='utf-8',check=True,timeout=60)
+        return json.loads(out.stdout)
+    def same(self,py,js,label):
+        self.assertEqual(py['found'],js['found'],label)
+        if not py['found']:return
+        self.assertAlmostEqual(py['speech_start'],js['start'],places=9,msg=label)
+        self.assertAlmostEqual(py['speech_end'],js['end'],places=9,msg=label)
+        self.assertAlmostEqual(py['spoken'],js['spoken'],places=9,msg=label)
+        self.assertEqual(py['pause_count'],js['pauses'],label)
+        self.assertAlmostEqual(py['pause_longest'] or 0,js['longest'],places=9,msg=label)
+    def test_synthetic_cases_match_js(self):
+        def lead(rate,body):return [0.0]*round(.5*rate)+body+[0.0]*round(.5*rate)
+        cases=[]
+        for rate in (8000,8025,11025,16000,24000,44100,48000):  # 8025Hz는 프레임이 160.5샘플
+            cases.append((lead(rate,sine(1,rate)+[0.0]*round(.6*rate)+sine(1,rate)),rate))
+        r=24000
+        for gap in (.24,.26):cases.append((lead(r,tone_pause_tone(gap,r)),r))
+        for blip in (.06,.08):cases.append((sine(1,r)+[0.0]*r+sine(blip,r)+[0.0]*r*2,r))
+        for amp in (.0139,.0141,.0143):cases.append((lead(r,sine(1,r,amp=amp)+[0.0]*(r//2)+sine(1,r,amp=amp)),r))  # 0.01 경계(RMS=amp/√2)
+        for (samples,rate),js in zip(cases,self.js(cases)):
+            self.same(measure_speech(samples,rate),js,f'{rate}Hz n={len(samples)}')
+    def test_32bit_pcm_precision_matches_js(self):
+        r=24000
+        for amp in (.0139,.0141,.0143,.2):
+            values=[0.0]*r+sine(1,r,amp=amp)+[0.0]*(r//2)+sine(1,r,amp=amp)+[0.0]*r
+            ints=array.array('i');ints.frombytes(encode(values,32,1))
+            py=analyze_wav(riff(values,32,rate=r))['speech']
+            self.same(py,self.js([([i/2**31 for i in ints],r)])[0],f'32bit amp={amp}')
+
 
 if __name__=='__main__':unittest.main(verbosity=2)

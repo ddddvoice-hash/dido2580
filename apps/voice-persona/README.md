@@ -16,7 +16,7 @@ cd ~/dido2580/apps/voice-persona; if ($?) { python -m venv .venv }; if ($?) { .v
 cd ~/dido2580/apps/voice-persona; if ($?) { .venv\Scripts\python -m unittest discover -s tests -p "test_*.py" -v }
 ```
 
-core 39개 + Streamlit AppTest 4개 = 43개 통과(2026-10-03). WAV는 16·24·32bit PCM, 32bit float, EXTENSIBLE을 받고 10분·231MB 이하입니다. A/B 비교는 말소리 구간과 쉼을 측정값으로 보여 주며 점수가 아닙니다.
+core 52개(JS 비교 2개는 node가 있을 때) + Streamlit AppTest 6개 = 58개 통과(2026-10-03). 개발용 브라우저 검사 `tests/browser_check.py`는 Playwright가 따로 필요합니다. WAV는 16·24·32bit PCM, 32bit float, EXTENSIBLE을 받고 10분·231MB 이하입니다. A/B 비교는 말소리 구간과 쉼을 측정값으로 보여 주며 점수가 아닙니다.
 
 ## 하는 일과 하지 않는 일
 

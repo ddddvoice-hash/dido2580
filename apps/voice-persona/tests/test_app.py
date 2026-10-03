@@ -42,4 +42,29 @@ class StreamlitTests(unittest.TestCase):
         text=str(self.app.table[0].value)
         self.assertIn('0.60초',text);self.assertIn('말소리를 찾지 못했습니다',text)
 
+    def test_new_work_drops_previous_recordings_and_says_so(self):
+        sys.path.insert(0,str(ROOT/'tests'))
+        from test_core import wav_bytes
+        self.app.button(key='prepare').click().run()
+        first=self.app.session_state['result'].fingerprint
+        self.app.session_state['audio_by_result'][first]={'A':wav_bytes(),'B':wav_bytes(seconds=1)}
+        self.app.run()
+        self.app.text_area(key='source_input').set_value('다른 안내입니다.').run()
+        self.app.button(key='prepare').click().run()
+        self.assertFalse(self.app.exception)
+        second=self.app.session_state['result'].fingerprint
+        self.assertNotEqual(first,second)
+        self.assertEqual(list(self.app.session_state['audio_by_result']),[second])
+        self.assertTrue(any('이전 작업의 녹음 2개' in i.value for i in self.app.info))
+
+    def test_same_work_keeps_recordings(self):
+        sys.path.insert(0,str(ROOT/'tests'))
+        from test_core import wav_bytes
+        self.app.button(key='prepare').click().run()
+        fp=self.app.session_state['result'].fingerprint
+        self.app.session_state['audio_by_result'][fp]={'A':wav_bytes()}
+        self.app.button(key='prepare').click().run()
+        self.assertEqual(list(self.app.session_state['audio_by_result'][fp]),['A'])
+        self.assertFalse(self.app.exception)
+
 if __name__=='__main__':unittest.main(verbosity=2)
