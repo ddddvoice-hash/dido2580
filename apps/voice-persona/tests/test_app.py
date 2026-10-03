@@ -38,7 +38,7 @@ class StreamlitTests(unittest.TestCase):
         self.app.run()
         self.assertFalse(self.app.exception)
         headers=[c for t in self.app.table for c in t.value.columns]
-        self.assertEqual(headers,['항목','A','B','B 설계값(참고)'])
+        self.assertEqual(headers,['항목','A','B','B 목표(참고)'])
         text=str(self.app.table[0].value)
         self.assertIn('0.60초',text);self.assertIn('말소리를 찾지 못했습니다',text)
 

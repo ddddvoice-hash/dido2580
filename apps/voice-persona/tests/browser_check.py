@@ -45,10 +45,10 @@ with sync_playwright() as p:
     page = browser.new_page(viewport={"width": 1440, "height": 1100}); errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.goto(URL)
-    source = page.get_by_role("textbox", name="변환할 안내 원문", exact=True)
+    source = page.get_by_role("textbox", name="읽을 안내 문장", exact=True)
     source.fill(REGRESSION); source.press("Tab")
-    page.get_by_text("등록된 표현만 쉽게 바꾸기", exact=True).click()
-    page.get_by_role("button", name="원문 확인하고 낭독 원고 준비", exact=True).click()
+    page.get_by_text("어려운 표현만 쉽게 (등록된 표현만 쉽게 바꾸기)", exact=True).click()
+    page.get_by_role("button", name="원고 만들기 →", exact=True).click()
     page.get_by_text("파일을 올리지 못했습니다. 파일은 삭제되지 않았습니다. '다시 업로드'를 눌러 주세요.", exact=True).wait_for()
     ok("회귀 사례: 파일 업로드 실패가 계정 잠김으로 바뀌지 않음", page.get_by_text("계정이 잠겼", exact=False).count() == 0)
 
@@ -60,18 +60,18 @@ with sync_playwright() as p:
     table = page.locator("[data-testid=stTable]").inner_text()
     ok("24bit WAV 두 개가 받아짐", page.locator(PLAYER).count() == 2)
     ok("A/B 표에 실제 쉼 값 (A 0.30초, B 0.90초)", "0.30초" in table and "0.90초" in table, table.replace("\n", " ")[:200])
-    ok("B 설계값은 참고 칸에만", "B 설계값(참고)" in table)
+    ok("B 목표는 참고 칸에만", "B 목표(참고)" in table)
 
     notes = page.get_by_role("textbox", name="더 잘 전달된 낭독과 그 이유", exact=True)
     notes.fill("B는 두 문장 사이 쉼이 더 길어 다음 행동이 잘 들렸습니다."); notes.press("Tab")
     page.wait_for_timeout(1500)
     with page.expect_download() as dl:
-        page.get_by_role("button", name="원문·설계·녹음·메모 전체 저장", exact=True).click()
+        page.get_by_role("button", name="작업 전체 저장", exact=True).click()
     backup = OUT / "workshop.json"; dl.value.save_as(backup)
     data = json.loads(backup.read_text())
     ok("작업 JSON에 녹음 2개와 메모", len(data["audio"]) == 2 and data["notes"].startswith("B는"))
     with page.expect_download() as dl:
-        page.get_by_role("button", name="녹음과 원고 ZIP 받기", exact=True).click()
+        page.get_by_role("button", name="녹음과 원고 묶음 받기 (ZIP)", exact=True).click()
     dl.value.save_as(OUT / "comparison.zip")
     with zipfile.ZipFile(OUT / "comparison.zip") as z:
         ok("ZIP 안의 A 녹음이 원본과 같음", z.testzip() is None and z.read("persona-A.wav") == A.read_bytes())
@@ -83,10 +83,10 @@ with sync_playwright() as p:
     fresh = browser.new_page(viewport={"width": 390, "height": 844})
     fresh.on("pageerror", lambda e: errors.append(str(e)))
     fresh.goto(URL)
-    fresh.get_by_text("저장한 작업 가져오기", exact=True).click()
+    fresh.get_by_text("저장해 둔 작업 불러오기", exact=True).click()
     fresh.locator("input[type=file]").first.set_input_files(str(backup))
-    fresh.get_by_text("현재 입력과 결과를 이 작업으로 교체합니다", exact=True).click()
-    fresh.get_by_role("button", name="작업 가져오기", exact=True).click()
+    fresh.get_by_text("지금 화면의 내용을 불러온 작업으로 바꿉니다", exact=True).click()
+    fresh.get_by_role("button", name="불러오기", exact=True).click()
     fresh.wait_for_function("document.querySelectorAll('audio[data-testid=stAudio]').length>=2", timeout=30000)
     expect(fresh.get_by_role("textbox", name="더 잘 전달된 낭독과 그 이유", exact=True)).to_have_value("B는 두 문장 사이 쉼이 더 길어 다음 행동이 잘 들렸습니다.")
     ok("새 세션에서 원문·녹음·메모 복원", True)
@@ -99,7 +99,7 @@ with sync_playwright() as p:
     data["result"]["text"] = "계정이 잠겼습니다."
     bad = OUT / "bad.json"; bad.write_text(json.dumps(data, ensure_ascii=False))
     fresh.locator("input[type=file]").first.set_input_files(str(bad))
-    fresh.get_by_role("button", name="작업 가져오기", exact=True).click()
+    fresh.get_by_role("button", name="불러오기", exact=True).click()
     fresh.get_by_text("저장된 변환 기록이 원문·등록 규칙과 일치하지 않습니다.", exact=True).wait_for()
     ok("변조된 백업 거부, 기존 녹음 유지", fresh.locator(PLAYER).count() == 2)
     ok("페이지 자바스크립트 오류 없음", not errors, "; ".join(errors))
