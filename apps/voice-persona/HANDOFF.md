@@ -22,7 +22,7 @@
 
 ## 클라우드 Claude가 확인한 문제 (2026-10-03)
 
-1. `core.analyze_wav`가 16bit PCM만 받는다. 가이드 규격인 48kHz·24bit WAV를 올리면 거부된다(직접 재현함). 32bit float도 거부된다.
-2. 녹음 길이 상한이 5분이라 속리산(약 7분) 같은 긴 원본은 들어가지 않는다. A/B 한 문장 비교에는 문제없다.
-3. A/B 비교가 파일 길이만 보여 준다. 앞뒤 여백이 섞여 B의 쉼·속도 설계값이 실제로 지켜졌는지 알 수 없다. `apps/reading-coach/analysis.js`와 같은 방식(20ms RMS, 바닥+15% 기준, 80ms 미만 소리 무시, 250ms 이상 쉼)으로 말소리 구간과 쉼을 재면 사실대로 비교할 수 있다.
-4. `app.py`의 녹음 처리 반복문 안에서 `import hashlib`를 한다(동작에는 문제없음, 정리 대상).
+1. `core.analyze_wav`가 16bit PCM만 받는다. 가이드 규격인 48kHz·24bit WAV를 올리면 거부된다(직접 재현함). 32bit float도 거부된다. → 처리됨(2026-10-03): 16·24·32bit PCM, 32bit float, EXTENSIBLE 지원.
+2. 녹음 길이 상한이 5분이라 속리산(약 7분) 같은 긴 원본은 들어가지 않는다. A/B 한 문장 비교에는 문제없다. → 처리됨: 상한 10분·231MB. 단 이 배포의 Streamlit 업로드 한도는 `.streamlit/config.toml`의 48MB.
+3. A/B 비교가 파일 길이만 보여 준다. 앞뒤 여백이 섞여 B의 쉼·속도 설계값이 실제로 지켜졌는지 알 수 없다. `apps/reading-coach/analysis.js`와 같은 방식(20ms RMS, 바닥+15% 기준, 80ms 미만 소리 무시, 250ms 이상 쉼)으로 말소리 구간과 쉼을 재면 사실대로 비교할 수 있다. → 처리됨: `core.measure_speech`와 4번 화면 A/B 표(측정값, 점수 아님).
+4. `app.py`의 녹음 처리 반복문 안에서 `import hashlib`를 한다(동작에는 문제없음, 정리 대상). → 처리됨: import를 파일 위로 이동.

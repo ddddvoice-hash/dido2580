@@ -130,6 +130,23 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 
 ---
 
+## 새 프로젝트: 보이스 페르소나 실험실 (`apps/voice-persona/`)
+
+**무엇:** 대표가 만든 Streamlit 앱의 독립 대체 실행본. 같은 원고를 A(기본 낭독)와 B(페르소나 낭독)로 녹음해 비교합니다.
+**지킬 것:** `apps/voice-persona/HANDOFF.md`의 '변경 원칙'을 그대로 지킵니다. 회귀 사례 테스트 `test_upload_never_becomes_account_lock`(파일 업로드 실패가 계정 잠김으로 바뀌던 오류)는 절대 지우지 않습니다. AI 재작성·TTS·API 키는 넣지 않고, Streamlit Cloud 배포는 건드리지 않습니다. 녹음 파일은 커밋하지 않습니다.
+
+| 번호 | 담당 | 업무 | 담당 파일 | 완료 조건 | 상태 |
+|---|---|---|---|---|---|
+| 1 | 매니저 | `core.analyze_wav`가 24bit·32bit PCM, 32bit float, WAVE_FORMAT_EXTENSIBLE WAV를 받게 고치기(`apps/voice-check/check.js` 헤더 검사 기준과 맞춤). 녹음 길이 상한 10분, 파일 크기 상한도 맞춤 | `core.py` | 24bit·float WAV 통과, 잘린 파일 거부, 10분 녹음 통과 | 검토 |
+| 2 | 매니저 | `apps/reading-coach/analysis.js`와 같은 방식(20ms RMS, 바닥+15% 기준, 80ms 미만 무시, 250ms 이상 쉼)으로 말소리 시작·끝, 말한 시간, 쉼 개수·중간값·최장을 재는 함수를 표준 라이브러리로 만들고 4번 화면에 A/B 표로 보이기. B 설계 쉼값은 참고로만 나란히 두고 점수·이해도라고 부르지 않음 | `core.py`, `app.py` | 쉼 0.6초 합성음을 0.6초 근처로 측정, 화면에 A/B 표 | 검토 |
+| 3 | 매니저 | `app.py` 녹음 처리 반복문 안 `import hashlib` 정리 | `app.py` | 반복문 안 import 없음, 테스트 통과 | 검토 |
+| 4 | 매니저 | 변경마다 `tests/test_core.py`에 테스트 추가(24bit·float 통과, 잘린 파일 거부, 쉼 0.6초 합성음 측정) | `tests/test_core.py` | 새 테스트 통과, 회귀 사례 테스트 그대로 | 검토 |
+| 5 | 사원 | 화면 문구 존댓말·용어 통일 검사 | 이 게시판 '보고' 칸 (코드 수정 안 함) | 지적 목록 제출 | 대기 |
+| 6 | GPT | 바뀐 `core.py`·`app.py` 교차 리뷰 (생각 깊이 high) | 이 게시판 'GPT 리뷰' 칸 (코드 수정 안 함) | 지적 목록 제출 | 대기 |
+| 7 | 팀장 | venv에 `requirements.txt` 설치 후 `python -m unittest discover -s tests -p "test_*.py"` 전부 통과 확인, `streamlit run app.py`로 첫 화면 확인 | 이 게시판 '검수' 칸 | 테스트 전부 통과, 첫 화면에 오류 없음 | 대기 |
+
+---
+
 ## 작업지시서 (팀장 작성)
 
 > 근거: `apps/warmth-scorer/GPT_PROMPT.md`(명세), `rubric.json`(기준표). 명세와 다르게 정한 곳은 **[결정]**으로 표시했습니다. 대표 확인이 필요한 곳은 **[대표 확인]**입니다.
@@ -322,6 +339,27 @@ Node 검증에서 예시 A=0, B=4, C=10, 두 `zero` 감점, 합계 하한 0을 �
 ## 보고
 
 (각 담당이 업무를 마치면 아래에 추가. 최신이 위로)
+
+### [페르소나 1~4] 팀장 확인 · 2026-10-03
+- `.venv`에서 `python -m unittest discover -s tests -p "test_*.py"`: **43개 통과**(기존 21 + 새 22).
+- 회귀 사례 `test_upload_never_becomes_account_lock`은 직전 커밋과 한 글자도 다르지 않습니다. 거부 목록에서 뺀 것은 24bit 한 항목뿐이고, 그 항목은 통과 테스트로 옮겼습니다.
+- `import hashlib`은 `app.py` 3번째 줄로 옮겼습니다. AI·TTS·외부 호출·API 키 관련 코드는 없습니다. `requirements.txt`, `.streamlit`은 바뀌지 않았습니다.
+- 실제 녹음으로 확인(읽기만): 속리산(48kHz·16bit) 431.3초, 시티 도미니언(96kHz·32bit float) 409.2초 모두 받습니다. 속리산의 말한 시간 226.3초, 쉼 172개, 중간값 0.56초, 최장 3.54초가 JS 쪽 `profile.js` 측정과 같습니다. 시티 도미니언 최장 쉼 4.9초는 가이드 문서 값과 같습니다.
+- **대표 확인 필요:** `.streamlit/config.toml`(저장소에 있음)의 `maxUploadSize = 48`(MB) 때문에, 화면에서는 48MB가 넘는 WAV를 올릴 수 없습니다. 48kHz·24bit·모노 10분이 약 86MB입니다. 배포 설정이라 건드리지 않았습니다.
+
+### [페르소나 1~4] 매니저 · 2026-10-03
+- **바꾼 파일:** `apps/voice-persona/core.py`, `app.py`, `tests/test_core.py`, `tests/test_app.py`(테스트 1개 추가만), `README.md`·`HANDOFF.md`(처리 결과 한 줄씩).
+- **테스트(실행함):** `apps/voice-persona`에서 `.venv\Scripts\python -m unittest discover -s tests -p "test_*.py"` 결과 **43개 통과**(기존 21개 + 새 22개: core 21, AppTest 1). `test_upload_never_becomes_account_lock` 그대로. `wav_bytes(width=3)`(24bit)만 거부 목록에서 빼 `test_24bit_wave_module_file_accepted`로 옮김.
+- **1번:** `analyze_wav`가 RIFF 청크를 직접 읽음. 16/24/32bit PCM, 32bit float, EXTENSIBLE(SubFormat GUID 전체 확인) 통과. fmt·data 순서 무관, 홀수 청크 패딩, data 선언>실제는 '잘림' 거부, 8bit·샘플레이트 8~192kHz 밖·채널 3개 이상·blockAlign 불일치·RF64·NaN/Infinity 거부. 길이 상한 600초. 샘플은 -1~1로 정규화해 기존 키(duration, sample_rate, channels, rms_dbfs, sampled_peak, envelope, sha256) 유지. 화면 분석(파형·크기)은 기존처럼 65,536개 샘플로 제한. 48kHz·24bit·스테레오 10분(172MB) 분석 1.3초.
+- **크기 상한 근거:** 48,000Hz × 4바이트(32bit) × 2채널 × 600초 = 230,400,000바이트. 헤더 여유를 더해 `MAX_AUDIO = 231,000,000`(≈231MB). 안내 문구도 '231MB·10분'으로 바꿈.
+- **MAX_BACKUP:** 48MB 그대로. A+B를 231MB씩 base64로 담으면 약 616MB라 너무 큼. 대신 `make_bundle`이 base64 합계가 48MB를 넘으면 분석 전에 '녹음이 커서 작업 JSON에 넣을 수 없습니다(JSON 한도 48MB). 원본 WAV를 각각 보관해 주세요.'로 거부(테스트 있음). 앱의 개별 WAV·ZIP 내려받기는 그대로 가능.
+- **2번:** `measure_speech(samples, rate)`와 `analyze_wav(...)['speech']`(found, speech_start, speech_end, spoken, pause_count, pause_median, pause_longest). analysis.js와 같은 기준(20ms RMS, 하위 10% 바닥, 상위 90%, 15% 지점, 0.01·바닥×3 미만 말소리 없음, 80ms 미만 무시, 250ms 이상=13프레임 이상 쉼). 전체 샘플 기준이고 프레임 RMS만 모음. 4번 화면에 '항목 | A | B | B 설계값(참고)' 표. 쉼 0.6초 합성음은 0.60초로 측정(±0.04 안). 말소리가 없으면 '말소리를 찾지 못했습니다'. 설계값은 '문장 사이 쉼' 한 칸에만 참고로 둠.
+- **3번:** `import hashlib`를 파일 위로 옮김. 동작 변화 없음. 추가로 큰 녹음을 rerun마다 다시 분석하지 않게 세션에 해시 기준 분석 캐시(최대 4개)를 둠.
+- **HANDOFF 원칙 확인:** 길이·측정값을 속도·이해도·따뜻함 점수로 부르지 않음(표 아래 안내 문구에 '점수나 이해도가 아닙니다' 명시). 가짜 성공 표시·AI·TTS·외부 호출·API 키 없음. 파형은 실제 샘플. 표준 라이브러리만, requirements.txt·.streamlit 그대로. 녹음 파일은 만들거나 저장하지 않음(테스트 WAV는 메모리 생성). 커밋·푸시 안 함.
+- **다르게 한 점·확인 필요:**
+  - 바닥을 하위 10%로 잡는 analysis.js 기준 그대로라, 무음이 전체의 10% 미만인 녹음은 말소리 없음으로 나옴(analysis.js도 같음). 0.2초 무음 테스트는 앞뒤 무음을 붙여 만듦.
+  - **대표 확인 필요:** `.streamlit/config.toml`의 `maxUploadSize = 48`(MB) 때문에 화면에서 올릴 수 있는 WAV는 48MB까지입니다. 48kHz·24bit·모노 10분(약 86MB)은 core는 받지만 이 배포 화면에서는 못 올립니다. 건드리지 말라는 지시라 그대로 두었고, 화면 안내 문구에 '48MB까지'라고 적었습니다. 올리려면 값을 키워야 합니다.
+  - 스테레오 프레임 RMS는 두 채널을 합친 제곱 평균(check.js와 같은 방식)입니다.
 
 ### [목소리 평소 녹음 추가분 · 일괄 검사] 팀장 · 2026-10-03
 - 대표 추가 지시 7가지를 반영한 일괄 검사 도구 `apps/voice-check/screen.js`(매니저 작성)로 base 폴더 33개를 다시 검사했습니다. 아래 표가 최종이고, 바로 아래 '[목소리 평소 녹음 추가분]' 표는 그 전 단계 기록입니다.

@@ -16,7 +16,7 @@ cd ~/dido2580/apps/voice-persona; if ($?) { python -m venv .venv }; if ($?) { .v
 cd ~/dido2580/apps/voice-persona; if ($?) { .venv\Scripts\python -m unittest discover -s tests -p "test_*.py" -v }
 ```
 
-core 18개 + Streamlit AppTest 3개. 2026-10-03 클라우드에서 그대로 재현해 21개 모두 통과했습니다.
+core 39개 + Streamlit AppTest 4개 = 43개 통과(2026-10-03). WAV는 16·24·32bit PCM, 32bit float, EXTENSIBLE을 받고 10분·231MB 이하입니다. A/B 비교는 말소리 구간과 쉼을 측정값으로 보여 주며 점수가 아닙니다.
 
 ## 하는 일과 하지 않는 일
 

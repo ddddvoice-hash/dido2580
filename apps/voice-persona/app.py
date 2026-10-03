@@ -1,5 +1,6 @@
 """배리어프리 보이스 페르소나: 사실 보존과 직접 녹음 A/B 비교 실행본."""
 from __future__ import annotations
+import hashlib
 import io
 import zipfile
 import streamlit as st
@@ -37,6 +38,21 @@ for key, value in {"source_input": DEFAULT_SOURCE, "persona_input": "senior", "s
                    "result": None, "audio_by_result": {}, "checks_by_result": {}}.items():
     if key not in st.session_state:
         st.session_state[key] = value
+
+
+def cached_meta(data):
+    """큰 녹음을 rerun마다 다시 분석하지 않도록 내용 해시로 결과를 세션에 둔다(최대 4개)."""
+    cache = st.session_state.setdefault("meta_cache", {})
+    key = hashlib.sha256(data).hexdigest()
+    if key not in cache:
+        if len(cache) >= 4:
+            cache.pop(next(iter(cache)))
+        cache[key] = analyze_wav(data)
+    return cache[key]
+
+
+def seconds(value):
+    return "-" if value is None else f"{value:.2f}초"
 
 
 def persona_defaults():
@@ -150,7 +166,7 @@ with st.expander("낭독 설계 JSON · 실제 처리 결과와 구분"):
 
 st.header("3. 같은 원고로 A/B 녹음")
 st.write("A는 기본 낭독, B는 쉼·강조·속도를 조정한 낭독입니다. 두 녹음 모두 위의 같은 원고를 읽으세요.")
-st.caption("마이크는 HTTPS 또는 localhost에서 브라우저 권한이 필요합니다. 오디오 파일을 올려도 됩니다. WAV는 각 16MB·5분 이하입니다.")
+st.caption("마이크는 HTTPS 또는 localhost에서 브라우저 권한이 필요합니다. 오디오 파일을 올려도 됩니다. WAV는 각 10분 이하이고, 이 화면에서는 48MB까지 올릴 수 있습니다.")
 current_audio = st.session_state.audio_by_result.setdefault(result.fingerprint, {})
 current_checks = st.session_state.checks_by_result.setdefault(result.fingerprint, {})
 
@@ -169,7 +185,6 @@ for slot, column in zip(("A", "B"), st.columns(2)):
             signature = (source_kind, len(data), file.name)
             source_key = f"loaded_{slot}_{result.fingerprint}_{source_kind}"
             # 같은 업로드를 매 rerun마다 덮어쓰지 않는다. 서로 같은 크기 파일도 해시로 구분한다.
-            import hashlib
             signature = (*signature, hashlib.sha256(data).hexdigest())
             error_key = source_key + "_error"
             if st.session_state.get(source_key) == signature:
@@ -177,7 +192,7 @@ for slot, column in zip(("A", "B"), st.columns(2)):
                     st.error(st.session_state[error_key])
                 continue
             try:
-                analyze_wav(data)
+                cached_meta(data)
             except ValueError as e:
                 message = f"새 {source_kind} 녹음을 적용하지 못했습니다: {e} 기존 유효 녹음은 유지됩니다."
                 st.session_state[error_key] = message
@@ -191,7 +206,7 @@ for slot, column in zip(("A", "B"), st.columns(2)):
             st.session_state[source_key] = signature
         data = current_audio.get(slot)
         if data:
-            meta = analyze_wav(data)
+            meta = cached_meta(data)
             st.audio(data, format="audio/wav")
             st.write(f"파일 길이 {meta['duration']:.2f}초 · {meta['sample_rate']:,}Hz · {meta['channels']}채널")
             st.line_chart(meta["envelope"], height=120, y_label="샘플 진폭")
@@ -206,10 +221,34 @@ for slot, column in zip(("A", "B"), st.columns(2)):
 
 st.header("4. 차이를 듣고 기록")
 if len(current_audio) == 2:
-    duration_a = analyze_wav(current_audio["A"])["duration"]
-    duration_b = analyze_wav(current_audio["B"])["duration"]
+    meta_a, meta_b = cached_meta(current_audio["A"]), cached_meta(current_audio["B"])
+    duration_a, duration_b = meta_a["duration"], meta_b["duration"]
     st.write(f"파일 길이: A {duration_a:.2f}초 / B {duration_b:.2f}초 · 차이 {duration_b-duration_a:+.2f}초")
     st.caption("파일 길이에는 앞뒤 여백이 포함됩니다. 길이 차이만으로 말하기 속도나 이해도를 판단하지 않습니다.")
+    sp_a, sp_b = meta_a["speech"], meta_b["speech"]
+    for slot, sp in (("A", sp_a), ("B", sp_b)):
+        if not sp["found"]:
+            st.warning(f"{slot} 녹음에서 말소리를 찾지 못했습니다. 아래 표의 {slot} 칸은 비어 있습니다.")
+
+    def cell(sp, key):
+        return seconds(sp[key]) if sp["found"] else "말소리를 찾지 못했습니다"
+
+    def count(sp):
+        return f"{sp['pause_count']}개" if sp["found"] else "말소리를 찾지 못했습니다"
+
+    def pause_cell(sp, key):
+        if not sp["found"]:
+            return "말소리를 찾지 못했습니다"
+        return seconds(sp[key]) if sp["pause_count"] else "쉼 없음"
+
+    design = f"{inputs['pause_ms'] / 1000:.2f}초"
+    st.table({"항목": ["말소리 시작", "말소리 끝", "말한 시간", "쉼 개수", "쉼 중간값", "가장 긴 쉼"],
+              "A": [cell(sp_a, "speech_start"), cell(sp_a, "speech_end"), cell(sp_a, "spoken"), count(sp_a),
+                    pause_cell(sp_a, "pause_median"), pause_cell(sp_a, "pause_longest")],
+              "B": [cell(sp_b, "speech_start"), cell(sp_b, "speech_end"), cell(sp_b, "spoken"), count(sp_b),
+                    pause_cell(sp_b, "pause_median"), pause_cell(sp_b, "pause_longest")],
+              "B 설계값(참고)": ["-", "-", "-", "-", f"문장 사이 쉼 {design}", "-"]})
+    st.caption("말소리와 쉼은 녹음 소리 크기로 잰 값입니다. 약 0.25초 이상 이어진 무음만 쉼으로 셉니다. 문장 사이가 아닌 곳의 숨 고르기도 쉼에 들어갈 수 있고, 설계값은 참고용이라 맞고 틀림을 가리는 값이 아닙니다. 점수나 이해도가 아닙니다.")
     if all(current_checks.get(slot) for slot in ("A", "B")):
         st.success("같은 원고인지 직접 확인했습니다. 어떤 낭독이 더 잘 전달됐는지 이유를 남겨 주세요.")
 else:

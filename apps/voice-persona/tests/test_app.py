@@ -1,4 +1,4 @@
-import unittest
+import sys,unittest
 from pathlib import Path
 from streamlit.testing.v1 import AppTest
 ROOT=Path(__file__).resolve().parents[1]
@@ -28,5 +28,18 @@ class StreamlitTests(unittest.TestCase):
         self.app.button(key='prepare').click().run()
         self.assertEqual(self.app.session_state['result'].text,self.app.session_state['source_input'])
         self.assertFalse(self.app.exception)
+
+    def test_ab_table_shows_measured_values_and_missing_speech(self):
+        sys.path.insert(0,str(ROOT/'tests'))
+        from test_core import riff,tone_pause_tone,wav_bytes
+        self.app.button(key='prepare').click().run()
+        fp=self.app.session_state['result'].fingerprint
+        self.app.session_state['audio_by_result'][fp]={'A':riff(tone_pause_tone(.6),16),'B':wav_bytes(silent=True)}
+        self.app.run()
+        self.assertFalse(self.app.exception)
+        headers=[c for t in self.app.table for c in t.value.columns]
+        self.assertEqual(headers,['항목','A','B','B 설계값(참고)'])
+        text=str(self.app.table[0].value)
+        self.assertIn('0.60초',text);self.assertIn('말소리를 찾지 못했습니다',text)
 
 if __name__=='__main__':unittest.main(verbosity=2)

@@ -13,11 +13,12 @@ import io
 import json
 import math
 import re
+import operator
+import statistics
+import struct
 import sys
-import wave
 
 MAX_TEXT = 5000
-MAX_AUDIO = 16 * 1024 * 1024
 MAX_BACKUP = 48 * 1024 * 1024
 SCENARIOS = {"error": "오류 안내", "progress": "진행 안내", "complete": "완료 안내"}
 MODES = {"original": "원문 그대로", "terms": "등록된 표현만 쉽게 바꾸기"}
@@ -150,43 +151,147 @@ def result_is_current(result: Result | None, inputs: dict) -> bool:
     return result is not None and result.fingerprint == fingerprint(inputs)
 
 
+# 파일 크기 상한 근거: 48kHz·32bit·스테레오로 10분이면 48,000 × 8바이트 × 600초 = 230,400,000바이트.
+# 헤더·부가 청크 여유를 더해 231,000,000바이트(약 231MB)로 둔다.
+MAX_AUDIO = 231_000_000
+MAX_SECONDS = 600
+PCM_GUID_TAIL = bytes.fromhex("0000" "0000" "1000" "8000" "00aa00389b71")
+FRAME_MS, MIN_PAUSE_MS, MIN_SPEECH_MS = 20, 250, 80
+FORMAT_HELP = "8~192kHz, 16·24·32bit PCM 또는 32bit float, 모노·스테레오 WAV를 사용해 주세요."
+
+
+def _parse_wav(data: bytes) -> dict:
+    """RIFF 청크를 직접 읽는다(fmt·data 순서 무관, 홀수 크기 청크 패딩 처리). 기준은 apps/voice-check/check.js."""
+    if len(data) < 12 or data[:4] != b"RIFF" or data[8:12] != b"WAVE":
+        raise ValueError("WAV 파일이 아닙니다. 지원하는 WAV를 선택하거나 마이크로 새로 녹음해 주세요.")
+    pos, fmt, chunk = 12, None, None
+    while pos + 8 <= len(data) and (fmt is None or chunk is None):
+        tag, size = data[pos:pos + 4], int.from_bytes(data[pos + 4:pos + 8], "little")
+        body = pos + 8
+        if tag == b"fmt ":
+            if size < 16 or body + size > len(data):
+                raise ValueError("WAV 헤더가 잘렸거나 올바르지 않습니다. 원본 파일을 다시 선택해 주세요.")
+            code, channels, rate, _, align, bits = struct.unpack_from("<HHIIHH", data, body)
+            if code == 0xFFFE:
+                if size < 40 or int.from_bytes(data[body + 16:body + 18], "little") < 22 or data[body + 26:body + 40] != PCM_GUID_TAIL:
+                    raise ValueError("지원하지 않는 확장 WAV 형식입니다. " + FORMAT_HELP)
+                code = int.from_bytes(data[body + 24:body + 26], "little")
+            fmt = (code, channels, rate, align, bits)
+        elif tag == b"data" and chunk is None:
+            if size > len(data) - body:
+                raise ValueError("WAV 데이터가 잘렸습니다. 원본 파일을 다시 선택해 주세요.")
+            chunk = (body, size)
+        pos = body + size + (size & 1)
+    if fmt is None or chunk is None:
+        raise ValueError("WAV의 fmt 또는 data 구간을 찾지 못했습니다. 원본 파일을 다시 선택해 주세요.")
+    code, channels, rate, align, bits = fmt
+    if channels not in (1, 2) or not 8000 <= rate <= 192000 or not ((code == 1 and bits in (16, 24, 32)) or (code == 3 and bits == 32)):
+        raise ValueError(FORMAT_HELP)
+    if align != channels * bits // 8:
+        raise ValueError("WAV 블록 크기가 채널 수와 비트 수에 맞지 않습니다. 원본 파일을 다시 선택해 주세요.")
+    frames = chunk[1] // align
+    if frames <= 0 or frames / rate > MAX_SECONDS:
+        raise ValueError("녹음은 0초보다 길고 10분 이하여야 합니다.")
+    return {"code": code, "channels": channels, "rate": rate, "bits": bits, "start": chunk[0], "frames": frames, "align": align}
+
+
+def _decode(data: bytes, h: dict):
+    """(샘플 배열, 정규화 나눗수). 배열은 채널이 섞인 원래 순서이며 값 / 나눗수가 -1~1이다."""
+    raw = memoryview(data)[h["start"]:h["start"] + h["frames"] * h["align"]]
+    bits = h["bits"]
+    if bits == 24:
+        padded = bytearray(h["frames"] * h["channels"] * 4)
+        padded[1::4], padded[2::4], padded[3::4] = raw[0::3], raw[1::3], raw[2::3]
+        values, scale = array.array("i"), 2147483648
+        values.frombytes(padded)
+    else:
+        values = array.array({16: "h", 32: "f" if h["code"] == 3 else "i"}[bits])
+        scale = 1 if h["code"] == 3 else 2 ** (bits - 1)
+        values.frombytes(raw)
+    if sys.byteorder != "little":
+        values.byteswap()
+    return values, scale
+
+
+def _frame_rms(values, per_frame: int, scale) -> list:
+    """20ms 프레임마다 RMS. 전체 샘플을 한 번에 훑되 프레임 값만 모아 메모리를 아낀다."""
+    sumsq = getattr(math, "sumprod", None) or (lambda a, b: sum(map(operator.mul, a, b)))
+    out = []
+    for start in range(0, len(values) - per_frame + 1, per_frame):
+        seg = values[start:start + per_frame]
+        out.append(math.sqrt(sumsq(seg, seg) / per_frame) / scale)
+    return out
+
+
+def _percentile(sorted_values, p):
+    return sorted_values[min(len(sorted_values) - 1, int(p * len(sorted_values)))] if sorted_values else 0
+
+
+def _measure_frames(env: list) -> dict:
+    """analysis.js와 같은 기준: 바닥=하위 10%, 말소리=상위 90%, 기준=바닥+(말소리-바닥)×0.15."""
+    none = {"found": False, "speech_start": None, "speech_end": None, "spoken": None,
+            "pause_count": 0, "pause_median": None, "pause_longest": None}
+    ordered = sorted(env)
+    floor, loud = _percentile(ordered, .1), _percentile(ordered, .9)
+    if not env or loud < .01 or loud < floor * 3:
+        return none
+    limit = floor + (loud - floor) * .15
+    min_speech, min_pause = math.ceil(MIN_SPEECH_MS / FRAME_MS), math.ceil(MIN_PAUSE_MS / FRAME_MS)
+    runs, start = [], -1
+    for i in range(len(env) + 1):
+        is_loud = i < len(env) and env[i] > limit
+        if is_loud and start < 0:
+            start = i
+        elif not is_loud and start >= 0:
+            if i - start >= min_speech:
+                runs.append((start, i))
+            start = -1
+    if not runs:
+        return none
+    sec = FRAME_MS / 1000
+    gaps = [(b[0] - a[1]) * sec for a, b in zip(runs, runs[1:]) if b[0] - a[1] >= min_pause]
+    return {"found": True, "speech_start": runs[0][0] * sec, "speech_end": runs[-1][1] * sec,
+            "spoken": sum(e - s for s, e in runs) * sec, "pause_count": len(gaps),
+            "pause_median": statistics.median(gaps) if gaps else None, "pause_longest": max(gaps) if gaps else None}
+
+
+def measure_speech(samples, rate: int) -> dict:
+    """모노 샘플(-1~1)의 말소리 구간과 쉼을 잰다. 점수가 아니라 측정값이다. 시간 단위는 초."""
+    return _measure_frames(_frame_rms(samples, max(1, round(rate * FRAME_MS / 1000)), 1))
+
+
 def analyze_wav(data: bytes) -> dict:
     if not isinstance(data, bytes) or not data:
         raise ValueError("녹음 파일이 비어 있습니다.")
     if len(data) > MAX_AUDIO:
-        raise ValueError("각 녹음은 16MB 이하 WAV 파일을 선택해 주세요.")
-    try:
-        with wave.open(io.BytesIO(data), "rb") as f:
-            channels, width, rate, count = f.getnchannels(), f.getsampwidth(), f.getframerate(), f.getnframes()
-            if channels not in (1, 2) or width != 2 or not 8000 <= rate <= 192000 or f.getcomptype() != "NONE":
-                raise ValueError("8~192kHz, 16bit PCM, 모노·스테레오 WAV를 사용해 주세요.")
-            if count <= 0 or count / rate > 300:
-                raise ValueError("녹음은 0초보다 길고 5분 이하여야 합니다.")
-            raw = f.readframes(count)
-            if len(raw) != count * channels * width:
-                raise ValueError("WAV 데이터가 잘렸습니다. 원본 파일을 다시 선택해 주세요.")
-    except (wave.Error, EOFError, OverflowError) as e:
-        raise ValueError("지원하는 PCM WAV를 선택하거나 마이크로 새로 녹음해 주세요.") from e
-    values = array.array("h")
-    values.frombytes(raw)
-    if sys.byteorder != "little":
-        values.byteswap()
-    # 큰 파일의 화면 분석은 최대 65,536개 샘플로 제한한다. 길이는 전체 헤더/프레임으로 확인한다.
+        raise ValueError("각 녹음은 231MB 이하 WAV 파일을 선택해 주세요.")
+    h = _parse_wav(data)
+    values, scale = _decode(data, h)
+    per_frame = max(1, round(h["rate"] * FRAME_MS / 1000)) * h["channels"]
+    env = _frame_rms(values, per_frame, scale)
+    if h["code"] == 3:
+        tail = values[len(env) * per_frame:]
+        if not all(map(math.isfinite, env)) or not all(map(math.isfinite, tail)):
+            raise ValueError("녹음에 유효하지 않은 샘플(NaN·무한대)이 있습니다. 원본 파일을 다시 선택해 주세요.")
+    # 큰 파일의 화면 분석(파형·크기)은 최대 65,536개 샘플로 제한한다. 말소리·쉼 측정은 전체 샘플로 한다.
     stride = max(1, math.ceil(len(values) / 65536))
     sampled = values[::stride]
-    rms = math.sqrt(sum((v / 32768) ** 2 for v in sampled) / len(sampled))
-    peak = max(abs(v) for v in sampled) / 32768
+    rms = math.sqrt(sum((v / scale) ** 2 for v in sampled) / len(sampled))
+    peak = max(abs(v) for v in sampled) / scale
     bin_size = max(1, math.ceil(len(sampled) / 128))
-    envelope = [max(abs(v) for v in sampled[i:i+bin_size]) / 32768 for i in range(0, len(sampled), bin_size)]
-    return {"duration": count / rate, "sample_rate": rate, "channels": channels,
+    envelope = [max(abs(v) for v in sampled[i:i+bin_size]) / scale for i in range(0, len(sampled), bin_size)]
+    return {"duration": h["frames"] / h["rate"], "sample_rate": h["rate"], "channels": h["channels"],
             "rms_dbfs": round(20 * math.log10(rms), 1) if rms else None,
-            "sampled_peak": peak, "envelope": envelope,
+            "sampled_peak": peak, "envelope": envelope, "speech": _measure_frames(env),
             "sha256": hashlib.sha256(data).hexdigest()}
 
 
 def make_bundle(result: Result, audio: dict, checks: dict, notes: str) -> bytes:
     if type(notes) is not str or len(notes) > 10000:
         raise ValueError("비교 메모는 10,000자 이하로 입력해 주세요.")
+    # 녹음 둘이 base64로 JSON에 들어가므로 커지면 분석 전에 먼저 거부한다.
+    if sum(4 * ((len(d) + 2) // 3) for d in audio.values() if isinstance(d, bytes)) > MAX_BACKUP:
+        raise ValueError("녹음이 커서 작업 JSON에 넣을 수 없습니다(JSON 한도 48MB). 원본 WAV를 각각 보관해 주세요.")
     out_audio = {}
     for slot, data in audio.items():
         if slot not in ("A", "B"):
@@ -199,7 +304,7 @@ def make_bundle(result: Result, audio: dict, checks: dict, notes: str) -> bytes:
               "audio": out_audio, "checks": checks, "notes": notes}
     encoded = json.dumps(packet, ensure_ascii=False, indent=2).encode()
     if len(encoded) > MAX_BACKUP:
-        raise ValueError("작업 파일이 48MB를 넘습니다. 원본 WAV를 각각 보관해 주세요.")
+        raise ValueError("작업 JSON이 48MB를 넘습니다. 원본 WAV를 각각 보관해 주세요.")
     return encoded
 
 

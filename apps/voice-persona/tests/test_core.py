@@ -1,4 +1,4 @@
-import io,json,math,struct,unittest,wave
+import io,json,math,struct,unittest,wave,array
 from dataclasses import replace
 from pathlib import Path
 import sys
@@ -17,6 +17,39 @@ def wav_bytes(seconds=.8,channels=1,silent=False,width=2):
         else:data=b'\x00'*round(24000*seconds)*channels*width
         f.writeframes(data)
     return out.getvalue()
+
+PCM_GUID=bytes.fromhex("0100000000001000800000aa00389b71")
+FLOAT_GUID=bytes.fromhex("0300000000001000800000aa00389b71")
+
+def sine(seconds,rate,amp=.4,freq=240):
+    return [amp*math.sin(2*math.pi*freq*i/rate) for i in range(round(seconds*rate))]
+
+def encode(values,bits,code):
+    if code==3:return array.array('f',values).tobytes()
+    top=2**(bits-1)-1
+    ints=[max(-top-1,min(top,round(v*top))) for v in values]
+    if bits==16:return array.array('h',ints).tobytes()
+    if bits==32:return array.array('i',ints).tobytes()
+    return b''.join(i.to_bytes(3,'little',signed=True) for i in ints)
+
+def riff(values,bits=16,code=1,rate=24000,channels=1,extensible=False,declared=None,fmt_last=False,pad_chunk=False,block=None):
+    """메모리에서 WAV를 만든다. declared는 data 선언 크기, fmt_last는 data 뒤에 fmt를 둔다."""
+    body=encode(values,bits,code)
+    block=channels*bits//8 if block is None else block
+    if extensible:
+        fmt=struct.pack('<HHIIHH',0xFFFE,channels,rate,rate*block,block,bits)+struct.pack('<HHI',22,bits,3)+(PCM_GUID if code==1 else FLOAT_GUID)
+    else:
+        fmt=struct.pack('<HHIIHH',code,channels,rate,rate*block,block,bits)
+    fmt_chunk=b'fmt '+struct.pack('<I',len(fmt))+fmt
+    data_chunk=b'data'+struct.pack('<I',len(body) if declared is None else declared)+body+(b'\0' if len(body)%2 else b'')
+    parts=[]
+    if pad_chunk:parts.append(b'LIST'+struct.pack('<I',3)+b'abc\0')
+    parts+=[data_chunk,fmt_chunk] if fmt_last else [fmt_chunk,data_chunk]
+    payload=b'WAVE'+b''.join(parts)
+    return b'RIFF'+struct.pack('<I',len(payload))+payload
+
+def tone_pause_tone(gap,rate=24000):
+    return sine(1,rate)+[0.0]*round(gap*rate)+sine(1,rate)
 
 class ContentTests(unittest.TestCase):
     def test_all_personas_scenarios_preserve_source(self):
@@ -79,10 +112,88 @@ class AudioTests(unittest.TestCase):
         self.assertEqual(analyze_wav(wav_bytes(channels=2))['channels'],2)
         meta=analyze_wav(wav_bytes(silent=True));self.assertIsNone(meta['rms_dbfs']);self.assertEqual(meta['sampled_peak'],0)
     def test_invalid_truncated_and_wrong_pcm_rejected(self):
-        for raw in [b'',b'not audio',wav_bytes()[:-100],wav_bytes(width=3),wav_bytes(seconds=0)]:
+        for raw in [b'',b'not audio',wav_bytes()[:-100],wav_bytes(seconds=0)]:
             with self.assertRaises(ValueError):analyze_wav(raw)
 
+class FormatTests(unittest.TestCase):
+    def check_ok(self,raw,duration=.5,channels=1):
+        meta=analyze_wav(raw)
+        self.assertAlmostEqual(meta['duration'],duration,places=3);self.assertEqual(meta['channels'],channels)
+        self.assertAlmostEqual(meta['sampled_peak'],.4,places=2)
+        self.assertTrue(all(0<=v<=1 for v in meta['envelope']))
+        return meta
+    def test_24bit_pcm_accepted(self):self.check_ok(riff(sine(.5,24000),24))
+    def test_24bit_wave_module_file_accepted(self):
+        # 이전에는 거부하던 wave 모듈 작성 24bit 파일(기존 사례를 통과 쪽으로 옮김)
+        self.assertEqual(analyze_wav(wav_bytes(width=3))['sample_rate'],24000)
+    def test_32bit_pcm_accepted(self):self.check_ok(riff(sine(.5,24000),32))
+    def test_32bit_float_accepted(self):self.check_ok(riff(sine(.5,24000),32,code=3))
+    def test_extensible_24bit_pcm_accepted(self):self.check_ok(riff(sine(.5,48000),24,rate=48000,extensible=True))
+    def test_extensible_float_accepted(self):self.check_ok(riff(sine(.5,24000),32,code=3,extensible=True))
+    def test_stereo_24bit_same_level_as_16bit(self):
+        values=[v for x in sine(.5,24000) for v in (x,x)]
+        a=analyze_wav(riff(values,16,channels=2));b=analyze_wav(riff(values,24,channels=2))
+        self.assertEqual(b['channels'],2);self.assertAlmostEqual(a['rms_dbfs'],b['rms_dbfs'],places=1)
+    def test_chunk_order_and_odd_padding(self):
+        self.check_ok(riff(sine(.5,24000),24,fmt_last=True))
+        self.check_ok(riff(sine(.5,24000),16,pad_chunk=True))
+        self.check_ok(riff(sine(.5,24000),24,pad_chunk=True,fmt_last=True))
+    def test_truncated_data_rejected(self):
+        raw=riff(sine(.5,24000),24)
+        with self.assertRaises(ValueError):analyze_wav(raw[:-300])
+        with self.assertRaises(ValueError):analyze_wav(riff(sine(.5,24000),16,declared=999999))
+    def test_non_finite_float_rejected(self):
+        for bad in (float('nan'),float('inf'),float('-inf')):
+            values=sine(.5,24000);values[5000]=bad
+            with self.assertRaises(ValueError):analyze_wav(riff(values,32,code=3))
+    def test_unsupported_formats_rejected(self):
+        eight=riff([0.0]*4800,16).replace(struct.pack('<HHIIHH',1,1,24000,48000,2,16),struct.pack('<HHIIHH',1,1,24000,24000,1,8))
+        bad_guid=riff(sine(.5,24000),24,extensible=True).replace(PCM_GUID[4:],b'\0'*12)
+        cases=[eight,riff(sine(.5,24000),16,rate=4000),riff(sine(.5,24000),16,rate=200000),riff(sine(.5,24000),16,block=4),
+               riff(sine(.5,24000),16).replace(b'RIFF',b'RIFX',1),bad_guid,riff([],16)]
+        for raw in cases:
+            with self.assertRaises(ValueError):analyze_wav(raw)
+    def test_ten_minutes_ok_and_longer_rejected(self):
+        ok=analyze_wav(riff([0.0]*(8000*600),16,rate=8000))
+        self.assertEqual(ok['duration'],600)
+        with self.assertRaises(ValueError):analyze_wav(riff([0.0]*(8000*601),16,rate=8000))
+    def test_size_limit_covers_48k_32bit_stereo_ten_minutes(self):
+        self.assertGreaterEqual(MAX_AUDIO,48000*4*2*600)
+        with self.assertRaises(ValueError):analyze_wav(b'RIFF'+b'\0'*MAX_AUDIO)
+
+class SpeechMeasureTests(unittest.TestCase):
+    def test_06_second_pause_measured(self):
+        m=analyze_wav(riff(tone_pause_tone(.6),16))['speech']
+        self.assertTrue(m['found']);self.assertEqual(m['pause_count'],1)
+        self.assertAlmostEqual(m['pause_longest'],.6,delta=.04);self.assertAlmostEqual(m['pause_median'],.6,delta=.04)
+        self.assertAlmostEqual(m['speech_start'],0,delta=.04);self.assertAlmostEqual(m['speech_end'],2.6,delta=.04)
+        self.assertAlmostEqual(m['spoken'],2.0,delta=.06)
+    def test_measure_speech_function_on_samples(self):
+        m=measure_speech(tone_pause_tone(.6),24000)
+        self.assertEqual(m['pause_count'],1);self.assertAlmostEqual(m['pause_longest'],.6,delta=.04)
+    def test_leading_and_trailing_silence_not_counted(self):
+        m=measure_speech([0.0]*24000+tone_pause_tone(.6)+[0.0]*24000,24000)
+        self.assertEqual(m['pause_count'],1);self.assertAlmostEqual(m['speech_start'],1,delta=.04);self.assertAlmostEqual(m['speech_end'],3.6,delta=.04)
+    def test_short_02_second_gap_is_not_a_pause(self):
+        m=measure_speech([0.0]*12000+tone_pause_tone(.2)+[0.0]*12000,24000)  # 바닥(하위 10%)을 잡으려면 앞뒤 무음이 필요하다
+        self.assertTrue(m['found']);self.assertEqual(m['pause_count'],0)
+        self.assertIsNone(m['pause_median']);self.assertIsNone(m['pause_longest'])
+    def test_silence_only_has_no_speech(self):
+        for m in (measure_speech([0.0]*24000,24000),analyze_wav(wav_bytes(silent=True))['speech']):
+            self.assertFalse(m['found']);self.assertIsNone(m['speech_start']);self.assertEqual(m['pause_count'],0)
+    def test_very_quiet_and_short_blip_have_no_speech(self):
+        self.assertFalse(measure_speech([v*.01 for v in sine(1,24000)],24000)['found'])
+        self.assertFalse(measure_speech([0.0]*24000+sine(.04,24000)+[0.0]*24000,24000)['found'])
+    def test_works_on_24bit_stereo(self):
+        values=[v for x in tone_pause_tone(.6,48000) for v in (x,x)]
+        m=analyze_wav(riff(values,24,rate=48000,channels=2))['speech']
+        self.assertEqual(m['pause_count'],1);self.assertAlmostEqual(m['pause_longest'],.6,delta=.04)
+
 class BackupTests(unittest.TestCase):
+    def test_large_recordings_rejected_with_clear_message(self):
+        r=build_result(inputs());big=riff([0.0]*2,16,rate=24000,declared=24000*2*600)[:-4]+bytes(24000*2*600)
+        with self.assertRaises(ValueError) as e:make_bundle(r,{'A':big,'B':big},{},'')
+        self.assertIn('작업 JSON',str(e.exception))
     def test_full_backup_round_trip(self):
         r=build_result(inputs(mode='terms'));audio={'A':wav_bytes(),'B':wav_bytes(seconds=1)}
         packet=make_bundle(r,audio,{'A':True,'B':False},'B가 더 또렷하게 들렸습니다.')
