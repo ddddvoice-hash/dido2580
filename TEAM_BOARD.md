@@ -142,7 +142,7 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 | 3 | 매니저 | `app.py` 녹음 처리 반복문 안 `import hashlib` 정리 | `app.py` | 반복문 안 import 없음, 테스트 통과 | 검토 |
 | 4 | 매니저 | 변경마다 `tests/test_core.py`에 테스트 추가(24bit·float 통과, 잘린 파일 거부, 쉼 0.6초 합성음 측정) | `tests/test_core.py` | 새 테스트 통과, 회귀 사례 테스트 그대로 | 검토 |
 | 5 | 사원 | 화면 문구 존댓말·용어 통일 검사 | 이 게시판 '보고' 칸 (코드 수정 안 함) | 지적 목록 제출 | 검토 (지적 9건, 팀장 판정 완료) |
-| 6 | GPT | 바뀐 `core.py`·`app.py` 교차 리뷰 (생각 깊이 high) | 이 게시판 'GPT 리뷰' 칸 (코드 수정 안 함) | 지적 목록 제출 | 대기 |
+| 6 | GPT | 바뀐 `core.py`·`app.py` 교차 리뷰 (생각 깊이 high) | 이 게시판 'GPT 리뷰' 칸 (코드 수정 안 함) | 지적 목록 제출 | 검토 (9건 제출) |
 | 7 | 팀장 | venv에 `requirements.txt` 설치 후 `python -m unittest discover -s tests -p "test_*.py"` 전부 통과 확인, `streamlit run app.py`로 첫 화면 확인 | 이 게시판 '검수' 칸 | 테스트 전부 통과, 첫 화면에 오류 없음 | 완료 (클라우드에서 확인: 단위 45개, 브라우저 13개 통과) |
 
 ---
@@ -335,6 +335,32 @@ Node 검증에서 예시 A=0, B=4, C=10, 두 `zero` 감점, 합계 하한 0을 �
 외부 패키지 없이 분석 코드를 재사용한다. 홀수 크기 LIST 청크 패딩과 16/24/32bit PCM 음수 해석은 메모리 검증에서 정상 동작했다.  
 불확실 기준 네 가지가 모두 구현되어 있고, 속도 비율의 경계 비교도 정의와 맞는다. 두 CSV 모두 BOM을 붙이며 align의 쉼표·따옴표·줄바꿈 이스케이프도 정상이다.  
 검토한 파일 목록: `AGENTS.md`, `TEAM_BOARD.md`, 지정된 `check.js`, `align.js`, `test.js`, `test-align.js`, `README.md`, `analysis.js`. 실행해 본 것: 메모리 WAV·정렬·CSV·오류 재현. 기존 테스트는 파일 생성 때문에 미실행했으며, 어떤 파일도 생성·수정하지 않았다.
+
+#### 보이스 페르소나 실험실 · 6번 교차 리뷰 (생각 깊이 high)
+
+> 2026-10-03 팀장이 `codex exec -s read-only -c model_reasoning_effort="high"`로 실행해 받은 결과를 그대로 옮겼습니다. 실행 기록에 `reasoning effort: high`, `sandbox: read-only`가 찍혔고, 실행 전후 앱 파일 상태가 같습니다(고친 파일 없음).
+
+##### 지적 사항
+
+| 번호 | 심각도(높음/중간/낮음) | 파일:줄 | 문제 | 제안 |
+|---|---|---|---|---|
+| 1 | 높음 | `apps/voice-persona/core.py:203,206` | 24bit 변환에서 전체 `bytearray`와 전체 정수 배열을 동시에 보유합니다. 720KB 입력에서 추가 메모리 약 1.98MB를 실측했습니다. 231MB 입력은 원본 포함 약 866MB까지 필요할 수 있습니다(추측). 리스트는 아니지만 서비스 거부 위험이 있습니다. | 청크 단위로 디코딩하고 RMS를 누적해 전체 변환본 복사를 없애세요. |
+| 2 | 높음 | `apps/voice-persona/app.py:170,203` | 기존 `audio_by_result` 구조에는 보관 개수·총용량 제한이 없습니다. 서로 다른 입력 6개를 준비한 뒤 녹음 12개가 모두 남는 것을 재현했습니다. 분석 캐시의 최대 4개 제한은 녹음 메모리를 제한하지 않습니다. 반복 업로드로 서버 메모리가 고갈될 수 있습니다(추측). | 세션 전체 녹음 용량을 제한하고, 이전 작업·관련 업로드 데이터를 정리할 수 있게 하세요. |
+| 3 | 중간 | `apps/voice-persona/core.py:222,236` | JS는 RMS를 `Float32Array`에 저장하지만 Python은 배정밀도를 유지합니다. 경계값 부근 32bit PCM 합성음에서 Python은 80ms 말소리를 찾고 JS는 말소리 없음으로 판정했습니다. 결과가 항상 같지는 않습니다. | JS의 샘플·RMS 정밀도까지 맞추고, `0.01`·바닥×3·임계값 경계의 교차 테스트를 추가하세요. |
+| 4 | 중간 | `apps/voice-persona/core.py:260,270` | Python `round()`와 JS `Math.round()`의 반올림 규칙이 다릅니다. 8025Hz에서 프레임이 각각 160·161샘플입니다. 같은 합성음의 시작은 1.00·0.98초, 끝은 3.62·3.60초로 달랐습니다. | 양수에 대해 `math.floor(x + 0.5)`를 사용하고, 반정수 프레임 크기를 만드는 샘플레이트를 검증하세요. |
+| 5 | 중간 | `apps/voice-persona/core.py:176,179` | EXTENSIBLE의 GUID는 검사하지만 `validBits`와 확장 길이의 일관성은 검사하지 않습니다. 32bit 컨테이너에 `validBits=33`, 40바이트 fmt에 `cbSize=65535`인 파일이 통과했습니다. `check.js`에도 같은 검증 공백이 있습니다. | 유효 비트 수가 컨테이너 범위 안인지, 선언한 확장 영역이 fmt 안에 들어가는지 검사하세요. |
+| 6 | 중간 | `apps/voice-persona/core.py:315,341`; `apps/voice-persona/app.py:71` | 기존 백업 처리에서 깊게 중첩된 JSON의 `RecursionError`가 처리되지 않습니다. 20,001바이트 입력으로 재현했습니다. 48MB 제한보다 훨씬 작은 파일도 복원 화면에 처리되지 않은 예외를 일으킵니다. | 중첩 깊이를 제한하고 `RecursionError`를 사용자용 `ValueError`로 변환하세요. 현재 작업 유지도 검증하세요. |
+| 7 | 중간 | `apps/voice-persona/app.py:262,268`; `apps/voice-persona/core.py:299` | 분석 캐시가 있어도 매 rerun의 `make_bundle()`이 A/B를 다시 전체 분석합니다. 두 녹음에 대한 분석 호출 2회를 확인했습니다. ZIP 압축도 매번 수행됩니다. | 백업·ZIP 생성 결과를 녹음 해시와 원문·체크·메모 기준으로 재사용하거나, 명시적인 생성 동작에서 수행하세요. |
+| 8 | 낮음 | `apps/voice-persona/core.py:165,192` | RIFF 선언 길이를 무시하고, data 크기의 불완전한 마지막 프레임을 버립니다. RIFF 길이 4인 파일과 16bit 모노 data 크기 1599인 파일이 정상 분석으로 통과했습니다. | RIFF 범위와 청크 경계를 검증하고 `data_size % blockAlign != 0`을 거부하세요. 허용할 복구 예외는 명시하세요. |
+| 9 | 낮음 | `apps/voice-persona/tests/test_core.py:184,186` | 40ms 잡음 테스트는 상위 90% RMS가 이미 0이라 임계값 검사에서 종료됩니다. 80ms 필터를 삭제해도 통과하므로 해당 회귀를 검증하지 못합니다. JS와의 직접 비교도 없습니다. | 임계값을 통과하는 짧은 소리들로 60ms 거부·80ms 허용을 검증하고, 240·260ms 쉼 및 JS 경계 비교를 추가하세요. |
+
+##### 잘된 점
+
+A/B 표는 측정값과 설계 참고값을 구분하고 점수·이해도·가짜 AI 성공을 표시하지 않습니다. 입력 변경 시 이전 결과를 숨기며, 원문은 `st.text`로 출력합니다.
+
+24bit 부호·양끝값과 float NaN/Inf 거부를 확인했습니다. SHA-256 캐시는 5개 녹음의 교체·재조회에서도 올바른 결과를 반환했고, 기존 반환 키와 `test_upload_never_becomes_account_lock`도 유지됐습니다.
+
+검토한 파일 목록: `AGENTS.md`, `TEAM_BOARD.md`, `HANDOFF.md`, 현재 `core.py`·`app.py`, 테스트 2개, `check.js`, `analysis.js`, 지정 커밋 변경. 실행해 본 것: venv에서 파일 쓰기를 차단한 core 39개·AppTest 4개 통과(AppTest 임시 폴더 생성은 메모리에서 대체), 추가 합성 입력·JS 비교·메모리 측정. 파일 생성·수정 없음.
 
 ## 보고
 
