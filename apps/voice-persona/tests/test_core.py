@@ -213,4 +213,17 @@ class BackupTests(unittest.TestCase):
         with self.assertRaises(ValueError):load_bundle(json.dumps(packet).encode())
         with self.assertRaises(ValueError):make_bundle(r,{}, {'A':'yes'},'')
 
+
+class CacheTests(unittest.TestCase):
+    def test_repeat_analysis_is_cached_copy(self):
+        data=wav_bytes(seconds=1.2)
+        first=analyze_wav(data)
+        first['envelope'].clear();first['speech']['found']='changed'
+        again=analyze_wav(data)
+        self.assertTrue(again['envelope']);self.assertNotEqual(again['speech']['found'],'changed')
+        self.assertEqual(again['sha256'],first['sha256'])
+    def test_invalid_data_is_not_cached_as_valid(self):
+        with self.assertRaises(ValueError):analyze_wav(b'not audio')
+        with self.assertRaises(ValueError):analyze_wav(b'not audio')
+
 if __name__=='__main__':unittest.main(verbosity=2)

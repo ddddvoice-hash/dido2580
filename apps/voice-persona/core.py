@@ -260,7 +260,23 @@ def measure_speech(samples, rate: int) -> dict:
     return _measure_frames(_frame_rms(samples, max(1, round(rate * FRAME_MS / 1000)), 1))
 
 
+_ANALYZED: dict = {}
+
+
 def analyze_wav(data: bytes) -> dict:
+    """WAV 검사·측정. 같은 내용(SHA-256)은 다시 디코딩하지 않는다(최근 4개). 돌려주는 값은 복사본이다."""
+    if not isinstance(data, bytes) or not data:
+        raise ValueError("녹음 파일이 비어 있습니다.")
+    key = hashlib.sha256(data).hexdigest()
+    if key not in _ANALYZED:
+        if len(_ANALYZED) >= 4:
+            _ANALYZED.pop(next(iter(_ANALYZED)))
+        _ANALYZED[key] = _analyze_wav(data)
+    meta = _ANALYZED[key]
+    return {**meta, "envelope": list(meta["envelope"]), "speech": dict(meta["speech"])}
+
+
+def _analyze_wav(data: bytes) -> dict:
     if not isinstance(data, bytes) or not data:
         raise ValueError("녹음 파일이 비어 있습니다.")
     if len(data) > MAX_AUDIO:

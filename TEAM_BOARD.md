@@ -143,7 +143,7 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 | 4 | 매니저 | 변경마다 `tests/test_core.py`에 테스트 추가(24bit·float 통과, 잘린 파일 거부, 쉼 0.6초 합성음 측정) | `tests/test_core.py` | 새 테스트 통과, 회귀 사례 테스트 그대로 | 검토 |
 | 5 | 사원 | 화면 문구 존댓말·용어 통일 검사 | 이 게시판 '보고' 칸 (코드 수정 안 함) | 지적 목록 제출 | 검토 (지적 9건, 팀장 판정 완료) |
 | 6 | GPT | 바뀐 `core.py`·`app.py` 교차 리뷰 (생각 깊이 high) | 이 게시판 'GPT 리뷰' 칸 (코드 수정 안 함) | 지적 목록 제출 | 대기 |
-| 7 | 팀장 | venv에 `requirements.txt` 설치 후 `python -m unittest discover -s tests -p "test_*.py"` 전부 통과 확인, `streamlit run app.py`로 첫 화면 확인 | 이 게시판 '검수' 칸 | 테스트 전부 통과, 첫 화면에 오류 없음 | 대기 |
+| 7 | 팀장 | venv에 `requirements.txt` 설치 후 `python -m unittest discover -s tests -p "test_*.py"` 전부 통과 확인, `streamlit run app.py`로 첫 화면 확인 | 이 게시판 '검수' 칸 | 테스트 전부 통과, 첫 화면에 오류 없음 | 완료 (클라우드에서 확인: 단위 45개, 브라우저 13개 통과) |
 
 ---
 
@@ -339,6 +339,13 @@ Node 검증에서 예시 A=0, B=4, C=10, 두 `zero` 감점, 합계 하한 0을 �
 ## 보고
 
 (각 담당이 업무를 마치면 아래에 추가. 최신이 위로)
+
+### [페르소나 5·7 + 리뷰] 클라우드 Claude · 2026-10-03 (대표 부재 중 전권 위임)
+- 테스트: Streamlit 1.50.0 venv에서 `python -m unittest discover -s tests -p "test_*.py"` 45개 통과(팀 43개 + 캐시 테스트 2개). 실행 시간 18초 → 9초.
+- 실제 브라우저(`tests/browser_check.py`, 새로 추가): 회귀 사례(업로드 실패가 계정 잠김으로 바뀌지 않음), 48kHz·24bit WAV A/B 업로드, A/B 표 쉼 0.30초·0.90초 정확히 측정, JSON·ZIP 저장, 입력 변경 시 녹음 숨김, 새 세션 복원, 변조 백업 거부, 390px 가로 넘침 없음, 본문 버튼 48px 이상, 페이지 오류 없음 — 13개 통과.
+- 리뷰에서 고친 것: ① 작업 JSON을 rerun마다 만들며 두 녹음을 다시 디코딩(10분 24bit 한 파일 약 4초) → `core.analyze_wav`에 내용 해시 캐시(최근 4개, 복사본 반환) ② ZIP을 rerun마다 압축 → `ZIP_STORED` ③ "오디오 파일을 올려도 됩니다"(실제로는 WAV만) → "WAV 파일(MP3·M4A는 WAV로 바꿔서)".
+- 문구: 사원 5번 지적 3('오디오 파일')은 위 ③으로 반영(WAV만 받는다는 사실까지 적음). 나머지 지적은 팀장 판정대로 GPT 리뷰 반영 때 처리.
+- 남은 것: 6번 GPT 교차 리뷰(로컬 터미널 필요). 실제 휴대폰 마이크·스크린리더는 확인하지 않음. Streamlit Cloud 배포는 손대지 않음(대표가 진입 파일 `apps/voice-persona/app.py`로 바꾸면 이 버전이 올라감).
 
 ### [페르소나 5] 팀장 판정 · 2026-10-03
 - 지적한 줄을 직접 열어 봤습니다.

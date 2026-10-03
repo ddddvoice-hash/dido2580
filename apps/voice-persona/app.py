@@ -166,7 +166,7 @@ with st.expander("낭독 설계 JSON · 실제 처리 결과와 구분"):
 
 st.header("3. 같은 원고로 A/B 녹음")
 st.write("A는 기본 낭독, B는 쉼·강조·속도를 조정한 낭독입니다. 두 녹음 모두 위의 같은 원고를 읽으세요.")
-st.caption("마이크는 HTTPS 또는 localhost에서 브라우저 권한이 필요합니다. 오디오 파일을 올려도 됩니다. WAV는 각 10분 이하이고, 이 화면에서는 48MB까지 올릴 수 있습니다.")
+st.caption("마이크는 HTTPS 또는 localhost에서 브라우저 권한이 필요합니다. 마이크 대신 WAV 파일을 올려도 됩니다(MP3·M4A는 WAV로 바꿔 올려 주세요). WAV는 각 10분 이하이고, 이 화면에서는 48MB까지 올릴 수 있습니다.")
 current_audio = st.session_state.audio_by_result.setdefault(result.fingerprint, {})
 current_checks = st.session_state.checks_by_result.setdefault(result.fingerprint, {})
 
@@ -252,7 +252,7 @@ if len(current_audio) == 2:
     if all(current_checks.get(slot) for slot in ("A", "B")):
         st.success("같은 원고인지 직접 확인했습니다. 어떤 낭독이 더 잘 전달됐는지 이유를 남겨 주세요.")
 else:
-    st.info("A와 B를 모두 녹음하면 파일 길이를 나란히 보여드립니다.")
+    st.info("A와 B를 모두 녹음하면 파일 길이와 말소리·쉼 측정값을 나란히 보여 드립니다.")
 notes = st.text_area("더 잘 전달된 낭독과 그 이유", key=f"notes_{result.fingerprint}", height=120, max_chars=10000,
                    placeholder="예: B는 다음 행동 앞에서 쉬어 버튼 이름이 더 잘 들렸습니다.")
 
@@ -266,7 +266,8 @@ except ValueError as e:
 st.download_button("낭독 원고 TXT 받기", data=result.text.encode(), file_name="narration-script.txt", mime="text/plain")
 if current_audio:
     audio_zip = io.BytesIO()
-    with zipfile.ZipFile(audio_zip, "w", zipfile.ZIP_DEFLATED) as archive:
+    # WAV는 압축이 거의 안 되므로 그대로 담는다(rerun마다 큰 파일을 압축하지 않게).
+    with zipfile.ZipFile(audio_zip, "w", zipfile.ZIP_STORED) as archive:
         for slot, data in current_audio.items():
             archive.writestr(f"persona-{slot}.wav", data)
         archive.writestr("script.txt", result.text)
