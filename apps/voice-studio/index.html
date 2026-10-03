@@ -190,11 +190,13 @@ button, input, textarea { font: inherit; color: inherit; }
 .export { display: flex; flex-wrap: wrap; gap: 8px; }
 .guide-link { color: var(--accent); font-weight: 500; }
 .unmatched { display: grid; gap: 12px; }
+.home-link{display:inline-flex;align-items:center;min-height:48px;color:inherit;font-size:.95rem;text-underline-offset:3px}.home-link:focus-visible{outline:3px solid currentColor;outline-offset:2px}
 </style>
 </head>
 <body>
 <header class="top">
   <div class="top-in">
+    <a class="home-link" href="../index.html">← 작업실 첫 화면</a>
     <div class="brand"><h1>디도 녹음 부스</h1><span>시티 도미니언 · 밝고 귀여운 모험 안내자</span></div>
     <div class="progress" aria-label="녹음 진행률">
       <div class="progress-label"><span>통과한 줄 <b id="doneCount">0</b> / 96</span><span id="retakeLabel"></span></div>
