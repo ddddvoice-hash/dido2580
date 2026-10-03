@@ -56,6 +56,10 @@
   .help { font-size:16px; }
   .help kbd { border:1px solid #666; border-radius:4px; padding:0 6px; background:#f4f4f4; }
   [hidden] { display:none !important; }
+.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+#agree-result table{width:100%;border-collapse:collapse;margin:8px 0}
+#agree-result th,#agree-result td{text-align:left;padding:8px 10px;border-bottom:1px solid currentColor;border-bottom-color:rgba(127,127,127,.35)}
+#agree-result td.n{font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -145,6 +149,18 @@
     <button type="button" id="export-jsonl" class="primary">JSONL 내보내기</button>
     <button type="button" id="clear-all" class="danger">전체 삭제</button>
   </div>
+</section>
+
+<section id="agree-section" aria-labelledby="h-agree">
+  <h2 id="h-agree">4. 평가자 일치도</h2>
+  <p>같은 답변을 두 사람 이상이 채점했을 때, 항목마다 점수가 얼마나 같게 나왔는지 봅니다. 크게 갈린 곳은 기준표 문구를 다듬을 후보입니다. 점수를 매기는 값이 아닙니다.</p>
+  <div class="row">
+    <button type="button" id="agree-mine" class="primary">이 브라우저의 채점으로 보기</button>
+    <button type="button" id="agree-add">다른 평가자 JSONL 더하기</button>
+    <input type="file" id="agree-files" accept=".jsonl,.json,.txt,application/x-ndjson" multiple class="sr-only" tabindex="-1" aria-label="다른 평가자가 내보낸 JSONL 파일">
+  </div>
+  <p id="agree-status" role="status"></p>
+  <div id="agree-result"></div>
 </section>
 
 </main>

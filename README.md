@@ -268,6 +268,6 @@ python tools/calibrate.py 3000      # 축 기준선 다시 뽑기
 | `apps/voice-persona` 보이스 페르소나 실험실 | 안내 원문 사실 보존, 같은 원고 A/B 녹음의 말소리·쉼 비교 (Streamlit) | `cd apps/voice-persona; if ($?) { python -m streamlit run app.py }` |
 | `apps/voice-check` 녹음 검사기 | 반려 코드(V02·V05·V08), 기준 프로필, 일괄 검사, AI 음성 비교 (Node) | `node apps/voice-check/check.js <폴더>` |
 | `apps/reading-coach` 낭독 따라 읽기 코치 | 시범 낭독과 따라 읽기의 속도·쉼 비교 | `start apps/reading-coach/index.html` |
-| `apps/warmth-scorer` 따뜻함 채점기 | AI 답변을 기준표(`rubric.json`)로 채점, JSONL 내보내기 | `start apps/warmth-scorer/index.html` |
+| `apps/warmth-scorer` 따뜻함 채점기 | AI 답변을 기준표(`rubric.json`)로 채점, JSONL 내보내기, 여러 평가자 JSONL을 모아 항목별 일치도·갈린 답변 보기 | `start apps/warmth-scorer/index.html` |
 
 푸시할 때마다 GitHub Actions(`.github/workflows/tests.yml`)가 사주 패키지, 보이스 페르소나, 녹음 검사기·녹음 부스 테스트를 모두 돌립니다.

@@ -119,12 +119,81 @@
     return res;
   }
 
+  // JSONL 한 덩어리(여러 줄)를 기록 목록으로. 읽지 못한 줄은 번호를 모아 돌려줍니다.
+  function parseJsonl(text) {
+    var records = [], bad = [];
+    String(text || '').split(/\r?\n/).forEach(function (line, i) {
+      if (!line.trim()) return;
+      try {
+        var r = JSON.parse(line);
+        if (r && typeof r === 'object' && typeof r.answer === 'string' && r.scores && typeof r.scores === 'object') records.push(r);
+        else bad.push(i + 1);
+      } catch (e) { bad.push(i + 1); }
+    });
+    return { records: records, bad: bad };
+  }
+
+  // 평가자 일치도. 같은 상황·같은 답변(글자 그대로)을 2명 이상이 채점한 것만 비교합니다.
+  // 항목마다 평가자 두 명씩 짝지어 '점수가 같은 비율'과 '1점 이내 비율'을 셉니다(점수가 아니라 기준이 얼마나 같게 읽히는지 보는 값).
+  function computeAgreement(rubric, records) {
+    var groups = {};
+    (records || []).forEach(function (r) {
+      if (!r || typeof r.rater !== 'string' || !r.rater) return;
+      var key = (r.situation || '') + '\u0000' + (r.answer || '');
+      var g = groups[key] || (groups[key] = { situation: r.situation || '', answer_id: r.answer_id || '', answer: r.answer || '', byRater: {} });
+      g.byRater[r.rater] = r;   // 같은 평가자가 두 번이면 나중 것
+    });
+    var crit = rubric.criteria.map(function (c) { return { id: c.id, name: c.name, pairs: 0, exact: 0, within1: 0 }; });
+    var pen = { pairs: 0, same: 0 };
+    var compared = [], raters = {}, splits = [];
+    Object.keys(groups).forEach(function (k) {
+      var g = groups[k];
+      var names = Object.keys(g.byRater).sort();
+      if (names.length < 2) return;
+      compared.push(g);
+      names.forEach(function (n) { raters[n] = true; });
+      crit.forEach(function (c) {
+        var vals = names.map(function (n) { return g.byRater[n].scores[c.id]; });
+        for (var i = 0; i < vals.length; i++) for (var j = i + 1; j < vals.length; j++) {
+          if (typeof vals[i] !== 'number' || typeof vals[j] !== 'number') continue;
+          c.pairs++;
+          if (vals[i] === vals[j]) c.exact++;
+          if (Math.abs(vals[i] - vals[j]) <= 1) c.within1++;
+        }
+        var nums = vals.filter(function (v) { return typeof v === 'number'; });
+        if (nums.length >= 2) {
+          var spread = Math.max.apply(null, nums) - Math.min.apply(null, nums);
+          if (spread > 0) splits.push({ situation: g.situation, answer_id: g.answer_id, criterion: c.name, spread: spread,
+            scores: names.map(function (n) { return { rater: n, score: g.byRater[n].scores[c.id] }; }) });
+        }
+      });
+      for (var i = 0; i < names.length; i++) for (var j = i + 1; j < names.length; j++) {
+        var a = (g.byRater[names[i]].penalties || []).slice().sort().join(','), b = (g.byRater[names[j]].penalties || []).slice().sort().join(',');
+        pen.pairs++;
+        if (a === b) pen.same++;
+      }
+    });
+    splits.sort(function (x, y) { return y.spread - x.spread; });
+    return {
+      answers: compared.length,
+      raters: Object.keys(raters).sort(),
+      criteria: crit.map(function (c) {
+        return { id: c.id, name: c.name, pairs: c.pairs,
+          exact: c.pairs ? c.exact / c.pairs : null, within1: c.pairs ? c.within1 / c.pairs : null };
+      }),
+      penalties: { pairs: pen.pairs, same: pen.pairs ? pen.same / pen.pairs : null },
+      splits: splits
+    };
+  }
+
   var api = {
     computeTotal: computeTotal,
     toJsonlLine: toJsonlLine,
     buildJsonl: buildJsonl,
     buildRecords: buildRecords,
     checkExample: checkExample,
+    parseJsonl: parseJsonl,
+    computeAgreement: computeAgreement,
     nowKstIso: nowKstIso,
     dateStamp: dateStamp
   };
@@ -715,6 +784,64 @@
     say(records.length + '건을 내보냈습니다.');
   }
 
+  /* ---------- 평가자 일치도 ---------- */
+  var extraRecords = [];   // 다른 평가자 파일에서 읽은 기록(저장하지 않고 이 화면에서만 씀)
+  function pct(v) { return v == null ? '-' : Math.round(v * 100) + '%'; }
+  function showAgreement() {
+    if (!rubric) { $('agree-status').textContent = '기준표를 먼저 불러오세요.'; return; }
+    var mine = buildRecords(rubric, state);
+    var r = computeAgreement(rubric, mine.concat(extraRecords));
+    var box = $('agree-result');
+    box.textContent = '';
+    if (!r.answers) {
+      $('agree-status').textContent = '두 사람 이상이 채점한 같은 답변이 아직 없습니다. 평가자 이름을 바꿔 같은 문항을 채점하거나, 다른 평가자의 JSONL을 더해 주세요.';
+      return;
+    }
+    $('agree-status').textContent = '비교한 답변 ' + r.answers + '개 · 평가자 ' + r.raters.join(', ') + ' · 감점 신호가 같았던 비율 ' + pct(r.penalties.same);
+    var t = el('table');
+    var head = el('tr');
+    ['항목', '같은 점수', '1점 이내', '비교한 짝'].forEach(function (h) { head.appendChild(el('th', { scope: 'col' }, h)); });
+    t.appendChild(el('thead')).appendChild(head);
+    var body = t.appendChild(el('tbody'));
+    r.criteria.forEach(function (c) {
+      var tr = el('tr');
+      tr.appendChild(el('th', { scope: 'row' }, c.name));
+      tr.appendChild(el('td', { class: 'n' }, pct(c.exact)));
+      tr.appendChild(el('td', { class: 'n' }, pct(c.within1)));
+      tr.appendChild(el('td', { class: 'n' }, String(c.pairs)));
+      body.appendChild(tr);
+    });
+    box.appendChild(t);
+    if (r.splits.length) {
+      box.appendChild(el('p', null, '많이 갈린 곳 (큰 차이부터, 10곳까지)'));
+      var ul = el('ul');
+      r.splits.slice(0, 10).forEach(function (sp) {
+        var who = sp.scores.map(function (x) { return x.rater + ' ' + (x.score == null ? '-' : x.score); }).join(' · ');
+        ul.appendChild(el('li', null, '[' + sp.criterion + '] ' + (sp.situation.length > 30 ? sp.situation.slice(0, 30) + '…' : sp.situation) + ' / 답변 ' + sp.answer_id + ' — ' + who));
+      });
+      box.appendChild(ul);
+    }
+  }
+  function addAgreementFiles(files) {
+    var list = Array.prototype.slice.call(files || []);
+    if (!list.length) return;
+    var done = 0, added = 0, badLines = 0;
+    list.forEach(function (f) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var parsed = parseJsonl(reader.result);
+        extraRecords = extraRecords.concat(parsed.records);
+        added += parsed.records.length; badLines += parsed.bad.length;
+        if (++done === list.length) {
+          showAgreement();
+          $('agree-status').textContent = '파일 ' + list.length + '개에서 채점 ' + added + '건을 더했습니다' + (badLines ? ' (읽지 못한 줄 ' + badLines + '개는 뺐습니다)' : '') + '. ' + $('agree-status').textContent;
+        }
+      };
+      reader.onerror = function () { if (++done === list.length) showAgreement(); };
+      reader.readAsText(f, 'UTF-8');
+    });
+  }
+
   function clearAll() {
     if (!window.confirm('저장된 문항과 채점을 모두 삭제할까요?')) return;
     state.items = [];
@@ -871,6 +998,9 @@
     $('next-answer').addEventListener('click', function () { goNext(false); });
     $('export-jsonl').addEventListener('click', exportJsonl);
     $('clear-all').addEventListener('click', clearAll);
+    $('agree-mine').addEventListener('click', showAgreement);
+    $('agree-add').addEventListener('click', function () { $('agree-files').click(); });
+    $('agree-files').addEventListener('change', function (e) { addAgreementFiles(e.target.files); e.target.value = ''; });
     $('rubric-file').addEventListener('change', function (e) {
       var f = e.target.files && e.target.files[0];
       if (!f) return;

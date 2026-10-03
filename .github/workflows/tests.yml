@@ -69,7 +69,7 @@ jobs:
           node apps/reading-coach/tests/browser.test.js
 
   warmth-scorer:
-    name: 따뜻함 채점기 (실제 브라우저 29가지)
+    name: 따뜻함 채점기 (실제 브라우저 29+8가지, 평가자 일치도)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -85,3 +85,12 @@ jobs:
         env:
           CHROME: /usr/bin/google-chrome
         run: node tests/browser-check.mjs http://127.0.0.1:8765 "file://$PWD/index.html" rubric.json
+      - name: 평가자 일치도 계산
+        run: node tests/agreement.test.js
+      - name: 평가자 일치도 화면
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          node tests/agreement.browser.js
