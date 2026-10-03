@@ -53,3 +53,5 @@ jobs:
         run: |
           node apps/voice-studio/tests/parity.test.js
           node apps/voice-studio/tests/lines.test.js
+      - name: 낭독 코치 (속도·쉼 비교와 피드백)
+        run: node apps/reading-coach/tests/test-analysis.js
