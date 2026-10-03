@@ -45,6 +45,10 @@
   .legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: .9rem; margin-top: 8px; }
   .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
   label { display: block; padding: 6px 0; }
+  .sub-h { font-size: 1rem; margin: 20px 0 6px; }
+  textarea { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  .confirm { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+  .confirm p { margin: 0 0 8px; }
   .hint { margin: 6px 0 0; font-size: .9rem; color: var(--muted, #555); }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   input[type=checkbox] { width: 20px; height: 20px; vertical-align: -4px; margin-right: 8px; }
@@ -64,6 +68,18 @@
     <label for="sentence-select" class="sr-only">연습 문장</label>
     <select id="sentence-select"></select>
     <p class="sentence" id="sentence-text"></p>
+    <div class="row">
+      <button id="pack-import">선생님이 보낸 시범 팩 열기</button>
+      <input type="file" id="pack-file" accept=".json,application/json" class="sr-only" tabindex="-1" aria-label="시범 팩 파일">
+    </div>
+    <div id="pack-confirm" class="confirm hidden" role="group" aria-labelledby="pack-confirm-text">
+      <p id="pack-confirm-text"></p>
+      <div class="row">
+        <button id="pack-apply" class="primary">이 팩으로 바꾸기</button>
+        <button id="pack-cancel">그만두기</button>
+      </div>
+    </div>
+    <p class="status" id="pack-status" aria-live="polite"></p>
   </section>
 
   <section aria-labelledby="h-demo">
@@ -76,12 +92,29 @@
       <summary>선생님 모드 — 시범 녹음 넣기</summary>
       <div class="row" style="margin-top:12px">
         <button id="demo-rec">시범 녹음 시작</button>
-        <label style="padding:0">
-          <span class="hidden">시범 파일 올리기</span>
-          <input type="file" id="demo-file" accept="audio/*">
-        </label>
+        <button id="demo-upload">시범 파일 올리기</button>
+        <input type="file" id="demo-file" accept="audio/*" class="sr-only" tabindex="-1" aria-label="시범 녹음 파일">
         <button id="demo-delete">시범 지우기</button>
       </div>
+      <h3 class="sub-h">문장 관리</h3>
+      <label for="sentence-edit">지금 문장 고치기</label>
+      <textarea id="sentence-edit" rows="2" maxlength="500"></textarea>
+      <div class="row">
+        <button id="sentence-save">고친 문장 저장</button>
+        <button id="sentence-delete">이 문장 지우기</button>
+      </div>
+      <label for="sentence-new">새 문장</label>
+      <textarea id="sentence-new" rows="2" maxlength="500" placeholder="예: 오늘은 바람이 조금 차갑습니다. 따뜻하게 입고 나가세요."></textarea>
+      <div class="row">
+        <button id="sentence-add">새 문장 추가</button>
+        <button id="sentence-reset">처음 문장 12개로 되돌리기</button>
+      </div>
+      <h3 class="sub-h">수강생에게 보내기</h3>
+      <div class="row">
+        <button id="pack-export" class="primary">시범 팩 내보내기</button>
+      </div>
+      <p class="hint">문장과 시범 녹음을 파일 하나(.json)로 저장합니다. 수강생은 위의 '선생님이 보낸 시범 팩 열기'로 엽니다.</p>
+      <p class="status" id="teacher-status" aria-live="polite"></p>
     </details>
   </section>
 
@@ -134,7 +167,7 @@
 "use strict";
 
 // 연습 문장. 쉼 자리가 다른 문장을 섞었다. 원하는 문장으로 바꿔 쓰면 된다.
-const SENTENCES = [
+const DEFAULT_SENTENCES = [
   "안녕하세요. 오늘도 함께 읽어 보겠습니다.",
   "봄비가 내리는 아침, 창밖의 나무가 조용히 젖어 갑니다.",
   "천천히 읽어도 괜찮습니다. 중요한 것은 끝까지 전하는 마음입니다.",
@@ -160,7 +193,33 @@ const CHECKS = [
 const $ = (id) => document.getElementById(id);
 const A = window.ReadingAnalysis;
 let audioCtx = null;
-let current = 0;
+let current = 0;          // 목록 안의 위치
+const SENTENCE_KEY = "reading-coach-sentences";
+const MAX_TEXT = 500, MAX_SENTENCES = 200, MAX_PACK_BYTES = 60 * 1024 * 1024;
+// id는 시범 녹음을 찾는 열쇠다. 처음 12개는 예전 판의 번호(0~11)와 같아 이미 넣은 시범이 그대로 이어진다.
+const defaultSentences = () => DEFAULT_SENTENCES.map((text, id) => ({ id, text }));
+function validSentences(list) {
+  if (!Array.isArray(list) || !list.length || list.length > MAX_SENTENCES) return false;
+  const ids = new Set();
+  for (const s of list) {
+    if (!s || !Number.isInteger(s.id) || s.id < 0 || ids.has(s.id)) return false;
+    if (typeof s.text !== "string" || !s.text.trim() || s.text.length > MAX_TEXT) return false;
+    ids.add(s.id);
+  }
+  return true;
+}
+function loadSentences() {
+  try {
+    const list = JSON.parse(localStorage.getItem(SENTENCE_KEY) || "null");
+    if (validSentences(list)) return list;
+  } catch { /* 저장소를 못 쓰면 처음 문장 */ }
+  return defaultSentences();
+}
+let sentences = loadSentences();
+function saveSentences() {
+  try { localStorage.setItem(SENTENCE_KEY, JSON.stringify(sentences)); return true; } catch { return false; }
+}
+const currentId = () => sentences[current].id;
 let demoResult = null;
 let mineBlob = null;
 let lastCompare = null;
@@ -243,22 +302,30 @@ function play(blob) {
 }
 
 // ---------- 화면 ----------
+// 선생님이 쓴 문장이 들어가므로 HTML로 넣지 않고 글자로만 넣는다.
 function renderSentences() {
   const sel = $("sentence-select");
-  sel.innerHTML = SENTENCES.map((s, i) => `<option value="${i}">${i + 1}. ${s}</option>`).join("");
-  sel.addEventListener("change", () => selectSentence(Number(sel.value)));
+  sel.replaceChildren(...sentences.map((s, i) => {
+    const o = document.createElement("option");
+    o.value = i;
+    o.textContent = `${i + 1}. ${s.text}`;
+    return o;
+  }));
+  sel.value = String(current);
 }
 
 async function selectSentence(i) {
-  current = i;
-  $("sentence-text").textContent = SENTENCES[i];
+  current = Math.max(0, Math.min(i, sentences.length - 1));
+  $("sentence-select").value = String(current);
+  $("sentence-text").textContent = sentences[current].text;
+  $("sentence-edit").value = sentences[current].text;
   mineBlob = null;
   lastCompare = null;
   $("mine-play").disabled = true;
   $("mine-status").textContent = "";
   $("result").classList.add("hidden");
   renderChecklist();
-  const blob = await getDemo(i);
+  const blob = await getDemo(currentId());
   demoResult = blob ? await decode(blob).catch(() => null) : null;
   $("demo-play").disabled = !blob;
   $("demo-status").textContent = blob
@@ -271,10 +338,16 @@ function renderChecklist() {
     `<label><input type="checkbox" data-i="${i}">${c}</label>`).join("");
 }
 
+// 기록에는 문장 id가 남는다. 지금 목록에서의 번호로 보여 주고, 지운 문장은 그렇게 표시한다.
+function sentenceLabel(id) {
+  const i = sentences.findIndex((s) => s.id === id);
+  return i >= 0 ? `${i + 1}번` : "지운 문장";
+}
+
 function renderHistory() {
   const rows = loadHistory().slice().reverse().slice(0, 30);
   $("history").innerHTML = rows.length
-    ? rows.map((r) => `<tr><td>${r.date}</td><td>${r.sentence + 1}번</td><td>${r.score ?? "-"}</td>
+    ? rows.map((r) => `<tr><td>${r.date}</td><td>${sentenceLabel(r.sentence)}</td><td>${r.score ?? "-"}</td>
         <td>${r.speed ?? "-"}</td><td>${r.checks}/${CHECKS.length}</td></tr>`).join("")
     : `<tr><td colspan="5">아직 기록이 없습니다.</td></tr>`;
 }
@@ -358,19 +431,20 @@ async function onMineRecorded(blob, error) {
 recorder($("mine-rec"), onMineRecorded, { idle: "녹음 시작", recording: "녹음 멈추기" });
 recorder($("demo-rec"), async (blob, error) => {
   if (!blob) { $("demo-status").textContent = error; return; }
-  await putDemo(current, blob);
+  await putDemo(currentId(), blob);
   selectSentence(current);
 }, { idle: "시범 녹음 시작", recording: "시범 녹음 멈추기" });
 
+$("demo-upload").addEventListener("click", () => $("demo-file").click());
 $("demo-file").addEventListener("change", async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  await putDemo(current, file);
+  await putDemo(currentId(), file);
   e.target.value = "";
   selectSentence(current);
 });
-$("demo-delete").addEventListener("click", async () => { await delDemo(current); selectSentence(current); });
-$("demo-play").addEventListener("click", async () => { const b = await getDemo(current); if (b) play(b); });
+$("demo-delete").addEventListener("click", async () => { await delDemo(currentId()); selectSentence(current); });
+$("demo-play").addEventListener("click", async () => { const b = await getDemo(currentId()); if (b) play(b); });
 $("mine-play").addEventListener("click", () => mineBlob && play(mineBlob));
 $("mine-upload").addEventListener("click", () => $("mine-file").click());
 $("mine-file").addEventListener("change", (e) => {
@@ -384,7 +458,7 @@ $("save").addEventListener("click", () => {
   const list = loadHistory();
   list.push({
     date: new Date().toLocaleDateString("ko-KR"),
-    sentence: current,
+    sentence: currentId(),
     score: lastCompare && lastCompare.ok ? lastCompare.score : null,
     speed: lastCompare && lastCompare.ok ? `${Math.round(lastCompare.speedRatio * 100)}%` : null,
     checks,
@@ -392,6 +466,139 @@ $("save").addEventListener("click", () => {
   saveHistory(list);
   renderHistory();
   $("save-status").textContent = "기록했습니다.";
+});
+
+// ---------- 문장 관리 (선생님 모드) ----------
+function teacherSay(msg) { $("teacher-status").textContent = msg; }
+function afterSentenceChange(i, msg) {
+  const ok = saveSentences();
+  renderSentences();
+  renderHistory();
+  selectSentence(i);
+  teacherSay(ok ? msg : msg + " 다만 이 브라우저에 저장하지 못했습니다. 시범 팩으로 내보내 두세요.");
+}
+$("sentence-select").addEventListener("change", (e) => selectSentence(Number(e.target.value)));
+$("sentence-save").addEventListener("click", () => {
+  const text = $("sentence-edit").value.trim();
+  if (!text) { teacherSay("문장이 비어 있습니다."); return; }
+  if (text === sentences[current].text) { teacherSay("바뀐 곳이 없습니다."); return; }
+  sentences[current] = { ...sentences[current], text };
+  afterSentenceChange(current, "문장을 고쳤습니다. 시범 녹음은 그대로라, 글이 많이 바뀌었으면 시범을 다시 녹음해 주세요.");
+});
+$("sentence-add").addEventListener("click", () => {
+  const text = $("sentence-new").value.trim();
+  if (!text) { teacherSay("새 문장을 먼저 적어 주세요."); return; }
+  if (sentences.length >= MAX_SENTENCES) { teacherSay(`문장은 ${MAX_SENTENCES}개까지 둘 수 있습니다.`); return; }
+  const id = Math.max(...sentences.map((x) => x.id)) + 1;
+  sentences.push({ id, text });
+  $("sentence-new").value = "";
+  afterSentenceChange(sentences.length - 1, `${sentences.length}번 문장으로 추가했습니다. 이어서 시범을 녹음하세요.`);
+});
+// 지우기는 두 번 눌러야 한다(시범 녹음도 함께 지워지므로). 5초 안에 다시 누르지 않으면 취소.
+let deleteArmed = null;
+$("sentence-delete").addEventListener("click", async () => {
+  if (sentences.length <= 1) { teacherSay("마지막 한 문장은 지울 수 없습니다."); return; }
+  if (deleteArmed !== current) {
+    deleteArmed = current;
+    $("sentence-delete").textContent = "한 번 더 누르면 지웁니다 (시범도 지워짐)";
+    setTimeout(() => { if (deleteArmed !== null) { deleteArmed = null; $("sentence-delete").textContent = "이 문장 지우기"; } }, 5000);
+    return;
+  }
+  deleteArmed = null;
+  $("sentence-delete").textContent = "이 문장 지우기";
+  const removed = sentences.splice(current, 1)[0];
+  await delDemo(removed.id).catch(() => {});
+  afterSentenceChange(Math.min(current, sentences.length - 1), "문장과 그 시범 녹음을 지웠습니다.");
+});
+$("sentence-reset").addEventListener("click", () => {
+  sentences = defaultSentences();
+  afterSentenceChange(0, "처음 문장 12개로 되돌렸습니다. 1~12번에 넣었던 시범 녹음은 그대로 이어집니다.");
+});
+
+// ---------- 시범 팩: 문장 + 시범 녹음을 JSON 하나로 ----------
+const blobToBase64 = (blob) => new Promise((resolve, reject) => {
+  const r = new FileReader();
+  r.onload = () => resolve(String(r.result).split(",")[1] || "");
+  r.onerror = () => reject(r.error);
+  r.readAsDataURL(blob);
+});
+function base64ToBlob(b64, type) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type });
+}
+$("pack-export").addEventListener("click", async () => {
+  teacherSay("시범 팩을 만드는 중입니다…");
+  const demos = {};
+  for (const s of sentences) {
+    const blob = await getDemo(s.id);
+    if (blob) demos[s.id] = { type: blob.type || "audio/webm", base64: await blobToBase64(blob) };
+  }
+  const pack = { format: "reading-coach-pack", version: 1, made: new Date().toISOString(), sentences, demos };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(pack)], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = `낭독-시범팩-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  teacherSay(`문장 ${sentences.length}개, 시범 녹음 ${Object.keys(demos).length}개를 시범 팩으로 저장했습니다.`);
+});
+
+// 가져오기는 전부 검사한 뒤, 사용자가 '바꾸기'를 눌러야 적용한다. 실패하면 지금 목록은 그대로.
+function readPack(text) {
+  let pack;
+  try { pack = JSON.parse(text); } catch { throw new Error("시범 팩 파일이 아닙니다(JSON을 읽지 못했습니다)."); }
+  if (!pack || pack.format !== "reading-coach-pack" || pack.version !== 1) throw new Error("이 코치에서 내보낸 시범 팩이 아닙니다.");
+  if (!validSentences(pack.sentences)) throw new Error("시범 팩의 문장 목록이 올바르지 않습니다.");
+  const ids = new Set(pack.sentences.map((s) => s.id));
+  const demos = {};
+  for (const [key, d] of Object.entries(pack.demos || {})) {
+    const id = Number(key);
+    if (!ids.has(id) || !d || typeof d.base64 !== "string" || typeof d.type !== "string" || !/^audio\/[\w.+-]+/.test(d.type)) {
+      throw new Error("시범 팩의 녹음 정보가 올바르지 않습니다.");
+    }
+    try { demos[id] = base64ToBlob(d.base64, d.type); } catch { throw new Error("시범 팩의 녹음을 읽지 못했습니다."); }
+  }
+  return { sentences: pack.sentences.map((s) => ({ id: s.id, text: s.text })), demos };
+}
+let pendingPack = null;
+$("pack-import").addEventListener("click", () => $("pack-file").click());
+$("pack-file").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  pendingPack = null;
+  $("pack-confirm").classList.add("hidden");
+  if (file.size > MAX_PACK_BYTES) { $("pack-status").textContent = "시범 팩이 너무 큽니다(60MB 넘음)."; return; }
+  try {
+    pendingPack = readPack(await file.text());
+  } catch (err) {
+    $("pack-status").textContent = err.message + " 지금 문장 목록은 그대로입니다.";
+    return;
+  }
+  $("pack-confirm-text").textContent = `문장 ${pendingPack.sentences.length}개, 시범 녹음 ${Object.keys(pendingPack.demos).length}개가 들어 있습니다. 지금 문장 목록과 시범을 이 팩으로 바꿀까요? 연습 기록은 지워지지 않습니다.`;
+  $("pack-confirm").classList.remove("hidden");
+  $("pack-status").textContent = "";
+  $("pack-apply").focus();
+});
+$("pack-cancel").addEventListener("click", () => {
+  pendingPack = null;
+  $("pack-confirm").classList.add("hidden");
+  $("pack-status").textContent = "가져오기를 그만두었습니다.";
+});
+$("pack-apply").addEventListener("click", async () => {
+  if (!pendingPack) return;
+  const pack = pendingPack;
+  pendingPack = null;
+  $("pack-confirm").classList.add("hidden");
+  for (const s of sentences) await delDemo(s.id).catch(() => {});
+  for (const [id, blob] of Object.entries(pack.demos)) await putDemo(Number(id), blob);
+  sentences = pack.sentences;
+  const ok = saveSentences();
+  renderSentences();
+  renderHistory();
+  await selectSentence(0);
+  $("pack-status").textContent = `시범 팩을 열었습니다. 문장 ${sentences.length}개, 시범 녹음 ${Object.keys(pack.demos).length}개.` + (ok ? "" : " 이 브라우저에 문장을 저장하지 못해, 새로고침하면 다시 열어야 합니다.");
 });
 
 renderSentences();

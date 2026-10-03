@@ -32,7 +32,7 @@ function wav(file, parts, rate = 16000) {
   const results = [];
   const ok = (name, cond, detail = "") => { results.push(!!cond); console.log(`${cond ? "PASS" : "FAIL"} ${name}${detail ? " — " + detail : ""}`); };
   const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("file://" + path.resolve(__dirname, "../index.html"));
@@ -53,6 +53,52 @@ function wav(file, parts, rate = 16000) {
   ok("'녹음 파일 올리기' 버튼 높이 48px 이상", (await page.locator("#mine-upload").boundingBox()).height >= 47.5);
   await page.focus("#mine-upload");
   ok("키보드로 '녹음 파일 올리기'에 갈 수 있음", await page.evaluate(() => document.activeElement.id === "mine-upload"));
+
+  // ---- 선생님: 문장 관리 ----
+  await page.fill("#sentence-new", "<b>굵게</b> 새 문장입니다. 천천히 읽어 보세요.");
+  await page.click("#sentence-add");
+  ok("새 문장 추가 → 13번, 글자 그대로(HTML로 안 바뀜)", (await page.textContent("#sentence-text")).startsWith("<b>굵게</b>") && (await page.$$eval("#sentence-select option", (o) => o.length)) === 13);
+  await page.setInputFiles("#demo-file", demo);
+  await page.waitForFunction(() => !document.getElementById("demo-play").disabled, null, { timeout: 15000 });
+  await page.fill("#sentence-edit", "고친 문장입니다. 끝까지 또렷하게.");
+  await page.click("#sentence-save");
+  ok("문장 고치기", (await page.textContent("#sentence-text")) === "고친 문장입니다. 끝까지 또렷하게.");
+  await page.selectOption("#sentence-select", "1");
+  await page.click("#sentence-delete");
+  ok("지우기 첫 번째 누름은 확인만", (await page.$$eval("#sentence-select option", (o) => o.length)) === 13 && (await page.textContent("#sentence-delete")).includes("한 번 더"));
+  await page.click("#sentence-delete");
+  // 지우기는 시범 녹음(IndexedDB)을 먼저 지운 뒤 목록을 다시 그린다.
+  const deleted = await page.waitForFunction(() => document.querySelectorAll("#sentence-select option").length === 12, null, { timeout: 5000 }).then(() => true, () => false);
+  ok("두 번 누르면 지움 → 12개", deleted);
+
+  // ---- 시범 팩 내보내기 → 새 브라우저(수강생)에서 열기 ----
+  const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#pack-export")]);
+  const packPath = path.join(dir, "pack.json");
+  await dl.saveAs(packPath);
+  const pack = JSON.parse(fs.readFileSync(packPath, "utf8"));
+  ok("시범 팩: 문장 12개, 시범 2개(1번·고친 13번)", pack.sentences.length === 12 && Object.keys(pack.demos).length === 2, `${pack.sentences.length}/${Object.keys(pack.demos).length}`);
+
+  const student = await browser.newContext();
+  const sp = await student.newPage();
+  sp.on("pageerror", (e) => errors.push(e.message));
+  await sp.goto("file://" + path.resolve(__dirname, "../index.html"));
+  const bad = path.join(dir, "bad.json");
+  fs.writeFileSync(bad, JSON.stringify({ ...pack, sentences: [{ id: 0, text: "" }] }));
+  await sp.setInputFiles("#pack-file", bad);
+  await sp.waitForFunction(() => document.getElementById("pack-status").textContent.length > 0);
+  ok("잘못된 팩은 거부하고 목록 유지", (await sp.textContent("#pack-status")).includes("올바르지 않습니다") && (await sp.$$eval("#sentence-select option", (o) => o.length)) === 12);
+  await sp.setInputFiles("#pack-file", packPath);
+  await sp.waitForSelector("#pack-confirm:not(.hidden)");
+  ok("열기 전에 확인을 물음", (await sp.textContent("#pack-confirm-text")).includes("문장 12개, 시범 녹음 2개"));
+  await sp.click("#pack-apply");
+  await sp.waitForFunction(() => document.getElementById("pack-status").textContent.includes("열었습니다"));
+  await sp.selectOption("#sentence-select", String(11));
+  await sp.waitForFunction(() => !document.getElementById("demo-play").disabled, null, { timeout: 15000 });
+  ok("수강생 쪽에 고친 문장과 시범이 그대로", (await sp.textContent("#sentence-text")) === "고친 문장입니다. 끝까지 또렷하게.");
+  await sp.setInputFiles("#mine-file", same);
+  await sp.waitForFunction(() => !document.getElementById("result").classList.contains("hidden"), null, { timeout: 15000 });
+  ok("수강생이 따라 읽기 비교까지 됨", (await sp.textContent("#score")).trim() === "100점");
+  await student.close();
   ok("페이지 오류 없음", errors.length === 0, errors.join("; "));
   await browser.close();
   fs.rmSync(dir, { recursive: true, force: true });
