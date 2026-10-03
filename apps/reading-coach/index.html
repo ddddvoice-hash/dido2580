@@ -45,6 +45,7 @@
   .legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: .9rem; margin-top: 8px; }
   .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
   label { display: block; padding: 6px 0; }
+  .hint { margin: 6px 0 0; font-size: .9rem; color: var(--muted, #555); }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   input[type=checkbox] { width: 20px; height: 20px; vertical-align: -4px; margin-right: 8px; }
   details summary { cursor: pointer; color: var(--muted); }
@@ -89,7 +90,10 @@
     <div class="row">
       <button id="mine-rec" class="rec">녹음 시작</button>
       <button id="mine-play" disabled>내 녹음 듣기</button>
+      <button id="mine-upload">녹음 파일 올리기</button>
+      <input type="file" id="mine-file" accept="audio/*" class="sr-only" tabindex="-1" aria-label="내 낭독 녹음 파일">
     </div>
+    <p class="hint">휴대폰 등 다른 곳에서 녹음했다면 '녹음 파일 올리기'로 올려도 됩니다.</p>
     <p class="status" id="mine-status" aria-live="polite"></p>
   </section>
 
@@ -368,6 +372,12 @@ $("demo-file").addEventListener("change", async (e) => {
 $("demo-delete").addEventListener("click", async () => { await delDemo(current); selectSentence(current); });
 $("demo-play").addEventListener("click", async () => { const b = await getDemo(current); if (b) play(b); });
 $("mine-play").addEventListener("click", () => mineBlob && play(mineBlob));
+$("mine-upload").addEventListener("click", () => $("mine-file").click());
+$("mine-file").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (file) onMineRecorded(file);
+});
 
 $("save").addEventListener("click", () => {
   const checks = document.querySelectorAll("#checklist input:checked").length;

@@ -56,6 +56,14 @@ jobs:
           node apps/voice-studio/tests/reference.test.js
       - name: 낭독 코치 (속도·쉼 비교와 피드백)
         run: node apps/reading-coach/tests/test-analysis.js
+      - name: 실제 브라우저 검사 (녹음 부스 33가지, 낭독 코치 7가지)
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          node apps/voice-studio/tests/browser.test.js
+          node apps/reading-coach/tests/browser.test.js
 
   warmth-scorer:
     name: 따뜻함 채점기 (실제 브라우저 29가지)

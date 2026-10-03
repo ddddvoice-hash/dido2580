@@ -52,7 +52,7 @@ const T = (sec, amp = 0.5) => ({ tone: true, sec, amp });
   };
   for (const [n, b] of Object.entries(files)) fs.writeFileSync(path.join(dir, n), b);
 
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
   const page = await ctx.newPage();
   const errors = [];
