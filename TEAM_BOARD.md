@@ -158,6 +158,7 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 | R3 | GPT | 낭독 코치 파일 올리기 `apps/reading-coach/index.html` | 2b2d215 | 큰 파일·지원 안 되는 형식에서 오류 문구, 연속 업로드 때 이전 결과가 섞이지 않는지 | 대기 |
 | R4 | GPT | 접근성 수정과 점검 도구 `apps/a11y_check.py` | f2e56cf | 색 바꾼 뒤 다른 곳 대비가 깨지지 않았는지, 점검 범위(첫 화면만 보는 한계) | 대기 |
 | R5 | GPT | CI `.github/workflows/tests.yml` | a474676~2b2d215 | 실패를 놓치는 단계(종료 코드), 권한·비밀값 노출 없음 | 대기 |
+| R6 | GPT | 낭독 코치 문장 관리·시범 팩·구간 듣기·쉼 길이 `apps/reading-coach/index.html`, `analysis.js` | eaa92ba 이후 | 시범 팩 가져오기 검증 빈틈(악성·거대 파일), 문장 id와 시범 녹음 짝이 어긋나는 경우, 쉼 길이 안내 기준(0.2초·30%)이 과한지, 문장 목록을 IndexedDB가 아닌 localStorage에 둔 판단 | 대기 |
 
 클라우드에서 이미 확인한 것: 단위·브라우저 테스트 전부 통과, GitHub Actions 통과, axe-core 접근성 우리 코드 위반 0.
 

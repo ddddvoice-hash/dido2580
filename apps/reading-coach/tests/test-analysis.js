@@ -59,6 +59,13 @@ check("아주 작은 소리는 말소리 기준이 무한대", A.threshold(A.env
 const short = A.analyze(build([[0.3, 0], [0.05, .5], [0.3, 0]]), RATE);
 check("80ms보다 짧은 소리는 말소리로 안 셈", short.duration === 0);
 
+const longPause = A.compare(demo, A.analyze(build(demoParts(1, 1.2)), RATE));
+check("쉼을 두 배로 길게 쉬면 길이 차이 2곳", longPause.lengthDiffs.length === 2, JSON.stringify(longPause.lengthDiffs.map(d => d.mine.toFixed(2))));
+check("피드백에 '조금 짧게 쉬어 보세요'", A.feedback(longPause).some(l => l.includes("시범 0.6초, 내 낭독 1.2초") && l.includes("조금 짧게")));
+check("쉼 길이 차이는 점수에 안 들어감(자리가 맞으면 쉼 50점 그대로)", longPause.matched.length === 2);
+check("같은 낭독에는 길이 안내 없음", same.lengthDiffs.length === 0 && !A.feedback(same).some(l => l.includes("번째 쉼")));
+const tiny = A.compare(demo, A.analyze(build(demoParts(1, 0.7)), RATE));
+check("0.1초 차이는 안내하지 않음", tiny.lengthDiffs.length === 0);
 const scoreRange = [same, slow, missOne, extra].every(r => r.score >= 0 && r.score <= 100);
 check("점수는 0~100 사이", scoreRange);
 

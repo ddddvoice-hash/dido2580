@@ -8,7 +8,9 @@
   const FRAME_MS = 20;        // 한 프레임 길이
   const MIN_PAUSE_MS = 250;   // 이보다 짧은 무음은 숨 고르기로 보고 쉼으로 세지 않는다
   const MIN_SPEECH_MS = 80;   // 이보다 짧은 소리는 잡음으로 본다
-  const PAUSE_MATCH = 0.08;   // 시범 쉼과 이 거리(전체 길이 비율) 안이면 같은 쉼으로 본다
+  const PAUSE_MATCH = 0.08;
+  const PAUSE_LEN_SEC = 0.2;    // 쉼 길이 차이 안내 기준(초)
+  const PAUSE_LEN_RATIO = 0.3;  // 그리고 시범 쉼 길이의 이 비율보다 클 때   // 시범 쉼과 이 거리(전체 길이 비율) 안이면 같은 쉼으로 본다
 
   // 프레임별 RMS(소리 크기)
   function envelope(samples, sampleRate) {
@@ -114,6 +116,10 @@
       }
     }
     const extra = mine.pauses.filter((_, j) => !used.has(j));
+    // 같은 자리 쉼의 길이 차이. 0.2초 넘게, 그리고 시범 길이의 30% 넘게 다를 때만 알린다(짧은 숨 고르기 흔들림은 무시).
+    const lengthDiffs = matched
+      .map((m, k) => ({ order: k + 1, demo: m.demo.length, mine: m.mine.length, diff: m.mine.length - m.demo.length }))
+      .filter((d) => Math.abs(d.diff) > PAUSE_LEN_SEC && Math.abs(d.diff) > d.demo * PAUSE_LEN_RATIO);
     const total = demo.pauses.length;
     // 점수: 속도 50점 + 쉼 50점. 속도는 ±25% 벗어나면 0점.
     const speedScore = Math.max(0, 1 - Math.abs(speedRatio - 1) / 0.25) * 50;
@@ -126,6 +132,7 @@
       matched,
       missing,
       extra,
+      lengthDiffs,
       score: Math.round(speedScore + pauseScore),
     };
   }
@@ -142,6 +149,10 @@
     if (total) lines.push(`시범의 쉼 ${total}곳 중 ${result.matched.length}곳을 같은 자리에서 쉬었습니다.`);
     if (result.missing.length) lines.push(`놓친 쉼 ${result.missing.length}곳은 아래 그림에서 빨간 표시로 보입니다.`);
     if (result.extra.length) lines.push(`시범에 없는 쉼이 ${result.extra.length}곳 있습니다.`);
+    // 쉼 길이는 점수에 넣지 않고 안내만 한다. 많으면 두 곳까지만.
+    for (const d of (result.lengthDiffs || []).slice(0, 2)) {
+      lines.push(`같은 자리 ${d.order}번째 쉼: 시범 ${d.demo.toFixed(1)}초, 내 낭독 ${d.mine.toFixed(1)}초 — ${d.diff > 0 ? "조금 짧게" : "조금 더 길게"} 쉬어 보세요.`);
+    }
     return lines;
   }
 

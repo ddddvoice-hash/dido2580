@@ -45,6 +45,9 @@
   .legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: .9rem; margin-top: 8px; }
   .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
   label { display: block; padding: 6px 0; }
+  .segment { margin-top: 14px; display: grid; gap: 6px; }
+  .segment input[type=range] { width: 100%; min-height: 48px; accent-color: var(--accent, #1a73e8); }
+  #chart { cursor: pointer; }
   .sub-h { font-size: 1rem; margin: 20px 0 6px; }
   textarea { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
   .confirm { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
@@ -141,6 +144,13 @@
       <span><i style="background:var(--mine)"></i>내 낭독 · 같은 자리 쉼</span>
       <span><i style="background:var(--miss)"></i>놓친 쉼</span>
       <span><i style="background:var(--extra)"></i>시범에 없는 쉼</span>
+    </div>
+    <div class="segment">
+      <label for="seg-pos">구간 듣기: 그래프를 누르거나 위치를 고른 뒤, 시범과 내 낭독을 2초씩 번갈아 듣습니다 <span id="seg-label">(처음)</span></label>
+      <input type="range" id="seg-pos" min="0" max="95" step="5" value="0">
+      <div class="row">
+        <button id="seg-play">이 위치 번갈아 듣기</button>
+      </div>
     </div>
   </section>
 
@@ -397,7 +407,56 @@ function drawChart(demo, mine, cmp) {
   cmp.matched.forEach((m) => { marker(m.demo.at, 0, color("--demo")); marker(m.mine.at, half, color("--mine")); });
   cmp.missing.forEach((p) => marker(p.at, 0, color("--miss")));
   cmp.extra.forEach((p) => marker(p.at, half, color("--extra")));
+  // 구간 듣기 위치(세로선)
+  const at = Number($("seg-pos").value) / 100;
+  g.fillStyle = color("--text");
+  g.fillRect(at * W - 2, 0, 4, H);
 }
+
+// ---------- 구간 듣기: 같은 자리(말소리 구간 안의 비율)를 시범 → 내 낭독 순서로 2초씩 ----------
+const SEG_SEC = 2;
+let segSources = [];
+const bufferCache = new WeakMap();
+async function audioBuffer(blob) {
+  if (!bufferCache.has(blob)) bufferCache.set(blob, await ctx().decodeAudioData(await blob.arrayBuffer()));
+  return bufferCache.get(blob);
+}
+function setSegment(pct) {
+  const v = Math.max(0, Math.min(95, Math.round(pct / 5) * 5));
+  $("seg-pos").value = v;
+  $("seg-label").textContent = v === 0 ? "(처음)" : `(말소리 ${v}% 지점)`;
+  if (lastCompare && lastCompare.ok) drawChart(demoResult, lastMine, lastCompare);
+}
+async function playSegment() {
+  if (!lastCompare || !lastCompare.ok) return;
+  const demoBlob = await getDemo(currentId());
+  if (!demoBlob || !mineBlob) return;
+  segSources.forEach((s) => { try { s.stop(); } catch { /* 이미 끝남 */ } });
+  segSources = [];
+  const p = Number($("seg-pos").value) / 100;
+  const ac = ctx();
+  if (ac.state === "suspended") await ac.resume();
+  const [db, mb] = await Promise.all([audioBuffer(demoBlob), audioBuffer(mineBlob)]);
+  const plan = [[db, demoResult], [mb, lastMine]];
+  let when = ac.currentTime + 0.05;
+  for (const [buf, res] of plan) {
+    const offset = Math.min(Math.max(0, res.speechStart + p * res.duration), Math.max(0, buf.duration - 0.1));
+    const src = ac.createBufferSource();
+    src.buffer = buf;
+    src.connect(ac.destination);
+    src.start(when, offset, SEG_SEC);
+    segSources.push(src);
+    when += SEG_SEC + 0.3;
+  }
+  $("mine-status").textContent = `시범과 내 낭독의 ${Math.round(p * 100)}% 지점을 2초씩 번갈아 들려 드립니다.`;
+}
+$("seg-pos").addEventListener("input", (e) => setSegment(Number(e.target.value)));
+$("seg-play").addEventListener("click", playSegment);
+$("chart").addEventListener("click", (e) => {
+  const r = e.currentTarget.getBoundingClientRect();
+  setSegment(((e.clientX - r.left) / r.width) * 100);
+  playSegment();
+});
 
 async function onMineRecorded(blob, error) {
   if (!blob) { $("mine-status").textContent = error; return; }
@@ -424,7 +483,7 @@ async function onMineRecorded(blob, error) {
   $("result").classList.remove("hidden");
   $("score").textContent = lastCompare.ok ? `${lastCompare.score}점` : "다시 녹음";
   $("feedback").innerHTML = A.feedback(lastCompare).map((l) => `<li>${l}</li>`).join("");
-  if (lastCompare.ok) drawChart(demoResult, lastMine, lastCompare);
+  if (lastCompare.ok) { setSegment(0); drawChart(demoResult, lastMine, lastCompare); }
 }
 
 // ---------- 연결 ----------

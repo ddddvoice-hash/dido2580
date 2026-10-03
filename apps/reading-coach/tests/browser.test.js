@@ -46,6 +46,18 @@ function wav(file, parts, rate = 16000) {
   ok("같은 낭독 파일을 올리면 100점", (await page.textContent("#score")).trim() === "100점", await page.textContent("#score"));
   ok("피드백에 '거의 같습니다'", (await page.textContent("#feedback")).includes("거의 같습니다"));
   ok("내 녹음 듣기 버튼이 켜짐", await page.isEnabled("#mine-play"));
+  // 구간 듣기: 키보드로 위치 옮기기 → 번갈아 듣기, 그래프 누르기
+  await page.focus("#seg-pos");
+  for (let i = 0; i < 10; i++) await page.keyboard.press("ArrowRight");
+  ok("화살표 키로 구간 위치 50%", (await page.inputValue("#seg-pos")) === "50" && (await page.textContent("#seg-label")).includes("50%"));
+  await page.click("#seg-play");
+  await page.waitForFunction(() => document.getElementById("mine-status").textContent.includes("50% 지점"), null, { timeout: 5000 });
+  ok("번갈아 듣기 시작 안내", (await page.textContent("#mine-status")).includes("2초씩 번갈아"));
+  const box = await page.locator("#chart").boundingBox();
+  await page.mouse.click(box.x + box.width * 0.76, box.y + box.height / 2);
+  ok("그래프를 누르면 그 자리(75%)로", (await page.inputValue("#seg-pos")) === "75");
+  ok("구간 버튼 높이 48px 이상", (await page.locator("#seg-play").boundingBox()).height >= 47.5);
+
 
   await page.setInputFiles("#mine-file", skip);
   await page.waitForFunction(() => document.getElementById("feedback").textContent.includes("놓친 쉼"), null, { timeout: 15000 });
