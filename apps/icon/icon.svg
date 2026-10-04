@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- 디도 보이스 작업실 아이콘: 청록 바탕에 마이크와 노란 소리 물결 -->
+  <rect width="256" height="256" rx="56" fill="#176b67"/>
+  <path d="M58 92a60 60 0 0 0 0 88" fill="none" stroke="#f2b632" stroke-width="14" stroke-linecap="round"/>
+  <path d="M198 92a60 60 0 0 1 0 88" fill="none" stroke="#f2b632" stroke-width="14" stroke-linecap="round"/>
+  <rect x="98" y="40" width="60" height="112" rx="30" fill="#ffffff"/>
+  <path d="M78 128a50 50 0 0 0 100 0" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+  <path d="M128 178v30M98 214h60" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+</svg>
