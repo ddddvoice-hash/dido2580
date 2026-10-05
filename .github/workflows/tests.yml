@@ -131,6 +131,11 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1
           node tests/agreement.browser.js
+          node tests/pack.browser.js
+      - name: 평가 묶음 파일이 만드는 스크립트 결과와 같은지
+        run: |
+          python3 ../../docs/eval/packs/build_packs.py
+          git diff --exit-code -- ../../docs/eval/packs
       - name: 크리펜도르프 α를 공개 패키지(krippendorff)와 무작위 300묶음으로 대조
         run: |
           python3 -m pip install --quiet krippendorff numpy

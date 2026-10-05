@@ -95,15 +95,17 @@
     <button type="button" id="load-example">예시 불러오기</button>
     <button type="button" id="new-item">새 문항 시작</button>
     <button type="button" id="load-test-items">테스트 문항 불러오기</button>
+    <button type="button" id="open-pack">평가 묶음 열기</button>
     <button type="button" id="start-scoring" class="primary">채점 시작</button>
   </div>
 
+  <input type="file" id="pack-file" accept=".json,application/json" class="sr-only" tabindex="-1" aria-label="평가 묶음 파일(JSON)">
   <div id="test-items-file-wrap" hidden>
     <label for="test-items-file">테스트 문항 파일 열기 (test-items.json)</label>
     <input type="file" id="test-items-file" accept=".json,application/json">
   </div>
   <div id="test-item-wrap" hidden>
-    <label for="test-item-select">테스트 문항 고르기</label>
+    <label for="test-item-select">불러온 문항 고르기</label>
     <select id="test-item-select" style="min-height:48px;font:inherit;max-width:100%"></select>
     <p id="test-notice" class="small"></p>
   </div>

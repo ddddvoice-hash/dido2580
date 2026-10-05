@@ -621,9 +621,11 @@
     var ok = list && list.length && list.every(function (t) {
       return t && typeof t.situation === 'string' && Array.isArray(t.answers) && t.answers.length;
     });
+    // 평가 묶음(test_only가 아닌 파일)은 실제 문항으로 넣는다. 문구만 다르고 처리는 같다.
+    var kind = data && data.test_only === true ? '테스트 문항' : '평가 묶음 문항';
     if (!ok) {
-      say('테스트 문항 형식이 맞지 않습니다.');
-      $('test-items-file-wrap').hidden = false;
+      say(kind + ' 형식이 맞지 않습니다.');
+      if (kind === '테스트 문항') $('test-items-file-wrap').hidden = false;
       return;
     }
     $('test-items-file-wrap').hidden = true;
@@ -648,7 +650,7 @@
     $('test-notice').textContent = data.notice || '';
     closeScoring();
     fillFormFromTestItem(0);
-    say('테스트 문항 ' + testItems.length + '개를 불러왔습니다. 채점 시작을 누르세요.');
+    say(kind + ' ' + testItems.length + '개를 불러왔습니다. 채점 시작을 누르세요.');
   }
 
   function loadTestItems() {
@@ -1188,6 +1190,18 @@
     $('new-item').addEventListener('click', newItem);
     $('load-example').addEventListener('click', loadExample);
     $('load-test-items').addEventListener('click', loadTestItems);
+    $('open-pack').addEventListener('click', function () { $('pack-file').click(); });
+    $('pack-file').addEventListener('change', function (e) {
+      var f = e.target.files && e.target.files[0];
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try { useTestItems(JSON.parse(reader.result)); }
+        catch (err) { say('평가 묶음 파일을 읽지 못했습니다. JSON 파일이 맞는지 확인하세요.'); }
+        e.target.value = '';
+      };
+      reader.readAsText(f, 'UTF-8');
+    });
     $('test-item-select').addEventListener('change', function () { fillFormFromTestItem(parseInt($('test-item-select').value, 10)); });
     $('test-items-file').addEventListener('change', function (e) {
       var f = e.target.files && e.target.files[0];
