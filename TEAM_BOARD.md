@@ -159,7 +159,11 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 | R4 | GPT | 접근성 수정과 점검 도구 `apps/a11y_check.py` | f2e56cf | 색 바꾼 뒤 다른 곳 대비가 깨지지 않았는지, 점검 범위(첫 화면만 보는 한계) | 대기 |
 | R5 | GPT | CI `.github/workflows/tests.yml` | a474676~2b2d215 | 실패를 놓치는 단계(종료 코드), 권한·비밀값 노출 없음 | 대기 |
 | R6 | GPT | 낭독 코치 문장 관리·시범 팩·구간 듣기·쉼 길이 `apps/reading-coach/index.html`, `analysis.js` | eaa92ba 이후 | 시범 팩 가져오기 검증 빈틈(악성·거대 파일), 문장 id와 시범 녹음 짝이 어긋나는 경우, 쉼 길이 안내 기준(0.2초·30%)이 과한지, 문장 목록을 IndexedDB가 아닌 localStorage에 둔 판단 | 대기 |
-| R7 | GPT | 따뜻함 채점기 평가자 일치도 `apps/warmth-scorer/app.js`(`parseJsonl`, `computeAgreement`), 작업실 시작 `apps/start.cmd`, 검사기 안내 `apps/voice-check/guide.html` | d3d197c~b812067 | 일치도를 "같은 점수 %·1점 이내 %"로만 보여 주는 게 충분한지(우연 일치를 뺀 가중 카파를 더할지, 평가자 셋 이상일 때 쌍 계산이 맞는지), 같은 답변을 상황+답변 글로 묶는 방식의 빈틈(띄어쓰기만 다른 답변), start.cmd가 포트가 이미 쓰일 때·Python이 없을 때 대표에게 알맞게 알리는지 | 대기 |
+| R7 | GPT | 따뜻함 채점기 평가자 일치도 `apps/warmth-scorer/app.js`(`parseJsonl`, `computeAgreement`), 작업실 시작 `apps/start.cmd`, 검사기 안내 `apps/voice-check/guide.html` | d3d197c~b812067 | 일치도 지표(같은 점수 %·1점 이내 %에 2026-10-05 크리펜도르프 α(서열) 추가 — 계산식·해석 문구·적은 표본 안내가 맞는지, 평가자 셋 이상일 때 쌍 계산이 맞는지), 같은 답변을 상황+답변 글로 묶는 방식의 빈틈(띄어쓰기만 다른 답변), start.cmd가 포트가 이미 쓰일 때·Python이 없을 때 대표에게 알맞게 알리는지 | 대기 |
+| R8 | GPT(아스트라) | 대표작 계획 `docs/FLAGSHIP.md` 협의 | 6e4b4da 이후 | 채용 담당자 눈으로 약한 곳·빠진 것·과장(특히 "왜 이것인가" 4개 주장), 상황 60개·7갈래 구성이 맞는지, 목소리 측정 항목을 근거로만 쓰는 선이 맞는지, 시연 사례(E)를 사람 평가자 2명으로 정직하게 만드는 최소 설계. 형식은 AGENTS.md "협의 요청에 답할 때" | 대기 |
+
+> **대표 지시 2026-10-05:** GPT는 **아스트라 모델**로 올려서 협의하고(실행 방법은 AGENTS.md "실행 모델"), GPT와 무엇을 협의했는지 매번 대표에게 보고한다. 대표작 방향은 `docs/FLAGSHIP.md`(대표 승인 전). 팀장(로컬)은 `대기`인 GPT 요청을 아스트라로 돌리고, 리뷰 칸 머리에 실행 기록의 모델 줄을 그대로 옮긴 뒤 푸시해 주세요.
+
 
 클라우드에서 이미 확인한 것: 단위·브라우저 테스트 전부 통과, GitHub Actions 통과, axe-core 접근성 우리 코드 위반 0.
 
