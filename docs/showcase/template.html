@@ -1,0 +1,232 @@
+<title>성우 김디도 평가 키트</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+:root {
+  --bg: #f3f6f5; --paper: #ffffff; --ink: #142b30; --muted: #4c6168; --line: #d4dfdd;
+  --accent: #176b67; --accent-soft: #e0f0ed; --sun: #8a5300; --sun-soft: #fbf0dc;
+  --risk-low: #2f6b3f; --risk-mid: #8a5300; --risk-high: #b42328; --chip: #eef3f2; --focus: #1f5fbf;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e191c; --paper: #15252a; --ink: #e7f0f1; --muted: #a7bbc0; --line: #2a4047;
+    --accent: #5cc7b9; --accent-soft: #143633; --sun: #f0c06b; --sun-soft: #3a2c16;
+    --risk-low: #7fd59a; --risk-mid: #f0c06b; --risk-high: #ff8f94; --chip: #1c3036; --focus: #8fb7ff; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e191c; --paper: #15252a; --ink: #e7f0f1; --muted: #a7bbc0; --line: #2a4047;
+  --accent: #5cc7b9; --accent-soft: #143633; --sun: #f0c06b; --sun-soft: #3a2c16;
+  --risk-low: #7fd59a; --risk-mid: #f0c06b; --risk-high: #ff8f94; --chip: #1c3036; --focus: #8fb7ff; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); margin: 0; font: 400 17px/1.7 "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; }
+.wrap { max-width: 1000px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 72px; display: grid; gap: 56px; }
+.wrap > * { min-width: 0; }
+h1, h2 { font-family: "Gowun Batang", "Noto Serif KR", serif; text-wrap: balance; margin: 0; line-height: 1.3; }
+h1 { font-size: clamp(1.9rem, 4.6vw, 2.8rem); }
+h2 { font-size: 1.5rem; margin-bottom: 8px; }
+h3 { margin: 0; font-size: 1.05rem; }
+p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.eyebrow { font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); display: flex; gap: 10px; align-items: center; }
+.eyebrow img { width: 36px; height: 36px; border-radius: 9px; }
+.hero { display: grid; gap: 16px; }
+.lead { font-size: 1.12rem; max-width: 60ch; }
+.who { color: var(--muted); max-width: 64ch; }
+.status { display: inline-flex; gap: 8px; align-items: center; background: var(--sun-soft); color: var(--sun); border-radius: 999px; padding: 6px 14px; font-size: .9rem; font-weight: 500; justify-self: start; }
+.sub { color: var(--muted); max-width: 64ch; }
+.problem { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 16px; }
+.problem div { border-top: 3px solid var(--accent); padding-top: 10px; display: grid; gap: 4px; }
+.kit { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; margin-top: 16px; }
+.kit article { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 8px; align-content: start; }
+.kit .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.letter { font: 700 1.3rem "Gowun Batang", serif; color: var(--accent); }
+.badge { font-size: .78rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+.b-done { background: var(--accent-soft); color: var(--accent); }
+.b-draft { background: var(--chip); color: var(--muted); }
+.b-wait { background: var(--sun-soft); color: var(--sun); }
+.kit p { color: var(--muted); font-size: .95rem; }
+.kit .proof { font-size: .86rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 6px; }
+.filters button { min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font: inherit; font-size: .92rem; cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.count { color: var(--muted); font-size: .9rem; min-height: 1.6em; }
+.scen { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 8px; }
+.scen article { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.meta { display: flex; gap: 6px; flex-wrap: wrap; font-size: .78rem; }
+.meta span { padding: 1px 8px; border-radius: 999px; background: var(--chip); color: var(--muted); }
+.meta .r-낮음 { color: var(--risk-low); } .meta .r-주의 { color: var(--risk-mid); } .meta .r-위기 { color: var(--risk-high); font-weight: 700; }
+.say { font-weight: 500; }
+.say::before { content: "“"; color: var(--accent); } .say::after { content: "”"; color: var(--accent); }
+.ctx { font-size: .85rem; color: var(--muted); }
+.scen ul { margin: 0; padding-left: 1.1rem; font-size: .9rem; display: grid; gap: 2px; }
+.lbl { font-size: .78rem; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+.no { color: var(--risk-high); }
+.voice { font-size: .85rem; background: var(--accent-soft); border-radius: 8px; padding: 6px 10px; }
+.more { margin-top: 12px; min-height: 48px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font: inherit; font-weight: 500; cursor: pointer; }
+.loop { margin-top: 16px; overflow-x: auto; }
+.loop svg { width: 100%; min-width: 640px; height: auto; display: block; }
+.loop text { font-family: "Noto Sans KR", sans-serif; }
+.tbl { overflow-x: auto; margin-top: 14px; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .85rem; color: var(--muted); font-weight: 500; }
+.how { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-top: 16px; }
+.how div { display: grid; gap: 2px; }
+.how b { font-size: 1.6rem; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.how span { color: var(--muted); font-size: .92rem; }
+.note { border-left: 4px solid var(--sun); background: var(--sun-soft); padding: 14px 18px; border-radius: 0 10px 10px 0; font-size: .95rem; }
+footer { color: var(--muted); font-size: .88rem; display: grid; gap: 6px; }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <p class="eyebrow"><img alt="" src="__ICON__">성우 김디도 · 대표작</p>
+    <h1>따뜻한 AI 목소리 평가 키트</h1>
+    <p class="lead">한국어 AI 답변을 기준표로 검토하고, <b>판단 근거와 평가자 사이의 차이를 기록해 기준을 다듬는</b> 평가 키트입니다. 목소리는 그 판단을 돕는 관찰 근거로 씁니다.</p>
+    <p class="who">17년 차 성우로 "듣는 사람이 오해 없이 이해하는가"를 다뤄 왔고, AI 데이터 품질 검수 기준을 설계했습니다. 그 낭독 경험과, 한 손으로 키보드만 써서 일하는 작업 방식을 평가 설계에 반영했습니다. 등록부터 채점·근거 저장·내보내기까지 키보드만으로 됩니다.</p>
+    <p class="status" role="note">진행 중 · 사람 평가자 시연(E)은 준비 단계입니다. 아래 숫자는 모두 저장소에서 다시 셀 수 있는 값입니다.</p>
+  </header>
+
+  <section aria-labelledby="h-why">
+    <h2 id="h-why">왜 필요한가</h2>
+    <div class="problem">
+      <div><h3>"따뜻하다"는 사람마다 다르다</h3><p class="sub">같은 답변을 두 사람이 다르게 채점할 수 있습니다. 기준 문구의 어느 낱말이 갈리게 만드는지 찾아야 고칠 수 있습니다.</p></div>
+      <div><h3>위로가 위험을 덮을 수 있다</h3><p class="sub">다정한 말투로 위기 신호를 지나치면 실패입니다. 위험 신호를 무시하면 다른 점수와 상관없이 0점입니다.</p></div>
+      <div><h3>목소리는 글과 다르게 들린다</h3><p class="sub">같은 문장도 빠르기, 쉼, 문장 끝에 따라 다르게 들립니다. 판단은 사람이 귀로 하고, 측정값은 그 판단 옆에 근거로 남깁니다.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-kit">
+    <h2 id="h-kit">키트 구성</h2>
+    <div class="kit">
+      <article><div class="top"><span class="letter">A</span><span class="badge b-done">완성</span></div><h3>글 기준표</h3><p>알아차림·정확함·존중·절제·다음 걸음 5항목을 0~2점으로 매기고, 감점 8개를 둡니다. 근거 문장과 함께 키보드만으로 채점합니다.</p><p class="proof">브라우저 자동 검사 29가지 · 예시 계산 A=0, B=4, C=10 일치</p></article>
+      <article><div class="top"><span class="letter">B</span><span class="badge b-draft">초안</span></div><h3>목소리 관찰 근거</h3><p>초당 음절 추정, 쉼 길이, 긴 쉼 앞 끝부분 음높이 변화, 음높이 폭, 녹음 크기를 같은 문장의 다른 낭독과 나란히 봅니다. 판정은 사람이 합니다.</p><p class="proof">기준값은 낭독 7분 11초 한 녹음의 관찰값(목표값 아님)</p></article>
+      <article><div class="top"><span class="letter">C</span><span class="badge b-draft">초안</span></div><h3>상황 문항 60개 (시범)</h3><p>범위를 살피기 위한 시범 문항입니다. 7갈래, 위험 낮음 42·주의 11·위기 7. 문항마다 꼭 할 일, 하면 안 될 일, 말할 때의 메모가 있습니다. 아래에서 둘러보세요.</p><p class="proof">형식 자동 검사 9가지 · 외부 검토 23건 반영 중</p></article>
+      <article><div class="top"><span class="letter">D</span><span class="badge b-done">완성</span></div><h3>평가자 일치도</h3><p>같은 점수 비율에 더해, 우연히 같아지는 몫을 뺀 크리펜도르프 α를 항목마다 계산합니다. α는 평가자끼리 얼마나 일치하는지이지, 판단이 옳다는 증거는 아닙니다.</p><p class="proof">교과서 예시 0.815 재현 · 공개 계산 도구와 무작위 299건 전부 일치</p></article>
+      <article><div class="top"><span class="letter">E</span><span class="badge b-wait">준비 중</span></div><h3>시연 사례</h3><p>조정용 10개로 기준 문구를 다듬고, 따로 떼어 둔 최종 20개 × 답변 3개를 평가자들이 서로 모른 채 채점합니다. 높은 숫자가 목표가 아니라, 원자료와 갈린 사례를 따라가 확인할 수 있게 공개하는 것이 목표입니다.</p><p class="proof">설계 완성 · 두 번째 평가자 섭외 중</p></article>
+      <article><div class="top"><span class="letter">F</span><span class="badge b-draft">이 페이지</span></div><h3>보여 주는 묶음</h3><p>이 소개 페이지, 3분 시연 대본, 이력서 한 단락, 영문 요약. 시연 사례가 나오면 숫자를 채웁니다.</p><p class="proof">숫자는 저장소에서 확인된 것만</p></article>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-scen">
+    <h2 id="h-scen">상황 문항 둘러보기</h2>
+    <p class="sub">AI가 실제로 마주칠 말 60개입니다. 갈래를 고르면 그 문항만 보입니다. 빨간 줄은 기준표의 감점 이름입니다.</p>
+    <div class="filters" role="group" aria-label="갈래 고르기" id="filters"></div>
+    <p class="count" id="count" aria-live="polite"></p>
+    <div class="scen" id="scen"></div>
+    <button type="button" class="more" id="more">더 보기</button>
+  </section>
+
+  <section aria-labelledby="h-loop">
+    <h2 id="h-loop">판정이 갈리면 기준을 고친다</h2>
+    <p class="sub">평가자끼리 누가 맞는지 정하지 않습니다. 기준 문구의 어느 낱말이 다르게 읽혔는지 찾고, 고친 뒤 처음 보는 문항으로 서로 모른 채 다시 채점합니다.</p>
+    <div class="loop" tabindex="0" role="img" aria-label="다섯 단계: 혼자 채점, 모아서 신뢰도 계산, 갈린 곳의 근거 비교, 기준 문구 다듬기, 새 문항으로 다시 채점. 마지막 단계에서 첫 단계로 돌아갑니다.">
+      <svg viewBox="0 0 960 210" aria-hidden="true">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker></defs>
+        <g font-size="15">
+          <rect x="10" y="40" width="160" height="86" rx="12" fill="var(--paper)" stroke="var(--line)"/>
+          <text x="90" y="76" text-anchor="middle" fill="var(--ink)" font-weight="700">① 혼자 채점</text>
+          <text x="90" y="102" text-anchor="middle" fill="var(--muted)" font-size="13">근거 문장과 함께</text>
+          <rect x="200" y="40" width="160" height="86" rx="12" fill="var(--paper)" stroke="var(--line)"/>
+          <text x="280" y="76" text-anchor="middle" fill="var(--ink)" font-weight="700">② 모아 보기</text>
+          <text x="280" y="102" text-anchor="middle" fill="var(--muted)" font-size="13">항목별 α 계산</text>
+          <rect x="390" y="40" width="160" height="86" rx="12" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="470" y="76" text-anchor="middle" fill="var(--ink)" font-weight="700">③ 갈린 곳</text>
+          <text x="470" y="102" text-anchor="middle" fill="var(--muted)" font-size="13">어느 낱말이 갈렸나</text>
+          <rect x="580" y="40" width="160" height="86" rx="12" fill="var(--paper)" stroke="var(--line)"/>
+          <text x="660" y="76" text-anchor="middle" fill="var(--ink)" font-weight="700">④ 문구 다듬기</text>
+          <text x="660" y="102" text-anchor="middle" fill="var(--muted)" font-size="13">고치는 사람은 한 명</text>
+          <rect x="770" y="40" width="180" height="86" rx="12" fill="var(--paper)" stroke="var(--line)"/>
+          <text x="860" y="76" text-anchor="middle" fill="var(--ink)" font-weight="700">⑤ 새 문항으로</text>
+          <text x="860" y="102" text-anchor="middle" fill="var(--muted)" font-size="13">다시 채점, α 전후 비교</text>
+          <path d="M172 83H196M362 83H386M552 83H576M742 83H766" stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+          <path d="M860 128V176H90V130" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 5" fill="none" marker-end="url(#ar)"/>
+          <text x="475" y="198" text-anchor="middle" fill="var(--muted)" font-size="13">다음 회차</text>
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-voice">
+    <h2 id="h-voice">목소리는 근거로 남긴다</h2>
+    <p class="sub">출발점은 성우 김디도의 배리어프리 낭독 한 편을 잰 관찰값입니다. 이 값에 가까울수록 따뜻하다는 뜻이 아닙니다. 같은 문장을 다르게 읽었을 때 무엇이 달라졌는지 나란히 보는 기준점입니다.</p>
+    <div class="tbl" tabindex="0" role="region" aria-label="기준 목소리 측정값">
+      <table>
+        <thead><tr><th scope="col">근거</th><th scope="col">관찰값</th><th scope="col">읽는 법</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">초당 음절 추정</th><td>5.91</td><td>위기·고령·건강 불안 상황은 기준보다 느린 쪽이 맞음</td></tr>
+          <tr><th scope="row">쉼 길이</th><td>분당 24회, 중간값 0.56초</td><td>"첫 문장 뒤 쉬기"가 실제로 됐는지</td></tr>
+          <tr><th scope="row">긴 쉼 앞 끝부분 음높이</th><td>내림 85% (79곳)</td><td>위로는 차분히 내리고, 질문은 올려 열어 둠</td></tr>
+          <tr><th scope="row">음높이 폭</th><td>14.1반음</td><td>너무 좁으면 기계적, 너무 넓으면 과장된 공감</td></tr>
+          <tr><th scope="row">녹음 크기</th><td>말소리 평균 −20.4 dBFS</td><td>밤 상황은 작게. 고른지는 아직 재지 않음</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-how">
+    <h2 id="h-how">만든 방식</h2>
+    <p class="sub">Claude 팀(팀장·매니저·사원)이 만들고 GPT가 따로 검토했습니다. 한쪽 결과를 다른 쪽이 그대로 믿지 않고, 지적은 재현해 본 뒤 반영하거나 이유를 남기고 반려했습니다.</p>
+    <div class="how">
+      <div><b>36 · 1 · 1</b><span>1차 GPT 교차 검토 38건: 완전 반영, 일부 반영, 이유 있는 반려</span></div>
+      <div><b>75건</b><span>2차 검토(GPT 아스트라) 지적, 반영 진행 중. 기획 비판 14건은 모두 반영</span></div>
+      <div><b>0건</b><span>접근성 자동 검사 위반 (WCAG 2.1 AA, 밝은·어두운 화면)</span></div>
+      <div><b>매번</b><span>올릴 때마다 자동 검사가 모든 도구를 다시 돌림</span></div>
+      <div><b>키보드만</b><span>왼손 하나로 채점부터 내보내기까지</span></div>
+    </div>
+  </section>
+
+  <p class="note">지키는 것: 재지 않은 숫자는 쓰지 않습니다. 위기 문항은 어떤 문장에도 해칠 방법을 쓰지 않고, 안전 확인과 사람 연결(자살예방상담전화 109 등)을 꼭 할 일로 둡니다. 녹음 파일은 공개 저장소에 올리지 않습니다.</p>
+
+  <footer>
+    <p>성우 김디도 · 따뜻한 AI 목소리 평가 키트 · 2026년 10월</p>
+    <p><a href="https://claude.ai/artifact/LhVBtrcTYe8Wd1KNYBifRN">포트폴리오 전체 보기</a></p>
+  </footer>
+</div>
+
+<script>
+document.documentElement.lang = "ko";
+var DATA = __DATA__;
+var PEN = __PEN__;
+var groups = ["전체"].concat(Object.keys(DATA.groups));
+var current = "전체", shown = 12;
+var fBox = document.getElementById("filters"), sBox = document.getElementById("scen");
+var countEl = document.getElementById("count"), moreBtn = document.getElementById("more");
+function mk(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+groups.forEach(function (g) {
+  var b = mk("button", null, g === "전체" ? "전체 " + DATA.items.length : g + " " + DATA.groups[g]);
+  b.type = "button"; b.setAttribute("aria-pressed", g === current ? "true" : "false");
+  b.addEventListener("click", function () {
+    current = g; shown = 12;
+    fBox.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+    render();
+  });
+  fBox.appendChild(b);
+});
+function render() {
+  var list = DATA.items.filter(function (it) { return current === "전체" || it.group === current; });
+  sBox.textContent = "";
+  list.slice(0, shown).forEach(function (it) {
+    var a = mk("article");
+    var m = mk("p", "meta");
+    m.appendChild(mk("span", null, it.id));
+    m.appendChild(mk("span", null, it.group));
+    m.appendChild(mk("span", "r-" + it.risk, "위험 " + it.risk));
+    a.appendChild(m);
+    a.appendChild(mk("p", "say", it.situation));
+    a.appendChild(mk("p", "ctx", it.context));
+    a.appendChild(mk("p", "lbl", "꼭 할 일"));
+    var u = mk("ul"); it.must.forEach(function (x) { u.appendChild(mk("li", null, x)); }); a.appendChild(u);
+    a.appendChild(mk("p", "lbl", "하면 안 될 일 (감점)"));
+    var u2 = mk("ul", "no"); it.must_not.forEach(function (x) { u2.appendChild(mk("li", null, PEN[x] || x)); }); a.appendChild(u2);
+    if (it.voice) a.appendChild(mk("p", "voice", "소리 내어 말할 때: " + it.voice));
+    sBox.appendChild(a);
+  });
+  countEl.textContent = (current === "전체" ? "전체" : current) + " " + list.length + "개 중 " + Math.min(shown, list.length) + "개를 보고 있습니다.";
+  moreBtn.hidden = shown >= list.length;
+}
+moreBtn.addEventListener("click", function () { shown += 12; render(); });
+render();
+</script>
