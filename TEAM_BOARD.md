@@ -212,7 +212,7 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 | B1 | 사원 | R9 반영: 아래 'B1 고칠 내용' 그대로 `docs/eval/scenarios-v0.json`에 적용(문구를 바꾸지 말 것). 고친 뒤 형식·맞춤법·존댓말 점검 | `docs/eval/scenarios-v0.json` | `node apps/warmth-scorer/tests/scenarios.test.js` 전부 통과, 바뀐 문항 id 목록 보고 | 검토 (팀장 확인 통과 · 보고 칸) |
 | B2 | 사원 | G1·G2 JSON 형식 검사(필드·감점 id·개수·겹침·위기 문항 높은 점수만)와 G3~G6 맞춤법·존댓말·브랜드 점검. **GPT 파일은 고치지 않고 지적 목록만** | 이 게시판 '보고' 칸 | 지적 목록 제출 | 검토 (팀장 확인 통과 · 보고 칸) |
 | B3 | 사원 | 낭독 코치 화면 문구 해요체 통일(A3 후속), `tests.yml` 단계 이름 23→48가지 | `apps/reading-coach/index.html`, `.github/workflows/tests.yml` | 남은 합니다체가 낭독문뿐, 브라우저 검사 통과 | 검토 (팀장 확인 통과 · 보고 칸) |
-| C1 | 매니저 | R12 후속: 소개 페이지 `docs/showcase/index.html` 안 문항 데이터를 `docs/eval/scenarios-v0.json`과 맞추기(11문항 차이), 필터 버튼 48px, 문자 인코딩·viewport 선언 | `docs/showcase/index.html` | 페이지 데이터와 원본 일치 검사, 버튼 48px | 대기 (다음 회차) |
+| C1 | 매니저 | R12 후속(소개 페이지 v2 기준): `python docs/showcase/build.py`로 다시 만들어 페이지 안 문항 데이터를 `docs/eval/scenarios-v0.json`과 똑같이(지금 s04·s10·s18·s48이 "알아주기 (짐작…" 띄어쓰기 한 칸 다름 — build.py의 B1 보정 코드 정리), 필터 버튼 44→48px(`template.html`), 문자 인코딩·viewport 선언 확인 | `docs/showcase/` | 페이지 데이터와 원본 60문항 일치 검사, 버튼 48px | 대기 (다음 회차) |
 
 **B1 고칠 내용 (팀장 결정 · R9 근거)**
 - `notice` 끝에 덧붙임: ` must_not은 중점 확인 감점이며, 실제 답변에 나타난 모든 기준표 감점을 검토한다. 목록에 있다고 자동 감점하지 않는다.`
