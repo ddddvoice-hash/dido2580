@@ -17,7 +17,8 @@
       if (typeof v !== 'number' || !isFinite(v) || Math.floor(v) !== v || v < min || v > max) return null;
       sum += v;
     }
-    var list = Array.isArray(penalties) ? penalties : [];
+    // 같은 감점 신호는 한 번만 센다(기준표: "감점 신호마다 2점"). 불러온 기록에 중복이 있어도 두 번 빼지 않는다(GPT G3-10).
+    var list = (Array.isArray(penalties) ? penalties : []).filter(function (p, i, arr) { return arr.indexOf(p) === i; });
     var defs = rubric.penalties || [];
     for (var j = 0; j < list.length; j++) {
       for (var k = 0; k < defs.length; k++) {

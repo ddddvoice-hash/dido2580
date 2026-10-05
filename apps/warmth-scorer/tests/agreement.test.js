@@ -130,5 +130,10 @@ ok('경계: 0.667 이상 잠정, 0.6668은 0.67로 보여도 다듬기', W.alpha
 const appSrc = require('fs').readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
 ok('안내 문구에 경계 0.667·0.800과 반올림 설명, 20개는 보장이 아니라는 말', appSrc.includes('0.667과 0.800') && appSrc.includes('반올림 전 값') && appSrc.includes('보장은 아니에요'));
 
+
+// 같은 감점 신호가 기록에 두 번 들어가도 한 번만 뺀다(기준표 scoring, GPT G3-10).
+const full = Object.fromEntries(rubric.criteria.map((c) => [c.id, 2]));
+ok('감점 중복은 한 번만: 10 - 2 = 8', W.computeTotal(rubric, full, ['flattery', 'flattery']) === 8, String(W.computeTotal(rubric, full, ['flattery', 'flattery'])));
+ok('서로 다른 감점은 각각: 10 - 2 - 2 = 6', W.computeTotal(rubric, full, ['flattery', 'lecturing']) === 6);
 console.log(fail ? `\n실패 ${fail}건` : `\n전부 통과 (${n}건)`);
 process.exitCode = fail ? 1 : 0;
