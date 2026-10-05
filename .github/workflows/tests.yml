@@ -136,6 +136,8 @@ jobs:
         run: |
           python3 ../../docs/eval/packs/build_packs.py
           git diff --exit-code -- ../../docs/eval/packs
+      - name: 평가 묶음 겉모양 단서 검사(지금은 보고만, G9 반영 뒤 --strict)
+        run: python3 ../../docs/eval/packs/cue_check.py
       - name: 크리펜도르프 α를 공개 패키지(krippendorff)와 무작위 300묶음으로 대조
         run: |
           python3 -m pip install --quiet krippendorff numpy
