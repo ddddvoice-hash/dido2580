@@ -145,6 +145,51 @@ const b1 = W.bootstrapAlpha(cl, 800, 42), b2 = W.bootstrapAlpha(cl, 800, 42);
 const point = W.krippendorffAlpha(Object.values(cl).flat());
 ok('같은 시드면 같은 구간', b1.lo === b2.lo && b1.hi === b2.hi);
 ok('구간이 점 추정을 감쌈(lo ≤ α ≤ hi)', b1.lo <= point && point <= b1.hi, `${b1.lo.toFixed(3)} ≤ ${point.toFixed(3)} ≤ ${b1.hi.toFixed(3)}`);
-ok('완전 일치면 구간도 1~1', (() => { const p = W.bootstrapAlpha(mkClusters(8, (i, j) => i % 3), 300, 7); return p.lo === 1 && p.hi === 1; })());
+// R16 지적 1: 완전 일치는 [1,1] 구간이 아니라 "구간 없음 + 이유"
+for (const nSit of [5, 10]) {
+  const cp = Object.fromEntries(Array.from({ length: nSit }, (_, i) => ['s' + i, Array.from({ length: 3 }, () => [i % 2 * 2, i % 2 * 2])]));
+  const p = W.bootstrapAlpha(cp, 2000, 20261005);
+  ok(`완전 일치(${nSit}상황): 구간 없음·이유 perfect·점추정 1`, p.lo === null && p.hi === null && p.reason === 'perfect' && W.krippendorffAlpha(Object.values(cp).flat()) === 1);
+  ok(`완전 일치(${nSit}상황): 화면 문구에 구간 대신 안내`, W.ciText(p).includes('불일치가 없어 구간을 낼 수 없어요') && !/95%/.test(W.ciText(p)));
+}
+// R16 지적 2: 실패 횟수 반환·표시, 10% 초과면 구간 보류, 모든 점수 동일
+for (const nSit of [5, 10]) {
+  const cf = Object.fromEntries(Array.from({ length: nSit }, (_, i) => ['s' + i, Array.from({ length: 3 }, () => i === nSit - 1 ? [0, 2] : [0, 0])]));
+  const p = W.bootstrapAlpha(cf, 2000, 20261005);
+  ok(`실패 횟수 반환(${nSit}상황): ${p.failed}/2000`, p.reps === 2000 && p.failed > 200 && p.ok === 2000 - p.failed);
+  ok(`실패 10% 초과면 구간 보류(${nSit}상황)`, p.lo === null && p.reason === 'manyFailed' && W.ciText(p).includes('믿기 어려워요'));
+  ok(`실패 횟수 화면 문구(${nSit}상황)`, W.ciFailText(p) === ` · 2,000번 중 ${p.failed}번은 계산할 수 없어 뺐어요`);
+}
+const pSame = W.bootstrapAlpha(Object.fromEntries(Array.from({ length: 6 }, (_, i) => ['s' + i, Array.from({ length: 3 }, () => [1, 1])])), 2000, 20261005);
+ok('모든 점수 동일: 구간 없음·이유 allSame', pSame.lo === null && pSame.reason === 'allSame' && W.ciText(pSame).includes('모든 점수가 같아'));
+const pOk = W.bootstrapAlpha(cl, 800, 42);
+ok('실패가 적으면 구간을 내고 실패 횟수도 반환', pOk.lo !== null && pOk.reason === null && pOk.failed / pOk.reps <= 0.1 && pOk.reps === 800);
+// R16 지적 3: 유효 평가가 없는 상황은 상황 수에 세지 않음
+const recs3 = [];
+for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) for (let k = 0; k < 2; k++) recs3.push({ situation: 's' + i, answer: 'a' + j, rater: 'r' + k, scores: { x: i === 0 ? j : null } });
+const c3 = W.computeAgreement({ criteria: [{ id: 'x', name: 'x' }] }, recs3).criteria[0];
+ok('결측 상황은 유효 상황에서 제외(5개 중 1개)', c3.alphaCI.clusters === 5 && c3.alphaCI.validClusters === 1 && c3.alphaCI.reason === 'few' && c3.alphaCI.lo === null, JSON.stringify(c3.alphaCI));
+const recs3b = [];
+for (let i = 0; i < 6; i++) for (let j = 0; j < 2; j++) for (let k = 0; k < 2; k++) recs3b.push({ situation: 's' + i, answer: 'a' + j, rater: 'r' + k, scores: { x: i < 5 ? (j + k * (i % 2)) : null, y: j + k } });
+const c3b = W.computeAgreement({ criteria: [{ id: 'x', name: 'x' }, { id: 'y', name: 'y' }] }, recs3b).criteria;
+ok('항목별 유효 상황 수가 다름(x 5개, y 6개)', c3b[0].alphaCI.validClusters === 5 && c3b[1].alphaCI.validClusters === 6, c3b.map((x) => x.alphaCI.validClusters).join());
+// 3답변 묶음 유지: 다시 뽑은 자료에서 같은 상황의 답변 3개가 항상 함께 들어온다(단위마다 상황 표지를 붙여 확인).
+{
+  const mk = (i) => [0, 1, 2].map((j) => { const u = [i % 2 * 2, j % 2]; u.sit = i; u.ans = j; return u; });
+  const cm = Object.fromEntries(Array.from({ length: 6 }, (_, i) => ['s' + i, mk(i)]));
+  let bad = 0, calls = 0;
+  const pp2 = W.bootstrapAlpha(cm, 200, 9, (units) => {
+    calls++;
+    if (units.length !== 18) bad++;
+    for (let t = 0; t < units.length; t += 3) {
+      const g = units.slice(t, t + 3);
+      if (!(g[0].sit === g[1].sit && g[1].sit === g[2].sit && g[0].ans === 0 && g[1].ans === 1 && g[2].ans === 2)) bad++;
+    }
+  });
+  ok('묶음 재표집: 같은 상황의 답변 3개가 함께 뽑힘', calls === 200 && bad === 0 && pp2.clusters === 6, `calls ${calls}, bad ${bad}`);
+}
+ok('소스: 상황 단위로 통째로 뽑음(clusters[키] 전체를 이어 붙임)', /units = units\.concat\(clusters\[keys\[Math\.floor\(rnd\(\) \* keys\.length\)\]\]\)/.test(appSrc));
+// 안내 문구
+ok('화면 안내: 방법·반복 2,000회·시드·95% 오해 방지', appSrc.includes('백분위 부트스트랩') && appSrc.includes('2,000회') && appSrc.includes('시드 20261005') && appSrc.includes('95% 확률로 담는다는 뜻은 아니에요'));
 console.log(fail ? `\n실패 ${fail}건` : `\n전부 통과 (${n}건)`);
 process.exitCode = fail ? 1 : 0;

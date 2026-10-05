@@ -252,23 +252,44 @@
 
   // α의 95% 구간: 같은 상황의 답변들은 서로 닮아서 따로 뽑으면 구간이 좁아 보인다.
   // 그래서 "상황" 단위로 통째로 다시 뽑는다(GPT 아스트라 Q2 제안). 시드를 고정해 같은 자료면 같은 구간이 나온다.
-  // 상황이 5개 미만이면 구간을 내지 않는다. 다시 뽑은 자료에서 α를 계산할 수 없었던 횟수도 함께 돌려준다.
+  // 구간을 내지 않는 경우(reason): few(유효 상황 5개 미만), allSame(모든 점수 동일), perfect(관찰 자료에 불일치가 없음),
+  // manyFailed(다시 뽑은 자료 중 α를 계산할 수 없는 것이 10% 초과). 실패한 횟수는 0이나 1로 바꾸지 않고 뺀다.
   var BOOT_MIN_CLUSTERS = 5;
-  function bootstrapAlpha(clusters, reps, seed) {
+  var BOOT_MAX_FAIL = 0.1;
+  function bootstrapAlpha(clusters, reps, seed, onSample) {
     var keys = Object.keys(clusters);
-    if (keys.length < BOOT_MIN_CLUSTERS) return { lo: null, hi: null, reps: 0, failed: 0, clusters: keys.length };
+    // 유효 상황: 평가자 2명 이상이 점수를 준 답변이 하나라도 있는 상황
+    var validKeys = keys.filter(function (k) {
+      return clusters[k].some(function (u) { return u.filter(function (v) { return v !== null && v !== undefined; }).length >= 2; });
+    });
+    var base = { lo: null, hi: null, reps: 0, ok: 0, failed: 0, clusters: keys.length, validClusters: validKeys.length, reason: null };
+    if (validKeys.length < BOOT_MIN_CLUSTERS) { base.reason = 'few'; return base; }
+    var all = [];
+    keys.forEach(function (k) { all = all.concat(clusters[k]); });
+    var point = krippendorffAlpha(all);
+    if (point == null) { base.reason = 'allSame'; return base; }
+    var disagree = all.some(function (u) {
+      var nums = u.filter(function (v) { return v !== null && v !== undefined; });
+      return nums.length >= 2 && nums.some(function (v) { return v !== nums[0]; });
+    });
+    if (!disagree) { base.reason = 'perfect'; return base; }
     var st = (seed >>> 0) || 1;
     function rnd() { st |= 0; st = st + 0x6D2B79F5 | 0; var t = Math.imul(st ^ st >>> 15, 1 | st); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
     var vals = [], failed = 0;
     for (var r = 0; r < reps; r++) {
       var units = [];
       for (var k = 0; k < keys.length; k++) units = units.concat(clusters[keys[Math.floor(rnd() * keys.length)]]);
+      if (onSample) onSample(units);
       var a = krippendorffAlpha(units);
       if (a == null) failed++; else vals.push(a);
     }
+    base.reps = reps; base.failed = failed; base.ok = vals.length;
+    if (reps && failed / reps > BOOT_MAX_FAIL) { base.reason = 'manyFailed'; return base; }
     vals.sort(function (x, y) { return x - y; });
     function q(p) { if (!vals.length) return null; var i = (vals.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return vals[lo] + (vals[hi] - vals[lo]) * (i - lo); }
-    return { lo: q(0.025), hi: q(0.975), reps: reps, failed: failed, clusters: keys.length };
+    base.lo = q(0.025); base.hi = q(0.975);
+    if (base.lo == null) base.reason = 'manyFailed';
+    return base;
   }
 
   function computeAgreement(rubric, records) {
@@ -360,13 +381,21 @@
 
   // 알파 읽는 법(Krippendorff의 관례): 0.800 이상 믿을 만함, 0.667 이상 잠정, 그 아래는 기준 문구를 다듬을 곳.
   // 판정은 반올림 전 값으로 합니다. 화면 숫자는 소수 둘째 자리까지만 보여 줍니다.
-  // 95% 구간(상황 단위로 다시 뽑기). 상황이 5개 미만이면 구간 대신 그 사실을 적는다.
+  // 95% 구간(상황 단위로 다시 뽑기). 구간을 낼 수 없으면 이유를 적는다.
   function ciText(ci) {
     if (!ci) return '';
-    if (ci.clusters < 5) return ' · 구간은 상황 5개부터';
+    if (ci.reason === 'few') return ' · 구간은 유효 상황 5개부터';
+    if (ci.reason === 'allSame') return ' · 모든 점수가 같아 구간을 낼 수 없어요';
+    if (ci.reason === 'perfect') return ' · 불일치가 없어 구간을 낼 수 없어요(표본이 작으면 우연일 수 있어요)';
+    if (ci.reason === 'manyFailed') return ' · 계산할 수 없는 재표집이 많아 구간을 믿기 어려워요';
     if (ci.lo == null) return ' · 구간 계산 불가';
     var f = function (v) { return (Math.round(v * 100) / 100).toFixed(2); };
     return ' (95% ' + f(ci.lo) + '~' + f(ci.hi) + ')';
+  }
+  // 다시 뽑기에서 α를 계산할 수 없어 뺀 횟수. 구간을 시도하지 않았으면 빈 글.
+  function ciFailText(ci) {
+    if (!ci || !ci.reps) return '';
+    return ' · ' + ci.reps.toLocaleString('en-US') + '번 중 ' + ci.failed + '번은 계산할 수 없어 뺐어요';
   }
   function alphaText(a) {
     if (a == null) return '계산 불가';
@@ -383,6 +412,8 @@
     parseJsonl: parseJsonl,
     validateRecord: validateRecord,
     alphaText: alphaText,
+    ciText: ciText,
+    ciFailText: ciFailText,
     MIN_ANSWERS: MIN_ANSWERS,
     computeAgreement: computeAgreement,
     krippendorffAlpha: krippendorffAlpha,
@@ -1034,7 +1065,7 @@
     $('agree-status').textContent = '비교한 답변 ' + r.answers + '개 · 평가자 ' + r.raters.join(', ') + ' · 감점 신호가 같았던 비율 ' + pct(r.penalties.same);
     var t = el('table');
     var head = el('tr');
-    ['항목', '같은 점수', '1점 이내', '신뢰도 α', '유효 답변', '평가 수', '비교한 짝'].forEach(function (h) { head.appendChild(el('th', { scope: 'col' }, h)); });
+    ['항목', '같은 점수', '1점 이내', '신뢰도 α', '유효 답변', '유효 상황', '평가 수', '비교한 짝'].forEach(function (h) { head.appendChild(el('th', { scope: 'col' }, h)); });
     t.appendChild(el('thead')).appendChild(head);
     var body = t.appendChild(el('tbody'));
     var anyLow = false;
@@ -1044,8 +1075,9 @@
       tr.appendChild(el('td', { class: 'n' }, pct(c.exact)));
       tr.appendChild(el('td', { class: 'n' }, pct(c.within1)));
       if (c.lowSample) anyLow = true;
-      tr.appendChild(el('td', { class: 'n' }, alphaText(c.alpha) + ciText(c.alphaCI) + (c.lowSample ? ' · 표본 적음' : '')));
+      tr.appendChild(el('td', { class: 'n' }, alphaText(c.alpha) + ciText(c.alphaCI) + ciFailText(c.alphaCI) + (c.lowSample ? ' · 표본 적음' : '')));
       tr.appendChild(el('td', { class: 'n' }, String(c.answersUsed)));
+      tr.appendChild(el('td', { class: 'n' }, String(c.alphaCI.validClusters)));
       tr.appendChild(el('td', { class: 'n' }, String(c.ratings)));
       tr.appendChild(el('td', { class: 'n' }, String(c.pairs)));
       body.appendChild(tr);
@@ -1056,6 +1088,9 @@
       '"유효 답변"은 그 항목에 두 사람 이상이 점수를 준 답변 수예요. 이 수가 ' + r.minAnswers + '개보다 적으면 "표본 적음"으로 표시하고 숫자는 크게 흔들려요. ' +
       r.minAnswers + '개는 최소 기준일 뿐, 넘었다고 믿을 만하다는 보장은 아니에요.' +
       (anyLow ? ' 지금 "표본 적음"인 항목이 있어요. 참고로만 봐 주세요.' : '')));
+    box.appendChild(el('p', { class: 'hint' }, '괄호 안 95% 구간은 상황 단위로 다시 뽑는 백분위 부트스트랩이에요(반복 2,000회, 시드 20261005). ' +
+      '"유효 상황"은 그 항목에 두 사람 이상이 점수를 준 답변이 하나라도 있는 상황 수이고, 5개보다 적으면 구간을 내지 않아요. ' +
+      '상황이 적으면 구간이 크게 흔들리고, 95% 구간이 참값을 95% 확률로 담는다는 뜻은 아니에요.'));
     agreementNotes(r).forEach(function (n) { box.appendChild(el('p', { class: 'hint' }, n)); });
     if (r.splits.length) {
       box.appendChild(el('p', null, '많이 갈린 곳 (큰 차이부터, 10곳까지)'));
