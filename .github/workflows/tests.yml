@@ -131,3 +131,7 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1
           node tests/agreement.browser.js
+      - name: 크리펜도르프 α를 공개 패키지(krippendorff)와 무작위 300묶음으로 대조
+        run: |
+          python3 -m pip install --quiet krippendorff numpy
+          python3 tests/alpha_crosscheck.py
