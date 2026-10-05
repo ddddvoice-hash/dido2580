@@ -430,6 +430,8 @@ function renderSentences() {
 
 // 문장을 빨리 바꾸면 앞서 시작한 시범 찾기가 나중에 끝나 화면을 덮을 수 있어, 마지막 호출 결과만 쓴다.
 let selectToken = 0;
+let demoFailed = false;
+const NO_SPEECH_MSG = "말소리를 찾지 못했어요. 앞뒤에 조용한 구간을 1초쯤 두고 다시 녹음해 주세요.";
 function clearResult() {
   $("result").classList.add("hidden");
   $("score").textContent = "";
@@ -451,6 +453,8 @@ async function selectSentence(i) {
   $("sentence-text").textContent = sentences[current].text;
   $("sentence-edit").value = sentences[current].text;
   demoResult = null;
+  demoFailed = false;
+  mineFailed = false;
   mineBlob = null;
   lastCompare = null;
   lastMine = null;
@@ -463,11 +467,16 @@ async function selectSentence(i) {
   const blob = await getDemo(currentId());
   const decoded = blob ? await decode(blob).catch(() => null) : null;
   if (token !== selectToken) return;
-  demoResult = decoded;
+  // 분석이 실패한 시범(failed)은 0초·쉼 0곳을 정상값처럼 쓰지 않는다.
+  demoFailed = !!(decoded && decoded.failed);
+  demoResult = decoded && !decoded.failed ? decoded : null;
   $("demo-play").disabled = !blob;
-  $("demo-status").textContent = blob
-    ? `시범 길이 ${demoResult ? demoResult.duration.toFixed(1) : "?"}초, 쉼 ${demoResult ? demoResult.pauses.length : "?"}곳이에요.`
-    : "이 문장에는 아직 시범 녹음이 없어요. 선생님 모드에서 넣어 주세요.";
+  $("save").disabled = demoFailed;
+  $("demo-status").textContent = !blob
+    ? "이 문장에는 아직 시범 녹음이 없어요. 선생님 모드에서 넣어 주세요."
+    : demoFailed
+      ? NO_SPEECH_MSG.replace("녹음해", "시범을 녹음해")
+      : `시범 길이 ${demoResult ? demoResult.duration.toFixed(1) : "?"}초, 쉼 ${demoResult ? demoResult.pauses.length : "?"}곳이에요.`;
 }
 
 function renderChecklist() {
@@ -596,12 +605,13 @@ $("chart").addEventListener("click", (e) => {
   playSegment();
 });
 
+let mineFailed = false;
 async function onMineRecorded(blob, error) {
   if (!blob) { $("mine-status").textContent = error; return; }
   // 새 업로드를 시작하면 앞선 결과·그래프를 지우고, 늦게 끝난 앞선 분석은 버린다. 분석이 끝나기 전에는 기록 버튼도 막는다.
   const token = ++mineToken;
   stopSegments();
-  mineBlob = null; lastMine = null; lastCompare = null;
+  mineBlob = null; lastMine = null; lastCompare = null; mineFailed = false;
   $("mine-play").disabled = true;
   clearResult();
   $("save").disabled = true;
@@ -616,10 +626,16 @@ async function onMineRecorded(blob, error) {
     }
     if (token !== mineToken) return;
     mineBlob = blob;
-    lastMine = mine;
     $("mine-play").disabled = false;
-    if (!mine.duration) {
-      $("mine-status").textContent = "말소리를 찾지 못했어요. 마이크 가까이에서 다시 녹음해 보세요.";
+    if (mine.failed || !mine.duration) {
+      // 실패한 분석은 점수·쉼 0개로 보여 주지 않고, 기록도 막는다.
+      mineFailed = true;
+      $("mine-status").textContent = NO_SPEECH_MSG;
+      return;
+    }
+    lastMine = mine;
+    if (demoFailed) {
+      $("mine-status").textContent = NO_SPEECH_MSG.replace("녹음해", "시범을 녹음해");
       return;
     }
     if (!demoResult) {
@@ -634,7 +650,7 @@ async function onMineRecorded(blob, error) {
     $("feedback").innerHTML = A.feedback(lastCompare).map((l) => `<li>${l}</li>`).join("");
     if (lastCompare.ok) { setSegment(0); drawChart(demoResult, mine, lastCompare); }
   } finally {
-    if (token === mineToken) $("save").disabled = false;
+    if (token === mineToken) $("save").disabled = mineFailed || demoFailed;
   }
 }
 
@@ -667,6 +683,7 @@ $("mine-file").addEventListener("change", (e) => {
 });
 
 $("save").addEventListener("click", () => {
+  if (mineFailed || demoFailed) return;
   const checks = document.querySelectorAll("#checklist input:checked").length;
   const list = loadHistory();
   list.push({

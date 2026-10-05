@@ -65,7 +65,10 @@
     const runs = speechRuns(env);
     const sec = (frames) => frames * FRAME_MS / 1000;
     if (!runs.length) {
-      return { env, speechStart: 0, speechEnd: 0, duration: 0, pauses: [], spoken: 0 };
+      // failed: 측정 실패 표시. 0은 정상값이 아니므로 호출하는 쪽은 failed부터 확인해야 한다.
+      // reason: 'threshold'(소리는 큰데 기준값을 못 잡음: 앞뒤 무음 여백이 짧아 바닥이 무음이 아님), 'no_speech'(소리가 없거나 말소리 구간이 없음)
+      const reason = !Number.isFinite(threshold(env)) && percentile(env, 0.9) >= 0.01 ? "threshold" : "no_speech";
+      return { env, speechStart: 0, speechEnd: 0, duration: 0, pauses: [], spoken: 0, failed: true, reason };
     }
     const first = runs[0].start;
     const last = runs[runs.length - 1].end;
@@ -95,8 +98,8 @@
 
   // 시범과 따라 읽기 비교
   function compare(demo, mine) {
-    if (!demo.duration || !mine.duration) {
-      return { ok: false, message: "말소리를 찾지 못했습니다. 마이크 가까이에서 다시 녹음해 보세요." };
+    if (!demo || !mine || demo.failed || mine.failed || !demo.duration || !mine.duration) {
+      return { ok: false, failed: true, message: "말소리를 찾지 못했어요. 앞뒤에 조용한 구간을 1초쯤 두고 다시 녹음해 주세요." };
     }
     const speedRatio = mine.duration / demo.duration; // 1보다 크면 느림
     const used = new Set();
@@ -145,16 +148,16 @@
     if (!result.ok) return [result.message];
     const lines = [];
     const pct = Math.round(Math.abs(result.speedRatio - 1) * 100);
-    if (pct <= 5) lines.push("속도가 시범과 거의 같습니다.");
-    else if (result.speedRatio > 1) lines.push(`시범보다 ${pct}% 느리게 읽었습니다.`);
-    else lines.push(`시범보다 ${pct}% 빠르게 읽었습니다.`);
+    if (pct <= 5) lines.push("속도가 시범과 거의 같아요.");
+    else if (result.speedRatio > 1) lines.push(`시범보다 ${pct}% 느리게 읽었어요.`);
+    else lines.push(`시범보다 ${pct}% 빠르게 읽었어요.`);
     const total = result.matched.length + result.missing.length;
-    if (total) lines.push(`시범의 쉼 ${total}곳 중 ${result.matched.length}곳을 같은 자리에서 쉬었습니다.`);
-    if (result.missing.length) lines.push(`놓친 쉼 ${result.missing.length}곳은 아래 그림에서 빨간 표시로 보입니다.`);
-    if (result.extra.length) lines.push(`시범에 없는 쉼이 ${result.extra.length}곳 있습니다.`);
+    if (total) lines.push(`시범의 쉼 ${total}곳 중 ${result.matched.length}곳을 같은 자리에서 쉬었어요.`);
+    if (result.missing.length) lines.push(`놓친 쉼 ${result.missing.length}곳은 아래 그림에서 빨간 표시로 보여요.`);
+    if (result.extra.length) lines.push(`시범에 없는 쉼이 ${result.extra.length}곳 있어요.`);
     // 쉼 길이는 점수에 넣지 않고 안내만 한다. 많으면 두 곳까지만.
     for (const d of (result.lengthDiffs || []).slice(0, 2)) {
-      lines.push(`같은 자리 ${d.order}번째 쉼: 시범 ${d.demo.toFixed(1)}초, 내 낭독 ${d.mine.toFixed(1)}초 — ${d.diff > 0 ? "조금 짧게" : "조금 더 길게"} 쉬어 보세요.`);
+      lines.push(`같은 자리 ${d.order}번째 쉼: 시범 ${d.demo.toFixed(1)}초, 내 낭독 ${d.mine.toFixed(1)}초 — ${d.diff > 0 ? "조금 짧게" : "조금 더 길게"} 쉬어 봐요.`);
     }
     return lines;
   }

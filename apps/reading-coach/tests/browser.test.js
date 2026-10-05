@@ -45,7 +45,7 @@ const DEFAULT_FIRST = "안녕하세요. 오늘도 함께 읽어 보겠습니다.
   await page.setInputFiles("#mine-file", same);
   await page.waitForFunction(() => !document.getElementById("result").classList.contains("hidden"), null, { timeout: 15000 });
   ok("같은 낭독 파일을 올리면 100점", (await page.textContent("#score")).trim() === "100점", await page.textContent("#score"));
-  ok("피드백에 '거의 같습니다'", (await page.textContent("#feedback")).includes("거의 같습니다"));
+  ok("피드백에 '거의 같아요'", (await page.textContent("#feedback")).includes("거의 같아요"));
   ok("내 녹음 듣기 버튼이 켜짐", await page.isEnabled("#mine-play"));
   // 구간 듣기: 키보드로 위치 옮기기 → 번갈아 듣기, 그래프 누르기
   await page.focus("#seg-pos");

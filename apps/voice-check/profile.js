@@ -148,10 +148,11 @@ function profile(samples, rate, peak) {
   const duration = samples.length / rate;
   const frameSize = Math.max(1, Math.round(rate * FR / 1000));
   const runs = analysis.speechRuns(analysis.envelope(samples, rate));
-  if (!runs.length) throw new Error("말소리를 찾지 못했습니다");
+  // 말소리 구간이 없거나 analyze가 측정 실패(failed)면 쉼 0개·길이 0으로 쓰지 않고 측정 실패로 던진다.
+  const a = analysis.analyze(samples, rate);
+  if (!runs.length || a.failed) throw new Error("말소리를 찾지 못했습니다 (측정 실패)");
   const runsSec = runs.map((r) => [r.start * FR / 1000, r.end * FR / 1000]);
   const spoken = runsSec.reduce((a, [s, e]) => a + (e - s), 0);
-  const a = analysis.analyze(samples, rate);
 
   // 말소리 덩어리: 0.25초 미만 틈은 같은 덩어리
   const chunks = [];

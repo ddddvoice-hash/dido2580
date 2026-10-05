@@ -36,7 +36,7 @@ check("말소리 시작 약 0.3초", Math.abs(demo.speechStart - 0.3) < 0.03, de
 
 const same = A.compare(demo, A.analyze(build(demoParts()), RATE));
 check("같은 낭독은 100점", same.ok && same.score === 100, same.score);
-check("같은 낭독 피드백은 '거의 같습니다'", A.feedback(same)[0] === "속도가 시범과 거의 같습니다.");
+check("같은 낭독 피드백은 '거의 같아요'", A.feedback(same)[0] === "속도가 시범과 거의 같아요.");
 
 const slow = A.compare(demo, A.analyze(build(demoParts(1.2, 0.72)), RATE));
 check("20% 느리게 읽으면 속도 비율 약 1.2", Math.abs(slow.speedRatio - 1.2) < 0.03, slow.speedRatio.toFixed(3));
@@ -88,6 +88,26 @@ const d3 = res([pz(0.25, 600), pz(0.75, 600)]);
 const lateOnly = A.compare(d3, res([pz(0.75, 1500)]));
 check("첫 쉼을 놓치고 두 번째만 맞으면 안내 번호는 2", lateOnly.matched.length === 1 && lateOnly.lengthDiffs.length === 1 && lateOnly.lengthDiffs[0].order === 2, JSON.stringify(lateOnly.lengthDiffs.map(d => d.order)));
 check("피드백 문장도 '2번째 쉼'", A.feedback(lateOnly).some(l => l.includes("같은 자리 2번째 쉼")));
+
+// ---- A9(R17-9): 앞뒤 무음 여백이 짧아 기준값을 못 잡으면 0을 정상값으로 쓰지 않고 failed로 알린다 ----
+const tone = (margin) => {
+  const m = Math.round(margin * RATE), n = 10 * RATE;
+  const x = new Float32Array(m * 2 + n);
+  for (let i = 0; i < n; i++) x[m + i] = 0.2 * Math.sin(2 * Math.PI * 200 * i / RATE);
+  return x;
+};
+for (const margin of [0.3, 0.5]) {
+  const r = A.analyze(tone(margin), RATE);
+  check(`10초 사인파 + 여백 ${margin}초: failed(threshold)`, r.failed === true && r.reason === "threshold" && r.duration === 0 && r.pauses.length === 0, JSON.stringify({ failed: r.failed, reason: r.reason }));
+}
+const okMargin = A.analyze(tone(1.0), RATE);
+check("10초 사인파 + 여백 1.0초: 정상(failed 없음), 약 10초, 1~11초", !okMargin.failed && Math.abs(okMargin.duration - 10) < 0.05 && Math.abs(okMargin.speechStart - 1) < 0.05 && Math.abs(okMargin.speechEnd - 11) < 0.05, JSON.stringify({ d: okMargin.duration, s: okMargin.speechStart, e: okMargin.speechEnd }));
+const zero = A.analyze(new Float32Array(RATE * 3), RATE);
+check("완전 무음: failed(no_speech)", zero.failed === true && zero.reason === "no_speech");
+check("정상 분석에는 failed가 없음", !demo.failed);
+const failedCmp = A.compare(demo, A.analyze(tone(0.3), RATE));
+check("compare: failed 결과면 비교하지 않고 다시 녹음 안내", failedCmp.ok === false && !("score" in failedCmp) && A.feedback(failedCmp).length === 1 && A.feedback(failedCmp)[0].includes("1초쯤"), JSON.stringify(A.feedback(failedCmp)));
+check("compare: 시범이 failed여도 비교하지 않음", A.compare(A.analyze(tone(0.3), RATE), demo).ok === false);
 
 console.log(fail ? `\n실패 ${fail}건 (${count}건 중)` : `\n전부 통과 (${count}건)`);
 process.exitCode = fail ? 1 : 0;

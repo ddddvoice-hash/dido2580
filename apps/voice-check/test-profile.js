@@ -153,5 +153,20 @@ for (const [hz, harm, label] of [[120, [1], "사인 120Hz"], [220, [1], "사인 
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
+// A9(R17-9): 앞뒤 여백이 짧거나 무음이면 쉼 0개·길이 0으로 쓰지 않고 측정 실패(오류)로 던진다
+for (const [margin, label] of [[0.3, "여백 0.3초"], [0.5, "여백 0.5초"]]) {
+  const sig = build([{ sec: margin, silence: true }, { sec: 10, f0: 200 }, { sec: margin, silence: true }]);
+  let msg = null;
+  try { prof.profile(sig, RATE, 0.2); } catch (e) { msg = e.message; }
+  ok(msg && msg.includes("말소리를 찾지 못했습니다"), `10초 말소리 + ${label}: 측정 실패로 던짐`, String(msg));
+}
+{
+  const good = prof.profile(build([{ sec: 1, silence: true }, { sec: 10, f0: 200 }, { sec: 1, silence: true }]), RATE, 0.2);
+  ok(near(good.pauses.spanSec, 10, 0.1), "여백 1.0초면 정상으로 측정(길이 약 10초)", String(good.pauses.spanSec));
+  let msg = null;
+  try { prof.profile(new Float32Array(RATE * 3), RATE, 0); } catch (e) { msg = e.message; }
+  ok(msg !== null, "완전 무음: 측정 실패로 던짐");
+}
+
 console.log(`\n통과 ${pass}개, 실패 ${fail}개`);
 process.exitCode = fail ? 1 : 0;
