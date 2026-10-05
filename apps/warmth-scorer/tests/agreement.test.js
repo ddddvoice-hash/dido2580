@@ -135,5 +135,16 @@ ok('안내 문구에 경계 0.667·0.800과 반올림 설명, 20개는 보장이
 const full = Object.fromEntries(rubric.criteria.map((c) => [c.id, 2]));
 ok('감점 중복은 한 번만: 10 - 2 = 8', W.computeTotal(rubric, full, ['flattery', 'flattery']) === 8, String(W.computeTotal(rubric, full, ['flattery', 'flattery'])));
 ok('서로 다른 감점은 각각: 10 - 2 - 2 = 6', W.computeTotal(rubric, full, ['flattery', 'lecturing']) === 6);
+
+// α 95% 구간(상황 단위 부트스트랩, GPT Q2): 시드가 같으면 같은 결과, 상황 5개 미만이면 구간 없음, 구간이 점 추정을 감쌈.
+const mkClusters = (n, f) => Object.fromEntries(Array.from({ length: n }, (_, i) => ['상황' + i, [[f(i, 0), f(i, 1)], [f(i, 2), f(i, 3)]]]));
+const bFew = W.bootstrapAlpha(mkClusters(4, (i, j) => (i + j) % 3), 500, 1);
+ok('상황 4개면 구간을 내지 않음', bFew.lo === null && bFew.clusters === 4);
+const cl = mkClusters(12, (i, j) => [0, 1, 2][(i * 7 + (j % 2 === 0 ? 0 : (i % 4 === 0 ? 1 : 0)) + Math.floor(j / 2)) % 3]);
+const b1 = W.bootstrapAlpha(cl, 800, 42), b2 = W.bootstrapAlpha(cl, 800, 42);
+const point = W.krippendorffAlpha(Object.values(cl).flat());
+ok('같은 시드면 같은 구간', b1.lo === b2.lo && b1.hi === b2.hi);
+ok('구간이 점 추정을 감쌈(lo ≤ α ≤ hi)', b1.lo <= point && point <= b1.hi, `${b1.lo.toFixed(3)} ≤ ${point.toFixed(3)} ≤ ${b1.hi.toFixed(3)}`);
+ok('완전 일치면 구간도 1~1', (() => { const p = W.bootstrapAlpha(mkClusters(8, (i, j) => i % 3), 300, 7); return p.lo === 1 && p.hi === 1; })());
 console.log(fail ? `\n실패 ${fail}건` : `\n전부 통과 (${n}건)`);
 process.exitCode = fail ? 1 : 0;

@@ -250,6 +250,27 @@
     return best.r;
   }
 
+  // α의 95% 구간: 같은 상황의 답변들은 서로 닮아서 따로 뽑으면 구간이 좁아 보인다.
+  // 그래서 "상황" 단위로 통째로 다시 뽑는다(GPT 아스트라 Q2 제안). 시드를 고정해 같은 자료면 같은 구간이 나온다.
+  // 상황이 5개 미만이면 구간을 내지 않는다. 다시 뽑은 자료에서 α를 계산할 수 없었던 횟수도 함께 돌려준다.
+  var BOOT_MIN_CLUSTERS = 5;
+  function bootstrapAlpha(clusters, reps, seed) {
+    var keys = Object.keys(clusters);
+    if (keys.length < BOOT_MIN_CLUSTERS) return { lo: null, hi: null, reps: 0, failed: 0, clusters: keys.length };
+    var st = (seed >>> 0) || 1;
+    function rnd() { st |= 0; st = st + 0x6D2B79F5 | 0; var t = Math.imul(st ^ st >>> 15, 1 | st); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+    var vals = [], failed = 0;
+    for (var r = 0; r < reps; r++) {
+      var units = [];
+      for (var k = 0; k < keys.length; k++) units = units.concat(clusters[keys[Math.floor(rnd() * keys.length)]]);
+      var a = krippendorffAlpha(units);
+      if (a == null) failed++; else vals.push(a);
+    }
+    vals.sort(function (x, y) { return x - y; });
+    function q(p) { if (!vals.length) return null; var i = (vals.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return vals[lo] + (vals[hi] - vals[lo]) * (i - lo); }
+    return { lo: q(0.025), hi: q(0.975), reps: reps, failed: failed, clusters: keys.length };
+  }
+
   function computeAgreement(rubric, records) {
     var ids = rubric.criteria.map(function (c) { return c.id; });
     var info = { invalid: 0, otherVersion: 0, otherVersions: {}, noVersion: 0, sameDuplicates: 0, conflicts: [], unresolved: [] };
@@ -277,7 +298,7 @@
     });
     matchCandidates.sort(function (x, y) { return (x.situation + x.answer_id) < (y.situation + y.answer_id) ? -1 : 1; });
 
-    var crit = rubric.criteria.map(function (c) { return { id: c.id, name: c.name, pairs: 0, exact: 0, within1: 0, units: [], answersUsed: 0, ratings: 0 }; });
+    var crit = rubric.criteria.map(function (c) { return { id: c.id, name: c.name, pairs: 0, exact: 0, within1: 0, units: [], clusters: {}, answersUsed: 0, ratings: 0 }; });
     var pen = { pairs: 0, same: 0 };
     var compared = [], raters = {}, splits = [];
     Object.keys(groups).sort().forEach(function (k) {
@@ -296,6 +317,7 @@
         var vals = names.map(function (n) { return g.byRater[n].scores[c.id]; });
         var unit = vals.map(function (v) { return typeof v === 'number' ? v : null; });
         c.units.push(unit);
+        (c.clusters[g.situation] || (c.clusters[g.situation] = [])).push(unit);
         var nn = unit.filter(function (v) { return v !== null; }).length;
         if (nn >= 2) { c.answersUsed++; c.ratings += nn; }
         for (var i = 0; i < vals.length; i++) for (var j = i + 1; j < vals.length; j++) {
@@ -326,7 +348,8 @@
         return { id: c.id, name: c.name, pairs: c.pairs, answersUsed: c.answersUsed, ratings: c.ratings,
           lowSample: c.answersUsed < MIN_ANSWERS,
           exact: c.pairs ? c.exact / c.pairs : null, within1: c.pairs ? c.within1 / c.pairs : null,
-          alpha: krippendorffAlpha(c.units) };
+          alpha: krippendorffAlpha(c.units),
+          alphaCI: bootstrapAlpha(c.clusters, 2000, 20261005) };
       }),
       penalties: { pairs: pen.pairs, same: pen.pairs ? pen.same / pen.pairs : null },
       splits: splits,
@@ -337,6 +360,14 @@
 
   // 알파 읽는 법(Krippendorff의 관례): 0.800 이상 믿을 만함, 0.667 이상 잠정, 그 아래는 기준 문구를 다듬을 곳.
   // 판정은 반올림 전 값으로 합니다. 화면 숫자는 소수 둘째 자리까지만 보여 줍니다.
+  // 95% 구간(상황 단위로 다시 뽑기). 상황이 5개 미만이면 구간 대신 그 사실을 적는다.
+  function ciText(ci) {
+    if (!ci) return '';
+    if (ci.clusters < 5) return ' · 구간은 상황 5개부터';
+    if (ci.lo == null) return ' · 구간 계산 불가';
+    var f = function (v) { return (Math.round(v * 100) / 100).toFixed(2); };
+    return ' (95% ' + f(ci.lo) + '~' + f(ci.hi) + ')';
+  }
   function alphaText(a) {
     if (a == null) return '계산 불가';
     var v = (Math.round(a * 100) / 100).toFixed(2);
@@ -355,6 +386,7 @@
     MIN_ANSWERS: MIN_ANSWERS,
     computeAgreement: computeAgreement,
     krippendorffAlpha: krippendorffAlpha,
+    bootstrapAlpha: bootstrapAlpha,
     nowKstIso: nowKstIso,
     dateStamp: dateStamp
   };
@@ -1012,7 +1044,7 @@
       tr.appendChild(el('td', { class: 'n' }, pct(c.exact)));
       tr.appendChild(el('td', { class: 'n' }, pct(c.within1)));
       if (c.lowSample) anyLow = true;
-      tr.appendChild(el('td', { class: 'n' }, alphaText(c.alpha) + (c.lowSample ? ' · 표본 적음' : '')));
+      tr.appendChild(el('td', { class: 'n' }, alphaText(c.alpha) + ciText(c.alphaCI) + (c.lowSample ? ' · 표본 적음' : '')));
       tr.appendChild(el('td', { class: 'n' }, String(c.answersUsed)));
       tr.appendChild(el('td', { class: 'n' }, String(c.ratings)));
       tr.appendChild(el('td', { class: 'n' }, String(c.pairs)));
