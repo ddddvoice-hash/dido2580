@@ -7,10 +7,31 @@ import json
 import random
 from pathlib import Path
 
+NL = chr(10)  # 파일은 어느 운영체제에서도 LF로 쓴다(결과가 바이트까지 같아야 함)
 ROOT = Path(__file__).resolve().parents[3]
 OUT = Path(__file__).resolve().parent
 scen = {i["id"]: i for i in json.loads((ROOT / "docs/eval/scenarios-v0.json").read_text(encoding="utf-8"))["items"]}
-g2 = json.loads((ROOT / "docs/gpt/G2-answers.json").read_text(encoding="utf-8"))
+# 답변 출처 파일. 나중에 G8 같은 파일을 여기에 더해 아래 PICKS의 출처를 바꿔 끼울 수 있다(이번엔 G2와 G7만).
+SOURCES = {
+    "G2": "docs/gpt/G2-answers.json",
+    "G7": "docs/gpt/G7-answers.json",
+}
+answers_by_source = {k: json.loads((ROOT / v).read_text(encoding="utf-8"))["items"] for k, v in SOURCES.items()}
+
+# 조정용 답변 후보 표(R13-03): 문항마다 (출처 파일, 그 파일 items 안 순번(0부터)). 채점 전에 고정한다.
+# 다른 답으로 바꾸려면 이 표만 고친다. 종류(높음·낮음·경계)는 아래에서 원본과 맞는지 확인한다.
+PICKS = {
+    "s01": [("G2", 0), ("G2", 1), ("G2", 2)],
+    "s08": [("G2", 6), ("G2", 7), ("G2", 8)],
+    "s10": [("G2", 10), ("G2", 11), ("G2", 12)],
+    "s18": [("G2", 17), ("G2", 18), ("G2", 19)],
+    "s25": [("G2", 23), ("G2", 24), ("G2", 25)],
+    "s26": [("G2", 27), ("G2", 28), ("G2", 29)],
+    "s28": [("G2", 30)],
+    "s38": [("G2", 37), ("G2", 38), ("G2", 39)],
+    "s48": [("G2", 47), ("G2", 48), ("G2", 49)],
+    "s59": [("G2", 57), ("G2", 58), ("G2", 59)],
+}
 
 # 조정용 10: 7갈래 모두, 위기 수준은 1개(답변 1개만, 안전한 답변).
 CALIBRATION = {
@@ -44,38 +65,96 @@ def why(sid, note):
     base = f"{scen[sid]['group']} · {scen[sid]['risk']}"
     return base + (f" · {note}" if note else "")
 
-by_sid = {}
-for a in g2["items"]:
-    by_sid.setdefault(a["scenario_id"], []).append(a)
+by_sid = {}  # 최종 계획용: 출처별로 문항마다 가진 답변 종류
+for src, lst in answers_by_source.items():
+    for a in lst:
+        by_sid.setdefault(a["scenario_id"], {}).setdefault(src, []).append(a["kind"])
 
-rng = random.Random(20261005)
-items, key = [], []
-for n, sid in enumerate(CALIBRATION, 1):
-    cands = by_sid[sid]
+assert set(PICKS) == set(CALIBRATION)
+chosen_all = []
+for sid in CALIBRATION:
+    row = []
+    for src, idx in PICKS[sid]:
+        a = answers_by_source[src][idx]
+        assert a["scenario_id"] == sid, (sid, src, idx)
+        row.append((src, idx, a))
+    kinds = [a["kind"] for _, _, a in row]
     if scen[sid]["risk"] == "위기":
-        chosen = [a for a in cands if a["kind"] == "high"][:1]
-    else:  # 높음·낮음·경계 하나씩(경계가 둘이면 첫 번째)
-        chosen = [next(a for a in cands if a["kind"] == k) for k in ("high", "low", "borderline")]
-    rng.shuffle(chosen)
-    letters = "ABC"
-    items.append({"id": f"c{n:02d}", "scenario_id": sid, "situation": scen[sid]["situation"],
-                  "source": "GPT(gpt-6-astra) 작성 예시 답변(G2), 실제 서비스 답변 아님",
-                  "answers": [{"text": a["answer"]} for a in chosen]})
-    key.append({"id": f"c{n:02d}", "scenario_id": sid, "why_chosen": why(sid, CALIBRATION[sid]),
-                "answers": [{"letter": letters[i], "kind": a["kind"], "intended_total": a["intended_total"],
-                             "intended_scores": a["intended_scores"]} for i, a in enumerate(chosen)]})
+        assert kinds == ["high"], (sid, kinds)  # 위기 수준은 안전한 답변 1개만
+    else:
+        assert sorted(kinds) == ["borderline", "high", "low"], (sid, kinds)
+    chosen_all.append(row)
 
+# 고정 시드로 순서를 섞되(R8-12), 3답 문항에서 high 위치가 A·B·C에 고르게(횟수 차이 1 이하)이고
+# 이웃한 두 문항의 종류 순서가 같지 않은 배치를 찾는다(R13-05). 같은 시드면 같은 배치가 나온다.
+SEED = 20261005
+rng = random.Random(SEED)
+for attempt in range(1, 100001):
+    orders = []
+    for row in chosen_all:
+        r = list(row)
+        rng.shuffle(r)
+        orders.append(r)
+    three = [r for r in orders if len(r) == 3]
+    pos = [[a["kind"] for _, _, a in r].index("high") for r in three]
+    counts = [pos.count(i) for i in range(3)]
+    kind_orders = [tuple(a["kind"] for _, _, a in r) for r in orders]
+    adj_ok = all(kind_orders[i] != kind_orders[i + 1] for i in range(len(orders) - 1))
+    if max(counts) - min(counts) <= 1 and adj_ok:
+        break
+else:
+    raise SystemExit("조건에 맞는 배치를 찾지 못했어요")
+assert max(counts) - min(counts) <= 1
+assert all(kind_orders[i] != kind_orders[i + 1] for i in range(len(orders) - 1))
+print("high 위치 분포 A·B·C =", counts, f"(3답 문항 {len(three)}개, 시도 {attempt}번째)")
+
+letters = "ABC"
+items, key = [], []
+for n, (sid, chosen) in enumerate(zip(CALIBRATION, orders), 1):
+    items.append({"id": f"c{n:02d}", "scenario_id": sid, "situation": scen[sid]["situation"],
+                  "context": scen[sid].get("context", ""),
+                  "source": "GPT(gpt-6-astra) 작성 예시 답변, 실제 서비스 답변 아님",
+                  "answers": [{"text": a["answer"]} for _, _, a in chosen]})
+    key.append({"id": f"c{n:02d}", "scenario_id": sid, "why_chosen": why(sid, CALIBRATION[sid]),
+                "answers": [{"letter": letters[i], "kind": a["kind"], "source_file": SOURCES[src], "source_index": idx,
+                             "rationale": a.get("rationale", ""),
+                             "intended_total": a["intended_total"], "intended_scores": a["intended_scores"]}
+                            for i, (src, idx, a) in enumerate(chosen)]})
+
+n_ans = sum(len(i["answers"]) for i in items)
+crisis = [i["id"] for i in items if scen[i["scenario_id"]]["risk"] == "위기"]
 pack = {"pack": "calibration-v0", "test_only": False,
-        "notice": "조정용 평가 묶음(10문항). 답변은 GPT가 쓴 예시이며 실제 서비스 답변이 아니에요. 서로 상의하지 말고 채점하고, 채점이 끝날 때까지 key 파일을 열지 마세요. 위기 문항(c07)은 힘들면 건너뛰어도 돼요.",
+        "notice": f"조정용 평가 묶음({len(items)}문항, {n_ans}답). 답변은 GPT가 쓴 예시이며 실제 서비스 답변이 아니에요. 서로 상의하지 말고 채점하고, 채점이 끝날 때까지 key 파일을 열지 마세요. 위기 문항({', '.join(crisis)})은 힘들면 건너뛰어도 돼요.",
         "items": items}
-(OUT / "calibration-v0.json").write_text(json.dumps(pack, ensure_ascii=False, indent=1), encoding="utf-8")
-(OUT / "calibration-v0.key.json").write_text(json.dumps({"pack": "calibration-v0", "seed": 20261005, "items": key}, ensure_ascii=False, indent=1), encoding="utf-8")
+(OUT / "calibration-v0.json").write_text(json.dumps(pack, ensure_ascii=False, indent=1), encoding="utf-8", newline=NL)
+(OUT / "calibration-v0.key.json").write_text(json.dumps(
+    {"notice": "작성 의도 참고표 — 작성자의 추측이며 검증된 정답이 아니에요. 채점이 모두 끝날 때까지 열지 마세요.",
+     "pack": "calibration-v0", "seed": SEED, "high_position_counts_ABC": counts, "items": key},
+    ensure_ascii=False, indent=1), encoding="utf-8", newline=NL)
+
+# 최종 계획: 쓸 답변 수. 위기 수준이거나 안전한 답변뿐인 문항은 1개, 나머지는 높음·낮음·경계 하나씩 3개.
+def plan_row(sid):
+    srcs = by_sid.get(sid, {})
+    kinds = [k for v in srcs.values() for k in v]
+    if not kinds:
+        return 0, "-", "답변 없음(대기)"
+    where = " · ".join(f"{s} {len(v)}개" for s, v in srcs.items())
+    if scen[sid]["risk"] == "위기":
+        return 1, where, "위기 수준: 안전한 답변 1개만"
+    if set(kinds) == {"high"}:
+        return 1, where, "안전한 답변 1개만(높음 답변만 있음)"
+    extra = "경계가 둘이라 첫 번째만 씀" if kinds.count("borderline") > 1 else ""
+    return 3, where, extra
 
 lines = ["# 최종 평가 묶음 계획(final-v0) · 성우 김디도", "",
-         "조정용과 겹치지 않게 채점 전에 고정한 20문항이에요(R8-11). 답변 3개씩이 필요하고, 위기 수준 문항은 안전한 답변만 써요.", "",
-         "| 문항 | 고른 이유 | 답변 |", "|---|---|---|"]
+         "조정용과 겹치지 않게 채점 전에 고정한 20문항이에요(R8-11). 문항마다 쓸 답변 수는 아래 표와 같아요. 위기 수준이거나 안전한 답변뿐인 문항은 1개, 나머지는 높음·낮음·경계 하나씩 3개예요.",
+         "G7 표시는 처음엔 답변이 없어서 docs/gpt/G7-answers.json에서 가져온 문항이에요.", "",
+         "| 문항 | 고른 이유 | 쓸 답변 수 | 답변 출처 | 예외·메모 |", "|---|---|---|---|---|"]
+total = 0
 for sid, note in FINAL.items():
-    have = len(by_sid.get(sid, []))
-    lines.append(f"| {sid} {scen[sid]['situation']} | {why(sid, note)} | {'G2에 ' + str(have) + '개' if have else '아직 없음(G7)'} |")
-(OUT / "final-v0-plan.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-print("조정용", len(items), "문항, 답변", sum(len(i["answers"]) for i in items), "개 / 최종 계획 20문항, 답변 없는 문항", sum(1 for s in FINAL if s not in by_sid))
+    cnt, where, memo = plan_row(sid)
+    total += cnt
+    lines.append(f"| {sid} {scen[sid]['situation']} | {why(sid, note)} | {cnt} | {where} | {memo} |")
+lines += ["", f"쓸 답변은 모두 {total}개예요."]
+(OUT / "final-v0-plan.md").write_text(NL.join(lines) + NL, encoding="utf-8", newline=NL)
+print("조정용", len(items), "문항, 답변", n_ans, "개 / 최종 계획 20문항, 쓸 답변", total, "개, G7 문항", sum(1 for s in FINAL if "G7" in by_sid.get(s, {})))

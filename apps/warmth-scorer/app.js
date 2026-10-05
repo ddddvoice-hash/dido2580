@@ -550,6 +550,7 @@
   function loadExample() {
     if (!rubric) { say('기준표를 먼저 불러오세요.'); return; }
     formTest = null;
+    showContext('');
     closeScoring();
     var ex = rubric.examples && rubric.examples[0];
     if (!ex) { say('기준표에 예시가 없습니다.'); return; }
@@ -599,6 +600,7 @@
 
   function newItem() {
     formTest = null;
+    showContext('');
     $('situation').value = '';
     setAnswerRows(['', '']);
     $('example-warning').textContent = '';
@@ -607,10 +609,18 @@
     say('새 문항을 시작합니다. 칸을 비웠습니다.');
   }
 
+  // 문항에 상황 설명(context)이 있으면 상황 칸 아래에 보여 줍니다. 없으면 숨깁니다.
+  function showContext(text) {
+    var box = $('situation-context');
+    box.textContent = text ? '배경: ' + text : '';
+    box.hidden = !text;
+  }
+
   function fillFormFromTestItem(i) {
     var t = testItems[i];
     if (!t) return;
     formTest = { id: t.id, source: t.source };
+    showContext(t.context);
     $('situation').value = t.situation;
     setAnswerRows(t.answers.map(function (a) { return a.text; }));
     $('example-warning').textContent = '';
@@ -633,6 +643,7 @@
     testItems = list.map(function (t) {
       return {
         id: t.id, situation: t.situation, source: t.source,
+        context: typeof t.context === 'string' ? t.context : '',
         test_only: t.test_only === true || data.test_only === true,
         answers: t.answers.map(function (a, i) { return { id: answerLetter(i), text: a.text }; })
       };

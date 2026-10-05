@@ -207,7 +207,7 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 
 | 번호 | 담당 | 할 일 | 담당 파일 | 완료 조건 (팀장이 직접 실행) | 상태 |
 |---|---|---|---|---|---|
-| A5 | 매니저 | `build_packs.py`: R13-03 같은 종류 첫 답 대신 **고정한 후보**로 고르기(답변 출처 파일·순번을 표에 적음), R13-05 3답 문항에서 높음 위치가 A·B·C에 고르게(차이 1 이하)·이웃 문항과 같은 순서 연속 금지, R13-15 평가자용 묶음에 `context` 넣고 채점기가 상황 아래에 보여 주기, R13-11 열쇠 파일에 "작성 의도 참고표 — 추측, 검증된 정답 아님" 안내와 답변별 근거, R13-09 최종 계획에 문항별 채택 답변 수와 예외 표시, 답변 없는 최종 문항은 **G7**에서 가져오기. 답변 출처 목록을 바꿔 끼울 수 있게(G8 검증 뒤 교체) | `docs/eval/packs/`, `apps/warmth-scorer/app.js`·`index.html`·`tests/` | `python docs/eval/packs/build_packs.py` 두 번 실행해 같은 결과, 위치 조건 검사, 채점기 테스트·`pack.browser.js` 통과 | 진행 |
+검토 (팀장 확인 통과 · 보고 칸) |
 | B4 | 사원 | G7 형식 검사(30개, 필드, 기준 id, 위기 문항 없음)와 맞춤법·존댓말·브랜드 점검. **GPT 파일은 고치지 않고 지적만** | 이 게시판 '보고' 칸 | 지적 목록 제출 | 진행 |
 
 R13-10(열쇠를 저장소에 두는 방식)·R13-12~14(예측 검증 방법)는 **대표 판단**으로 남깁니다.
@@ -502,6 +502,15 @@ A/B 표는 측정값과 설계 참고값을 구분하고 점수·이해도·가�
 검토한 파일 목록: `AGENTS.md`, `TEAM_BOARD.md`, `HANDOFF.md`, 현재 `core.py`·`app.py`, 테스트 2개, `check.js`, `analysis.js`, 지정 커밋 변경. 실행해 본 것: venv에서 파일 쓰기를 차단한 core 39개·AppTest 4개 통과(AppTest 임시 폴더 생성은 메모리에서 대체), 추가 합성 입력·JS 비교·메모리 측정. 파일 생성·수정 없음.
 
 ## 보고
+
+### [A5] 팀장 확인 · 2026-10-05
+- 통과. 직접 실행: `build_packs.py` 두 번 → 결과 파일 md5 같음. 열쇠 파일로 확인: 3답 문항 9개에서 높음 위치 A·B·C = **3·3·3**, 이웃 문항 같은 순서 0, 묶음 10문항 모두 `context` 있음, 묶음에 kind·rationale 없음, 열쇠 notice "작성 의도 참고표 — 추측…". `agreement.test.js` 53·`scenarios.test.js` 9·`pack.browser.js` 13·`agreement.browser.js` 10 통과, `browser-check.mjs` **29/29**.
+- 매니저가 본 browser-check 27/28은 앱 문제가 아니라 file:// 주소를 `/c/Users/...`로 준 실행 방법 문제였어요(`file:///C:/...`로 주면 29/29). CI는 리눅스 경로라 영향 없음.
+- 남은 것: 답변 글 자체의 길이 단서(R13-01)는 G8 검증 뒤 `SOURCES`·`PICKS`에서 바꿔 끼웁니다.
+
+### [A5] 매니저 · 2026-10-05
+- R13-03 반영(`SOURCES`·`PICKS` 고정 후보 표, 지금과 같은 답) · R13-05 반영(시드 유지, 조건 맞는 첫 배치, assert) · R13-15 반영(묶음에 context, 채점기 "배경: …" 표시, 검사 4건) · R13-11 반영(열쇠 notice, 답변별 출처·순번·근거) · R13-09 반영(최종 계획 표: 쓸 답변 56개, s30·s35 1개, G7 10문항 표시) · notice 숫자 "10문항, 28답"으로.
+- 바꾼 파일: `docs/eval/packs/{build_packs.py,calibration-v0.json,calibration-v0.key.json,final-v0-plan.md}`, `apps/warmth-scorer/{app.js,index.html,tests/pack.browser.js}`.
 
 ### [A1] 팀장 확인 · 2026-10-05
 - 통과. 직접 실행: `apps/voice-persona`에서 `python -m unittest discover -s tests -p "test_*.py"` → **64개 OK**. 회귀 테스트 `test_upload_never_becomes_account_lock` 그대로 있음.
