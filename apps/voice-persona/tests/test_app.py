@@ -67,4 +67,46 @@ class StreamlitTests(unittest.TestCase):
         self.assertEqual(list(self.app.session_state['audio_by_result'][fp]),['A'])
         self.assertFalse(self.app.exception)
 
+    def test_example_button_keeps_user_input(self):
+        mine="직접 쓴 안내 문장입니다."
+        self.app.text_area(key='source_input').set_value(mine).run()
+        self.app.button(key='example_progress').click().run()
+        self.assertFalse(self.app.exception)
+        self.assertEqual(self.app.session_state['source_input'],mine)
+        self.assertTrue(any('바꾸지 않았어요' in i.value for i in self.app.info))
+        self.app.text_area(key='source_input').set_value('').run()
+        self.app.button(key='example_progress').click().run()
+        self.assertIn('파일을 올리는 중',self.app.session_state['source_input'])
+        self.assertFalse(any('바꾸지 않았어요' in i.value for i in self.app.info))
+
+    def test_steps_do_not_claim_unchecked_done(self):
+        sys.path.insert(0,str(ROOT/'tests'))
+        from test_core import wav_bytes
+        self.app.button(key='prepare').click().run()
+        html=' '.join(m.value for m in self.app.markdown)
+        self.assertIn('원고 확인<span class="sr-only"> (이용 가능)',html)
+        fp=self.app.session_state['result'].fingerprint
+        self.app.session_state['audio_by_result'][fp]={'A':wav_bytes(),'B':wav_bytes(seconds=1)}
+        self.app.text_area(key=f'notes_{fp}').set_value('메모').run()
+        html=' '.join(m.value for m in self.app.markdown)
+        self.assertIn('비교하고 기록<span class="sr-only"> (지금)',html)
+        self.assertNotIn('비교하고 기록<span class="sr-only"> (끝)',html)
+
+    def test_pause_line_does_not_judge_target(self):
+        sys.path.insert(0,str(ROOT/'tests'))
+        from test_core import riff,tone_pause_tone
+        self.app.button(key='prepare').click().run()
+        fp=self.app.session_state['result'].fingerprint
+        self.app.session_state['audio_by_result'][fp]={'A':riff(tone_pause_tone(.6),16),'B':riff(tone_pause_tone(.6),16)}
+        self.app.run()
+        text=' '.join(s.value for s in self.app.success)
+        self.assertIn('문장 사이 쉼만 잰 값이 아니고',text)
+        self.assertIn('판단하지 않아요',text)
+        self.assertNotIn('차이',text)
+
+    def test_intro_matches_features(self):
+        text=' '.join(m.value for m in self.app.markdown)
+        self.assertNotIn('한 글자도 바꾸지 않',text)
+        self.assertIn('등록된 표현만 쉽게 바꿔',text)
+
 if __name__=='__main__':unittest.main(verbosity=2)

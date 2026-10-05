@@ -52,8 +52,8 @@ table { word-break: keep-all; overflow-wrap: anywhere; }
   <ol class="steps">
     <li>PowerShell을 엽니다(<kbd>Win</kbd> 키 → <code>powershell</code> 입력 → <kbd>Enter</kbd>).</li>
     <li>폴더 전체 검사: 녹음 폴더가 <code>(내 사용자 폴더)\voice-raw\base</code>일 때입니다. 다른 폴더면 따옴표 안만 바꾸세요.
-      <div class="cmd"><code id="c1">cd ~/dido2580; if ($?) { node apps/voice-check/check.js "$HOME\voice-raw\base" --csv "$HOME\voice-raw\_work\검사결과.csv" }</code><button type="button" data-copy="c1" aria-label="폴더 전체 검사 명령 복사">복사</button></div>
-      <p class="muted">결과는 화면에 표로 나오고, 엑셀로 열 수 있는 <code>검사결과.csv</code>도 <code>_work</code> 폴더에 생깁니다.</p>
+      <div class="cmd"><code id="c1">cd ~/dido2580; if ($?) { New-Item -ItemType Directory -Force "$HOME\voice-raw\_work" | Out-Null }; if ($?) { node apps/voice-check/check.js "$HOME\voice-raw\base" --csv "$HOME\voice-raw\_work\검사결과.csv" }</code><button type="button" data-copy="c1" aria-label="폴더 전체 검사 명령 복사">복사</button></div>
+      <p class="muted">결과는 화면에 표로 나오고, 엑셀로 열 수 있는 <code>검사결과.csv</code>도 <code>_work</code> 폴더에 생깁니다. 이 폴더가 없으면 명령이 먼저 만들고, 만들지 못하면 검사는 하지 않고 멈춥니다.</p>
     </li>
     <li>기준 목소리 프로필(음높이·빠르기·쉼): 파일 하나를 봅니다.
       <div class="cmd"><code id="c2">cd ~/dido2580; if ($?) { node apps/voice-check/profile.js "$HOME\voice-raw\base\속리산.wav" }</code><button type="button" data-copy="c2" aria-label="기준 프로필 명령 복사">복사</button></div>

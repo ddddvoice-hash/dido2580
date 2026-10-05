@@ -69,5 +69,25 @@ check("0.1초 차이는 안내하지 않음", tiny.lengthDiffs.length === 0);
 const scoreRange = [same, slow, missOne, extra].every(r => r.score >= 0 && r.score <= 100);
 check("점수는 0~100 사이", scoreRange);
 
+// ---- R6-9: 쉼 길이 차이는 정수 밀리초로 비교(경계값) ----
+const pz = (at, ms) => ({ at, length: ms / 1000, lengthMs: ms });
+const res = (pauses) => ({ duration: 5, pauses });
+const edge = (d, m) => A.compare(res([pz(0.5, d)]), res([pz(0.5, m)])).lengthDiffs.length;
+check("경계: 시범 0.6초, 내 낭독 0.8초(정확히 0.2초 차이)는 안내 없음", edge(600, 800) === 0);
+check("경계: 0.2초보다 1ms 더 다르면(0.801초) 30% 조건도 넘으니 안내", edge(600, 801) === 1);
+check("경계: 시범 1.0초, 내 낭독 1.3초(30% 딱 같음)는 안내 없음", edge(1000, 1300) === 0);
+check("경계: 시범 1.0초, 내 낭독 1.301초는 안내", edge(1000, 1301) === 1);
+check("부동소수점 오차가 있는 길이(0.6, 0.8)도 안내 없음(lengthMs 없는 옛 형식)",
+  A.compare(res([{ at: 0.5, length: 0.6 }]), res([{ at: 0.5, length: 0.8 }])).lengthDiffs.length === 0);
+const frames = A.compare(demo, A.analyze(build(demoParts(1, 0.8)), RATE));
+check("합성 소리 0.6초 -> 0.8초 쉼(프레임 10개 차이)도 안내 없음", frames.lengthDiffs.length === 0, JSON.stringify(frames.lengthDiffs.map(d => d.diffMs)));
+check("analyze가 쉼 길이를 정수 밀리초로도 돌려줌", demo.pauses.every(p => Number.isInteger(p.lengthMs) && p.lengthMs >= 500));
+
+// ---- R6-10: 앞 쉼을 놓쳐도 시범의 원래 쉼 번호 유지 ----
+const d3 = res([pz(0.25, 600), pz(0.75, 600)]);
+const lateOnly = A.compare(d3, res([pz(0.75, 1500)]));
+check("첫 쉼을 놓치고 두 번째만 맞으면 안내 번호는 2", lateOnly.matched.length === 1 && lateOnly.lengthDiffs.length === 1 && lateOnly.lengthDiffs[0].order === 2, JSON.stringify(lateOnly.lengthDiffs.map(d => d.order)));
+check("피드백 문장도 '2번째 쉼'", A.feedback(lateOnly).some(l => l.includes("같은 자리 2번째 쉼")));
+
 console.log(fail ? `\n실패 ${fail}건 (${count}건 중)` : `\n전부 통과 (${count}건)`);
 process.exitCode = fail ? 1 : 0;

@@ -101,6 +101,7 @@
     const l = line();
     const fam = family(l.dir);
     document.documentElement.style.setProperty("--fam", `var(--fam-${fam.id})`);
+    document.documentElement.style.setProperty("--fam-ink", `var(--fam-ink-${fam.id})`);
     $("cueNo").textContent = l.id;
     $("cueScene").textContent = l.scene;
     $("cueKey").textContent = l.key;
@@ -270,14 +271,16 @@
     }
     if (t.voice.speechSec && ref.speechSec) {
       const pct = Math.round((t.voice.speechSec / ref.speechSec - 1) * 100);
-      far = far || Math.abs(pct) > 25;
+      // 짧은 발화(예: 0.2초)는 0.05초만 달라도 25%라서, 절대 차이도 0.15초 이상일 때만 '차이 큼'으로 본다.
+      // 0.15초는 말소리 길이 측정 단위(0.02초)의 약 7배로, 측정 흔들림보다 확실히 큰 값이다. 연기 비교로 다시 정할 수 있다.
+      far = far || (Math.abs(pct) > 25 && Math.abs(t.voice.speechSec - ref.speechSec) >= 0.15);
       const how = Math.abs(pct) < 5 ? "거의 같음" : `${Math.abs(pct)}% ${pct > 0 ? "김" : "짧음"}`;
-      parts.push(`말한 길이 <b>${t.voice.speechSec.toFixed(2)}초</b> (원래 ${ref.speechSec.toFixed(2)}초, ${how})`);
+      parts.push(`말한 길이(중간 쉼 포함) <b>${t.voice.speechSec.toFixed(2)}초</b> (원래 ${ref.speechSec.toFixed(2)}초, ${how})`);
     }
     if (!parts.length) return null;
     box.innerHTML = `<b class="compare-title">원래 녹음과 비교</b><span>${parts.join(" · ")}</span>` +
       (ref.uncertain ? `<span class="compare-note">원래 녹음의 이 줄은 자동으로 나눈 경계가 불확실해서 참고만 하세요.</span>` :
-        far ? `<span class="compare-note">원래 녹음과 차이가 큽니다(음높이 3반음 또는 길이 25% 넘게). 의도한 연기인지 들어 보세요.</span>` : "");
+        far ? `<span class="compare-note">원래 녹음과 차이가 큽니다(음높이 3반음 또는 길이 25%와 0.15초를 모두 넘게). 의도한 연기인지 들어 보세요.</span>` : "");
     if (far && !ref.uncertain) box.classList.add("far");
     return box;
   }

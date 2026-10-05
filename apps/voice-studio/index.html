@@ -16,6 +16,8 @@
   --pass: #157a42; --warn: #8a5300; --reject: #b42328; --pass-bg: #e3f5ea; --warn-bg: #fff2d9; --reject-bg: #fde7e7;
   --wave: #3b4a6b; --wave-speech: #0e8c7e; --room-band: #fff1c7; --zero-mark: #d93a3e; --focus: #3a6fd8;
   --fam-energy: #e4572e; --fam-spark: #d99400; --fam-calm: #2e9d6e; --fam-clear: #3a6fd8;
+  /* 감정 세기를 고른 칸의 숫자색(배경 대비 4.5:1 이상: 에너지 5.70, 스파크 6.30, 차분 4.74, 또렷 4.72) */
+  --fam-ink-energy: #000000; --fam-ink-spark: #172038; --fam-ink-calm: #172038; --fam-ink-clear: #ffffff;
   --font-display: "Jua", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -28,6 +30,7 @@
     --pass: #45c97e; --warn: #f0a43a; --reject: #ff6b6e; --pass-bg: #163a2a; --warn-bg: #3a2c12; --reject-bg: #3d1c22;
     --wave: #8fa0cc; --wave-speech: #35c9b5; --room-band: #2e2a16; --zero-mark: #ff6b6e; --focus: #8fb3ff;
     --fam-energy: #ff7a52; --fam-spark: #f5c042; --fam-calm: #4fc48e; --fam-clear: #6f9bff;
+    --fam-ink-energy: #172038; --fam-ink-spark: #172038; --fam-ink-calm: #172038; --fam-ink-clear: #172038;
     color-scheme: dark;
   }
 }
@@ -37,6 +40,7 @@
   --pass: #45c97e; --warn: #f0a43a; --reject: #ff6b6e; --pass-bg: #163a2a; --warn-bg: #3a2c12; --reject-bg: #3d1c22;
   --wave: #8fa0cc; --wave-speech: #35c9b5; --room-band: #2e2a16; --zero-mark: #ff6b6e; --focus: #8fb3ff;
   --fam-energy: #ff7a52; --fam-spark: #f5c042; --fam-calm: #4fc48e; --fam-clear: #6f9bff;
+  --fam-ink-energy: #172038; --fam-ink-spark: #172038; --fam-ink-calm: #172038; --fam-ink-clear: #172038;
   color-scheme: dark;
 }
 
@@ -123,6 +127,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .btn.primary:hover { filter: brightness(1.06); }
 .btn.small { min-height: 48px; padding: 0 12px; font-size: 14px; }
 .kbd { font: 500 11.5px var(--font-mono); padding: 1px 6px; border-radius: 5px; border: 1px solid currentColor; opacity: .7; }
+.btn.primary .kbd { opacity: 1; } /* 기본 버튼 안 단축키는 불투명(흰 글자 5.22:1) */
 .nav { display: flex; gap: 8px; margin-left: auto; }
 
 /* 연기 메모 */
@@ -142,7 +147,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .scale input { position: absolute; left: 0; top: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
 .scale label { min-height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); display: grid; place-items: center;
   cursor: pointer; font: 400 20px var(--font-display); }
-.scale input:checked + label { background: var(--fam, var(--accent)); border-color: var(--fam, var(--accent)); color: var(--surface); }
+.scale input:checked + label { background: var(--fam, var(--accent)); border-color: var(--fam, var(--accent)); color: var(--fam-ink, var(--surface)); }
 .scale input:focus-visible + label { outline: 3px solid var(--focus); outline-offset: 2px; }
 .saved { font-size: 12.5px; color: var(--muted); }
 

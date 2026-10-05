@@ -336,4 +336,18 @@ class JsParityTests(unittest.TestCase):
             self.same(py,self.js([([i/2**31 for i in ints],r)])[0],f'32bit amp={amp}')
 
 
+class StepAndExampleTests(unittest.TestCase):
+    def test_example_replace_rule(self):
+        self.assertTrue(can_replace_with_example("",["예문"]))
+        self.assertTrue(can_replace_with_example(" 예문 ",["예문"]))
+        self.assertFalse(can_replace_with_example("직접 쓴 글",["예문"]))
+
+    def test_step_states_reflect_real_checks(self):
+        self.assertEqual(step_states(False,0,False,False),["now","","","",""])
+        self.assertEqual(step_states(True,0,False,False),["done","avail","now","","avail"])
+        self.assertEqual(step_states(True,2,False,True),["done","avail","done","now","avail"])
+        self.assertEqual(step_states(True,2,True,False)[3],"now")
+        self.assertEqual(step_states(True,2,True,True)[3],"done")
+
+
 if __name__=='__main__':unittest.main(verbosity=2)

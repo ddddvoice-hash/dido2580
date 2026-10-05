@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -28,13 +30,30 @@ jobs:
         working-directory: apps/voice-persona
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - run: python -m unittest discover -s tests -p "test_*.py" -v
-      - name: 배포용 설정(저장소 맨 위)과 앱 설정이 같은지
-        run: diff <(tail -n +2 ../../.streamlit/config.toml) .streamlit/config.toml
+      - name: 배포용 설정(저장소 맨 위)과 앱 설정이 같은지 (문법과 값을 함께 비교)
+        run: |
+          python - <<'PY'
+          import sys, tomllib
+          paths = ["../../.streamlit/config.toml", ".streamlit/config.toml"]
+          try:
+              a, b = [tomllib.load(open(p, "rb")) for p in paths]
+          except Exception as e:
+              print("설정 파일을 읽지 못했어요:", e)
+              sys.exit(1)
+          if a != b:
+              print("두 설정이 달라요.")
+              print(paths[0], a)
+              print(paths[1], b)
+              sys.exit(1)
+          print("두 설정이 같아요:", a)
+          PY
         shell: bash
 
   voice-node:
@@ -42,6 +61,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -59,7 +80,7 @@ jobs:
           node apps/voice-studio/tests/reference.test.js
       - name: 낭독 코치 (속도·쉼 비교와 피드백)
         run: node apps/reading-coach/tests/test-analysis.js
-      - name: 실제 브라우저 검사 (녹음 부스 33가지, 낭독 코치 23가지)
+      - name: 실제 브라우저 검사 (녹음 부스 33가지, 낭독 코치 48가지)
         env:
           CHROMIUM: /usr/bin/google-chrome
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
@@ -76,11 +97,25 @@ jobs:
         working-directory: apps/warmth-scorer
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
       - name: 기준표 자동 로드를 위한 로컬 서버
-        run: python3 -m http.server 8765 > /dev/null 2>&1 &
+        run: |
+          python3 -m http.server 8765 > /tmp/server.log 2>&1 &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+              echo "서버가 꺼졌어요. 로그:"; cat /tmp/server.log; exit 1
+            fi
+            if curl -fsS -o /dev/null http://127.0.0.1:8765/index.html; then
+              echo "서버가 응답해요."; exit 0
+            fi
+            sleep 1
+          done
+          echo "30초 안에 서버가 응답하지 않았어요. 로그:"; cat /tmp/server.log; exit 1
       - name: 브라우저 검수
         env:
           CHROME: /usr/bin/google-chrome

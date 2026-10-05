@@ -348,6 +348,22 @@ def _analyze_wav(data: bytes) -> dict:
             "sha256": hashlib.sha256(data).hexdigest()}
 
 
+def can_replace_with_example(current: str, examples: list[str]) -> bool:
+    """예문 버튼이 입력창을 바꿔도 되는지. 비었거나 이미 처음 값·예문 그대로일 때만 true. 직접 쓴 글은 지키지 않는다."""
+    text = (current or "").strip()
+    return not text or text in {e.strip() for e in examples}
+
+
+def step_states(has_result: bool, audio_count: int, both_checked: bool, has_notes: bool) -> list[str]:
+    """다섯 단계의 실제 상태. done=끝, now=지금, avail=이용 가능(앱이 확인하지 않는 단계), 빈 문자열=아직."""
+    if not has_result:
+        return ["now", "", "", "", ""]
+    states = ["done", "avail", "done" if audio_count >= 2 else "now", "", "avail"]
+    if audio_count >= 2:
+        states[3] = "done" if both_checked and has_notes else "now"
+    return states
+
+
 def make_bundle(result: Result, audio: dict, checks: dict, notes: str) -> bytes:
     if type(notes) is not str or len(notes) > 10000:
         raise ValueError("비교 메모는 10,000자 이하로 입력해 주세요.")

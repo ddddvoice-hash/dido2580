@@ -7,7 +7,7 @@ import zipfile
 import pandas as pd
 import streamlit as st
 from core import (MAX_SESSION_AUDIO, MODES, PERSONAS, SCENARIOS, analyze_wav, audio_total, build_result,
-                  drop_other_audio, load_bundle, make_bundle, result_is_current)
+                  drop_other_audio, can_replace_with_example, load_bundle, step_states, make_bundle, result_is_current)
 
 st.set_page_config(page_title="보이스 페르소나 실험실", page_icon="🎙️", layout="wide",
                    initial_sidebar_state="collapsed")
@@ -38,7 +38,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 .steps li{display:flex;align-items:center;gap:.45rem;padding:.45rem .8rem;border-radius:999px;border:1px solid #c9d6da;background:#fff;color:#4b6068;font-size:.95rem}
 .steps li b{display:inline-grid;place-items:center;width:1.6rem;height:1.6rem;border-radius:50%;background:#e4ecee;color:#142b34;font-size:.85rem}
 .steps li.done{border-color:#9cc8c2;color:#176b67}.steps li.done b{background:#176b67;color:#fff}
-.steps li.now{border:2px solid #176b67;color:#142b34;font-weight:600}.steps li.now b{background:#f2b632;color:#142b34}
+.steps li.avail{border-style:dashed}.steps li.now{border:2px solid #176b67;color:#142b34;font-weight:600}.steps li.now b{background:#f2b632;color:#142b34}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>""", unsafe_allow_html=True)
 
@@ -122,17 +122,25 @@ EXAMPLES = {
 }
 
 
-def show_steps(slot, now: int):
-    """지금 단계를 위쪽 줄에 표시한다. now보다 앞은 끝난 단계."""
+STEP_LABELS = {"done": " (끝)", "now": " (지금)", "avail": " (이용 가능)", "": ""}
+
+
+def show_steps(slot, states):
+    """단계 줄. 끝은 앱이 실제로 확인한 단계만, 확인할 수 없는 단계는 '이용 가능'으로 표시한다."""
     items = []
     for i, name in enumerate(STEP_NAMES):
-        state = "done" if i < now else "now" if i == now else ""
-        label = " (지금)" if i == now else " (끝)" if i < now else ""
+        state = states[i]
+        label = STEP_LABELS[state]
         items.append(f'<li class="{state}"><b>{i + 1}</b>{name}<span class="sr-only">{label}</span></li>')
     slot.markdown('<ol class="steps" aria-label="진행 단계">' + "".join(items) + "</ol>", unsafe_allow_html=True)
 
 
 def use_example(scenario: str):
+    """직접 쓴 글은 덮어쓰지 않는다. 비었거나 처음 값·예문 그대로일 때만 바꾼다."""
+    if not can_replace_with_example(st.session_state.source_input, [DEFAULT_SOURCE] + [t for _, t in EXAMPLES.values()]):
+        st.session_state.example_notice = "직접 넣은 문장이 있어서 예문으로 바꾸지 않았어요. 예문을 쓰려면 문장 칸을 비워 주세요."
+        return
+    st.session_state.example_notice = ""
     st.session_state.source_input = EXAMPLES[scenario][1]
     st.session_state.scenario_input = scenario
 
@@ -150,9 +158,9 @@ def compare_line(name: str, a, b, same: float = .05) -> str:
 
 
 st.title("🎙️ 보이스 페르소나 실험실")
-st.write("안내 문장을 한 글자도 바꾸지 않고 지키면서, 두 가지 방식으로 읽어 보고 어느 쪽이 더 잘 들리는지 비교합니다.")
+st.write("원문 그대로 읽거나, 등록된 표현만 쉽게 바꿔 두 가지 낭독으로 비교해요. 바뀐 곳은 모두 보여 드려요.")
 steps_slot = st.empty()
-show_steps(steps_slot, 0)
+show_steps(steps_slot, step_states(False, 0, False, False))
 st.caption("이 앱은 문장을 새로 지어내지 않습니다. 감정 인식, AI 다시 쓰기, 음성 합성은 하지 않습니다.")
 
 with st.expander("저장해 둔 작업 불러오기"):
@@ -169,6 +177,8 @@ st.header("1. 읽을 문장 넣기")
 st.write("예문으로 바로 해 보거나, 직접 안내 문장을 붙여 넣으세요.")
 for column, (scenario, (label, _)) in zip(st.columns(len(EXAMPLES)), EXAMPLES.items()):
     column.button(label, key=f"example_{scenario}", on_click=use_example, args=(scenario,), width="stretch")
+if st.session_state.get("example_notice"):
+    st.info(st.session_state.example_notice)
 st.text_area("읽을 안내 문장", key="source_input", height=140, max_chars=5000,
              help="전화번호·시간·다음 행동·버튼 이름은 이 문장에 있는 것만 씁니다. 새로 덧붙이지 않습니다.")
 left, right = st.columns(2)
@@ -303,8 +313,7 @@ if len(current_audio) == 2:
         else:
             lines.append(f"쉼: A {sp_a['pause_count']}개, B {sp_b['pause_count']}개 (0.25초 넘게 쉰 곳이 없는 녹음이 있습니다)")
         if sp_b["pause_count"]:
-            gap = sp_b["pause_median"] - target
-            lines.append(f"B 쉼과 목표 {target:.2f}초의 차이: {'거의 같습니다' if abs(gap) < .05 else f'{abs(gap):.2f}초 ' + ('더 깁니다' if gap > 0 else '더 짧습니다')} (참고)")
+            lines.append(f"B 쉼 중간값은 {sp_b['pause_median']:.2f}초예요. 문장 사이 쉼만 잰 값이 아니고, 목표 {target:.2f}초를 이뤘는지는 판단하지 않아요.")
         st.success("**한눈에 보기**\n\n" + "\n".join(f"- {line}" for line in lines))
 
     def cell(sp, key):
@@ -375,7 +384,7 @@ if audio_zip:
     save_cols[2].download_button("녹음과 원고 묶음 받기 (ZIP)", data=audio_zip, file_name="persona-comparison.zip",
                                  mime="application/zip", width="stretch")
 
-show_steps(steps_slot, 2 if len(current_audio) < 2 else 3 if not notes.strip() else 4)
+show_steps(steps_slot, step_states(True, len(current_audio), all(current_checks.get(x) for x in ("A", "B")), bool(notes.strip())))
 
 with st.expander("개발자용 정보"):
     st.json({"persona": persona.title, "scenario": SCENARIOS[inputs["scenario"]],

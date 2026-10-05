@@ -8,9 +8,9 @@
   const FRAME_MS = 20;        // 한 프레임 길이
   const MIN_PAUSE_MS = 250;   // 이보다 짧은 무음은 숨 고르기로 보고 쉼으로 세지 않는다
   const MIN_SPEECH_MS = 80;   // 이보다 짧은 소리는 잡음으로 본다
-  const PAUSE_MATCH = 0.08;
-  const PAUSE_LEN_SEC = 0.2;    // 쉼 길이 차이 안내 기준(초)
-  const PAUSE_LEN_RATIO = 0.3;  // 그리고 시범 쉼 길이의 이 비율보다 클 때   // 시범 쉼과 이 거리(전체 길이 비율) 안이면 같은 쉼으로 본다
+  const PAUSE_MATCH = 0.08;     // 시범 쉼과 이 거리(발화 길이 비율) 안이면 같은 쉼으로 본다
+  const PAUSE_LEN_MS = 200;     // 쉼 길이 차이 안내 기준(밀리초)
+  const PAUSE_LEN_PERCENT = 30; // 그리고 시범 쉼 길이의 이 퍼센트보다 클 때
 
   // 프레임별 RMS(소리 크기)
   function envelope(samples, sampleRate) {
@@ -79,7 +79,8 @@
       const gap = runs[i].start - runs[i - 1].end;
       if (gap >= minPause) {
         const mid = (runs[i - 1].end + runs[i].start) / 2;
-        pauses.push({ at: (mid - first) / span, length: sec(gap), time: sec(mid) });
+        // lengthMs: 정수 밀리초(프레임 수 x 20). 길이 비교는 이 값으로 해서 부동소수점 오차를 피한다.
+        pauses.push({ at: (mid - first) / span, length: sec(gap), lengthMs: gap * FRAME_MS, time: sec(mid) });
       }
     }
     return {
@@ -101,7 +102,7 @@
     const used = new Set();
     const matched = [];
     const missing = [];
-    for (const p of demo.pauses) {
+    demo.pauses.forEach((p, order) => {
       let best = -1;
       let bestDist = Infinity;
       mine.pauses.forEach((q, j) => {
@@ -110,16 +111,18 @@
       });
       if (best >= 0 && bestDist <= PAUSE_MATCH) {
         used.add(best);
-        matched.push({ demo: p, mine: mine.pauses[best] });
+        matched.push({ demo: p, mine: mine.pauses[best], order: order + 1 }); // order: 시범의 원래 쉼 번호
       } else {
         missing.push(p);
       }
-    }
+    });
     const extra = mine.pauses.filter((_, j) => !used.has(j));
     // 같은 자리 쉼의 길이 차이. 0.2초 넘게, 그리고 시범 길이의 30% 넘게 다를 때만 알린다(짧은 숨 고르기 흔들림은 무시).
+    // 정수 밀리초로 비교한다: 정확히 0.2초 차이는 '넘게'가 아니므로 알리지 않는다.
+    const ms = (p) => (Number.isFinite(p.lengthMs) ? p.lengthMs : Math.round(p.length * 1000));
     const lengthDiffs = matched
-      .map((m, k) => ({ order: k + 1, demo: m.demo.length, mine: m.mine.length, diff: m.mine.length - m.demo.length }))
-      .filter((d) => Math.abs(d.diff) > PAUSE_LEN_SEC && Math.abs(d.diff) > d.demo * PAUSE_LEN_RATIO);
+      .map((m) => ({ order: m.order, demo: m.demo.length, mine: m.mine.length, diff: m.mine.length - m.demo.length, diffMs: ms(m.mine) - ms(m.demo), demoMs: ms(m.demo) }))
+      .filter((d) => Math.abs(d.diffMs) > PAUSE_LEN_MS && Math.abs(d.diffMs) * 100 > d.demoMs * PAUSE_LEN_PERCENT);
     const total = demo.pauses.length;
     // 점수: 속도 50점 + 쉼 50점. 속도는 ±25% 벗어나면 0점.
     const speedScore = Math.max(0, 1 - Math.abs(speedRatio - 1) / 0.25) * 50;

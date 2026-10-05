@@ -119,18 +119,54 @@
     return res;
   }
 
-  // JSONL 한 덩어리(여러 줄)를 기록 목록으로. 읽지 못한 줄은 번호를 모아 돌려줍니다.
-  function parseJsonl(text) {
-    var records = [], bad = [];
+  // 기록 한 줄 검사. 문제가 있으면 이유(문장), 괜찮으면 null.
+  // 점수는 기준표 범위의 유한한 정수만 받습니다. 빈칸(null)과 아예 없는 항목은 '결측'으로 두고, 숫자가 아닌 값·범위 밖·소수는 잘못된 값으로 봅니다.
+  function validateRecord(rubric, r) {
+    if (!r || typeof r !== 'object' || Array.isArray(r)) return '기록이 객체가 아니에요';
+    if (typeof r.rater !== 'string' || !r.rater.trim()) return '평가자 이름이 없어요';
+    if (typeof r.situation !== 'string') return '상황이 글이 아니에요';
+    if (typeof r.answer !== 'string' || !r.answer) return '답변이 없어요';
+    if (!r.scores || typeof r.scores !== 'object' || Array.isArray(r.scores)) return '점수가 객체가 아니에요';
+    var min = rubric && rubric.scale ? rubric.scale.min : 0;
+    var max = rubric && rubric.scale ? rubric.scale.max : 2;
+    var keys = Object.keys(r.scores);
+    for (var i = 0; i < keys.length; i++) {
+      var v = r.scores[keys[i]];
+      if (v === null || v === undefined) continue;
+      if (typeof v !== 'number' || !isFinite(v)) return '점수 "' + keys[i] + '"가 유한한 숫자가 아니에요';
+      if (Math.floor(v) !== v) return '점수 "' + keys[i] + '"가 정수가 아니에요';
+      if (v < min || v > max) return '점수 "' + keys[i] + '"가 범위(' + min + '~' + max + ') 밖이에요';
+    }
+    if (rubric && Array.isArray(rubric.criteria)) {
+      var known = {};
+      rubric.criteria.forEach(function (c) { known[c.id] = true; });
+      for (var k = 0; k < keys.length; k++) if (!known[keys[k]]) return '기준표에 없는 항목 "' + keys[k] + '"이에요';
+    }
+    if (r.penalties !== undefined && r.penalties !== null) {
+      if (!Array.isArray(r.penalties)) return '감점이 배열이 아니에요';
+      var defs = {};
+      if (rubric && Array.isArray(rubric.penalties)) rubric.penalties.forEach(function (p) { defs[p.id] = true; });
+      for (var j = 0; j < r.penalties.length; j++) {
+        if (typeof r.penalties[j] !== 'string') return '감점 항목이 글이 아니에요';
+        if (rubric && Array.isArray(rubric.penalties) && !defs[r.penalties[j]]) return '기준표에 없는 감점 "' + r.penalties[j] + '"이에요';
+      }
+    }
+    return null;
+  }
+
+  // JSONL 한 덩어리(여러 줄)를 기록 목록으로. 읽지 못한 줄은 번호(bad)와 이유(problems)로 돌려줍니다.
+  // rubric을 주면 기준표 항목·점수 범위·감점 이름까지 확인합니다.
+  function parseJsonl(text, rubric) {
+    var records = [], bad = [], problems = [];
     String(text || '').split(/\r?\n/).forEach(function (line, i) {
       if (!line.trim()) return;
-      try {
-        var r = JSON.parse(line);
-        if (r && typeof r === 'object' && typeof r.answer === 'string' && r.scores && typeof r.scores === 'object') records.push(r);
-        else bad.push(i + 1);
-      } catch (e) { bad.push(i + 1); }
+      var reason = null, r = null;
+      try { r = JSON.parse(line); } catch (e) { reason = '줄이 JSON이 아니에요'; }
+      if (!reason) reason = validateRecord(rubric, r);
+      if (reason) { bad.push(i + 1); problems.push({ line: i + 1, reason: reason }); }
+      else records.push(r);
     });
-    return { records: records, bad: bad };
+    return { records: records, bad: bad, problems: problems };
   }
 
   // 평가자 일치도. 같은 상황·같은 답변(글자 그대로)을 2명 이상이 채점한 것만 비교합니다.
@@ -173,26 +209,94 @@
     return dExp === 0 ? null : 1 - dObs / dExp;
   }
 
-  function computeAgreement(rubric, records) {
-    var groups = {};
-    (records || []).forEach(function (r) {
-      if (!r || typeof r.rater !== 'string' || !r.rater) return;
-      var key = (r.situation || '') + '\u0000' + (r.answer || '');
-      var g = groups[key] || (groups[key] = { situation: r.situation || '', answer_id: r.answer_id || '', answer: r.answer || '', byRater: {} });
-      g.byRater[r.rater] = r;   // 같은 평가자가 두 번이면 나중 것
+  var MIN_ANSWERS = 20;   // 항목마다 '두 명 이상이 점수를 준 답변'이 이보다 적으면 '표본 적음'. 20개를 넘었다고 믿을 만하다는 보장은 아니다.
+
+  function sameRecordContent(a, b, ids) {
+    for (var i = 0; i < ids.length; i++) {
+      var x = a.scores[ids[i]], y = b.scores[ids[i]];
+      if ((typeof x === 'number' ? x : null) !== (typeof y === 'number' ? y : null)) return false;
+    }
+    return (a.penalties || []).slice().sort().join(',') === (b.penalties || []).slice().sort().join(',');
+  }
+  function validDate(r) {
+    if (typeof r.date !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(r.date)) return null;
+    var t = Date.parse(r.date);
+    return isFinite(t) ? t : null;
+  }
+  function normText(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
+
+  // 같은 평가자가 같은 답변을 여러 번 냈을 때 하나로 정합니다. 파일을 읽은 순서와 상관없이 같은 결과가 나옵니다.
+  // 내용이 같으면 하나로, 다르면 '유효한 날짜가 하나뿐인 최신'을 씁니다. 날짜가 없거나 최신이 동률이면 그 평가자의 그 답변은 뺍니다.
+  function resolveDuplicates(list, ids, info, g) {
+    var first = list[0], same = true;
+    for (var i = 1; i < list.length; i++) if (!sameRecordContent(first, list[i], ids)) same = false;
+    if (same) { info.sameDuplicates += list.length - 1; return first; }
+    var best = null, tie = false;
+    list.forEach(function (r) {
+      var t = validDate(r);
+      if (t === null) return;
+      if (best === null || t > best.t) { best = { t: t, r: r }; tie = false; }
+      else if (t === best.t) {
+        if (!sameRecordContent(best.r, r, ids)) tie = true;
+      }
     });
-    var crit = rubric.criteria.map(function (c) { return { id: c.id, name: c.name, pairs: 0, exact: 0, within1: 0, units: [] }; });
+    var tag = { situation: g.situation, answer_id: g.answer_id, rater: first.rater };
+    if (best === null) { tag.reason = '날짜가 없어서 어느 쪽이 최신인지 알 수 없어요'; info.unresolved.push(tag); return null; }
+    if (tie) { tag.reason = '가장 최신 날짜가 같은데 내용이 달라요'; info.unresolved.push(tag); return null; }
+    var undated = list.filter(function (r) { return validDate(r) === null; }).length;
+    tag.reason = '내용이 다른 기록이 ' + list.length + '개라 가장 최신 날짜 것을 썼어요' + (undated ? '(날짜 없는 ' + undated + '개는 뺌)' : '');
+    info.conflicts.push(tag);
+    return best.r;
+  }
+
+  function computeAgreement(rubric, records) {
+    var ids = rubric.criteria.map(function (c) { return c.id; });
+    var info = { invalid: 0, otherVersion: 0, otherVersions: {}, noVersion: 0, sameDuplicates: 0, conflicts: [], unresolved: [] };
+    var groups = {}, variants = {};
+    (records || []).forEach(function (r) {
+      if (validateRecord(rubric, r) !== null) { info.invalid++; return; }
+      if (r.rubric_version === undefined || r.rubric_version === null || r.rubric_version === '') info.noVersion++;
+      else if (rubric.version !== undefined && String(r.rubric_version) !== String(rubric.version)) {
+        info.otherVersion++;
+        info.otherVersions[r.rubric_version] = (info.otherVersions[r.rubric_version] || 0) + 1;
+        return;
+      }
+      var key = r.situation + '\u0000' + r.answer;
+      var g = groups[key] || (groups[key] = { situation: r.situation, answer_id: r.answer_id || '', answer: r.answer, list: {} });
+      (g.list[r.rater] || (g.list[r.rater] = [])).push(r);
+      var nk = normText(r.situation) + '\u0000' + normText(r.answer);
+      var v = variants[nk] || (variants[nk] = { situation: r.situation, answer_id: r.answer_id || '', keys: {}, raters: {} });
+      v.keys[key] = true; v.raters[r.rater] = true;
+    });
+    // 공백만 다른 문항·답변은 합치지 않고 '매칭 후보'로만 알립니다.
+    var matchCandidates = [];
+    Object.keys(variants).forEach(function (k) {
+      var v = variants[k];
+      if (Object.keys(v.keys).length > 1) matchCandidates.push({ situation: v.situation, answer_id: v.answer_id, variants: Object.keys(v.keys).length, raters: Object.keys(v.raters).sort() });
+    });
+    matchCandidates.sort(function (x, y) { return (x.situation + x.answer_id) < (y.situation + y.answer_id) ? -1 : 1; });
+
+    var crit = rubric.criteria.map(function (c) { return { id: c.id, name: c.name, pairs: 0, exact: 0, within1: 0, units: [], answersUsed: 0, ratings: 0 }; });
     var pen = { pairs: 0, same: 0 };
     var compared = [], raters = {}, splits = [];
-    Object.keys(groups).forEach(function (k) {
+    Object.keys(groups).sort().forEach(function (k) {
       var g = groups[k];
-      var names = Object.keys(g.byRater).sort();
+      var names = Object.keys(g.list).sort();
+      g.byRater = {};
+      names.forEach(function (n) {
+        var picked = resolveDuplicates(g.list[n], ids, info, g);
+        if (picked) g.byRater[n] = picked;
+      });
+      names = Object.keys(g.byRater).sort();
       if (names.length < 2) return;
       compared.push(g);
       names.forEach(function (n) { raters[n] = true; });
       crit.forEach(function (c) {
         var vals = names.map(function (n) { return g.byRater[n].scores[c.id]; });
-        c.units.push(vals.map(function (v) { return typeof v === 'number' ? v : null; }));
+        var unit = vals.map(function (v) { return typeof v === 'number' ? v : null; });
+        c.units.push(unit);
+        var nn = unit.filter(function (v) { return v !== null; }).length;
+        if (nn >= 2) { c.answersUsed++; c.ratings += nn; }
         for (var i = 0; i < vals.length; i++) for (var j = i + 1; j < vals.length; j++) {
           if (typeof vals[i] !== 'number' || typeof vals[j] !== 'number') continue;
           c.pairs++;
@@ -216,14 +320,26 @@
     return {
       answers: compared.length,
       raters: Object.keys(raters).sort(),
+      minAnswers: MIN_ANSWERS,
       criteria: crit.map(function (c) {
-        return { id: c.id, name: c.name, pairs: c.pairs,
+        return { id: c.id, name: c.name, pairs: c.pairs, answersUsed: c.answersUsed, ratings: c.ratings,
+          lowSample: c.answersUsed < MIN_ANSWERS,
           exact: c.pairs ? c.exact / c.pairs : null, within1: c.pairs ? c.within1 / c.pairs : null,
           alpha: krippendorffAlpha(c.units) };
       }),
       penalties: { pairs: pen.pairs, same: pen.pairs ? pen.same / pen.pairs : null },
-      splits: splits
+      splits: splits,
+      skipped: info,
+      matchCandidates: matchCandidates
     };
+  }
+
+  // 알파 읽는 법(Krippendorff의 관례): 0.800 이상 믿을 만함, 0.667 이상 잠정, 그 아래는 기준 문구를 다듬을 곳.
+  // 판정은 반올림 전 값으로 합니다. 화면 숫자는 소수 둘째 자리까지만 보여 줍니다.
+  function alphaText(a) {
+    if (a == null) return '계산 불가';
+    var v = (Math.round(a * 100) / 100).toFixed(2);
+    return v + (a >= 0.8 ? ' 믿을 만함' : a >= 0.667 ? ' 잠정' : ' 다듬기');
   }
 
   var api = {
@@ -233,6 +349,9 @@
     buildRecords: buildRecords,
     checkExample: checkExample,
     parseJsonl: parseJsonl,
+    validateRecord: validateRecord,
+    alphaText: alphaText,
+    MIN_ANSWERS: MIN_ANSWERS,
     computeAgreement: computeAgreement,
     krippendorffAlpha: krippendorffAlpha,
     nowKstIso: nowKstIso,
@@ -827,12 +946,33 @@
 
   /* ---------- 평가자 일치도 ---------- */
   var extraRecords = [];   // 다른 평가자 파일에서 읽은 기록(저장하지 않고 이 화면에서만 씀)
+  var extraSkipped = { count: 0, reasons: [] };   // 읽지 못해 건너뛴 줄: 개수와 이유
   function pct(v) { return v == null ? '-' : Math.round(v * 100) + '%'; }
-  // 알파 읽는 법(Krippendorff의 관례 기준): 0.80 이상 믿을 만함, 0.667 이상 잠정, 그 아래는 기준 문구를 다듬을 곳.
-  function alphaText(a) {
-    if (a == null) return '계산 불가';
-    var v = (Math.round(a * 100) / 100).toFixed(2);
-    return v + (a >= 0.8 ? ' 믿을 만함' : a >= 0.667 ? ' 잠정' : ' 다듬기');
+  function listText(items, max) {
+    return items.slice(0, max).join(' / ') + (items.length > max ? ' 외 ' + (items.length - max) + '건' : '');
+  }
+  function agreementNotes(r) {
+    var notes = [], s = r.skipped;
+    if (extraSkipped.count) {
+      notes.push('읽지 못한 줄 ' + extraSkipped.count + '개는 건너뛰었어요. 이유: ' + listText(extraSkipped.reasons.map(function (x) { return x.file + ' ' + x.line + '번째 줄 ' + x.reason; }), 5) + '.');
+    }
+    if (s.invalid) notes.push('형식이 맞지 않아 뺀 기록이 ' + s.invalid + '건 있어요.');
+    if (s.otherVersion) {
+      notes.push('현재 기준표(' + rubric.version + ')와 다른 버전 기록 ' + s.otherVersion + '건은 섞지 않고 뺐어요(' +
+        Object.keys(s.otherVersions).map(function (v) { return v + ' ' + s.otherVersions[v] + '건'; }).join(', ') + ').');
+    }
+    if (s.noVersion) notes.push('기준표 버전이 적혀 있지 않은 기록이 ' + s.noVersion + '건 있어요. 같은 기준표로 채점했는지 확인해 주세요.');
+    if (s.sameDuplicates) notes.push('같은 평가자가 같은 내용으로 낸 중복 기록 ' + s.sameDuplicates + '건은 하나로 쳤어요.');
+    if (s.conflicts.length) {
+      notes.push('같은 평가자의 같은 답변에 내용이 다른 기록이 있어 최신 날짜 것을 썼어요: ' + listText(s.conflicts.map(function (x) { return x.rater + ' · 답변 ' + x.answer_id; }), 5) + '.');
+    }
+    if (s.unresolved.length) {
+      notes.push('날짜가 없거나 최신이 같아서 고르지 못해 뺀 기록이 있어요: ' + listText(s.unresolved.map(function (x) { return x.rater + ' · 답변 ' + x.answer_id + '(' + x.reason + ')'; }), 5) + '. 날짜를 확인해 주세요.');
+    }
+    if (r.matchCandidates.length) {
+      notes.push('공백만 다른 문항·답변이 있어요. 합치지 않았어요. 같은 답변이면 글을 맞춘 뒤 다시 불러 주세요: ' + listText(r.matchCandidates.map(function (x) { return '답변 ' + (x.answer_id || '?') + '(' + x.raters.join(', ') + ')'; }), 5) + '.');
+    }
+    return notes;
   }
   function showAgreement() {
     if (!rubric) { $('agree-status').textContent = '기준표를 먼저 불러오세요.'; return; }
@@ -841,27 +981,36 @@
     var box = $('agree-result');
     box.textContent = '';
     if (!r.answers) {
-      $('agree-status').textContent = '두 사람 이상이 채점한 같은 답변이 아직 없습니다. 평가자 이름을 바꿔 같은 문항을 채점하거나, 다른 평가자의 JSONL을 더해 주세요.';
+      $('agree-status').textContent = '두 사람 이상이 채점한 같은 답변이 아직 없어요. 평가자 이름을 바꿔 같은 문항을 채점하거나, 다른 평가자의 JSONL을 더해 주세요.';
+      agreementNotes(r).forEach(function (n) { box.appendChild(el('p', { class: 'hint' }, n)); });
       return;
     }
     $('agree-status').textContent = '비교한 답변 ' + r.answers + '개 · 평가자 ' + r.raters.join(', ') + ' · 감점 신호가 같았던 비율 ' + pct(r.penalties.same);
     var t = el('table');
     var head = el('tr');
-    ['항목', '같은 점수', '1점 이내', '신뢰도 α', '비교한 짝'].forEach(function (h) { head.appendChild(el('th', { scope: 'col' }, h)); });
+    ['항목', '같은 점수', '1점 이내', '신뢰도 α', '유효 답변', '평가 수', '비교한 짝'].forEach(function (h) { head.appendChild(el('th', { scope: 'col' }, h)); });
     t.appendChild(el('thead')).appendChild(head);
     var body = t.appendChild(el('tbody'));
+    var anyLow = false;
     r.criteria.forEach(function (c) {
       var tr = el('tr');
       tr.appendChild(el('th', { scope: 'row' }, c.name));
       tr.appendChild(el('td', { class: 'n' }, pct(c.exact)));
       tr.appendChild(el('td', { class: 'n' }, pct(c.within1)));
-      tr.appendChild(el('td', { class: 'n' }, alphaText(c.alpha)));
+      if (c.lowSample) anyLow = true;
+      tr.appendChild(el('td', { class: 'n' }, alphaText(c.alpha) + (c.lowSample ? ' · 표본 적음' : '')));
+      tr.appendChild(el('td', { class: 'n' }, String(c.answersUsed)));
+      tr.appendChild(el('td', { class: 'n' }, String(c.ratings)));
       tr.appendChild(el('td', { class: 'n' }, String(c.pairs)));
       body.appendChild(tr);
     });
     box.appendChild(t);
-    box.appendChild(el('p', { class: 'hint' }, '신뢰도 α는 우연히 같은 점수가 나올 몫을 뺀 일치도입니다(크리펜도르프 알파, 1이 완전 일치, 0이 우연 수준). 0.80 이상은 믿을 만함, 0.67~0.80은 잠정, 그 아래는 기준 문구를 다듬을 항목입니다. 모두 같은 점수만 주면 계산할 수 없습니다.' +
-      (r.answers < 10 ? ' 지금은 비교한 답변이 ' + r.answers + '개뿐이라 숫자가 크게 흔들립니다. 답변 20개 이상에서 보세요.' : '')));
+    box.appendChild(el('p', { class: 'hint' }, '신뢰도 α는 우연히 같은 점수가 나올 몫을 뺀 일치도예요(크리펜도르프 알파, 1이 완전 일치, 0이 우연 수준). 모두 같은 점수만 주면 계산할 수 없어요. ' +
+      '판정 경계는 0.667과 0.800이에요: 0.800 이상은 믿을 만함, 0.667 이상은 잠정, 그 아래는 기준 문구를 다듬을 항목이에요. 화면 숫자는 소수 둘째 자리까지만 보여서, 0.7999가 0.80으로 보여도 판정은 반올림 전 값으로 해 잠정이에요. ' +
+      '"유효 답변"은 그 항목에 두 사람 이상이 점수를 준 답변 수예요. 이 수가 ' + r.minAnswers + '개보다 적으면 "표본 적음"으로 표시하고 숫자는 크게 흔들려요. ' +
+      r.minAnswers + '개는 최소 기준일 뿐, 넘었다고 믿을 만하다는 보장은 아니에요.' +
+      (anyLow ? ' 지금 "표본 적음"인 항목이 있어요. 참고로만 봐 주세요.' : '')));
+    agreementNotes(r).forEach(function (n) { box.appendChild(el('p', { class: 'hint' }, n)); });
     if (r.splits.length) {
       box.appendChild(el('p', null, '많이 갈린 곳 (큰 차이부터, 10곳까지)'));
       var ul = el('ul');
@@ -872,22 +1021,30 @@
       box.appendChild(ul);
     }
   }
+  // 파일을 모두 읽은 뒤에 한꺼번에 더합니다. 읽기가 끝나는 순서와 상관없이 파일을 고른 순서대로 쌓아요.
   function addAgreementFiles(files) {
     var list = Array.prototype.slice.call(files || []);
     if (!list.length) return;
-    var done = 0, added = 0, badLines = 0;
-    list.forEach(function (f) {
+    var done = 0, results = new Array(list.length);
+    function finish() {
+      var added = 0, badLines = 0;
+      results.forEach(function (res, idx) {
+        if (!res) { extraSkipped.count++; extraSkipped.reasons.push({ file: list[idx].name, line: 0, reason: '파일을 읽지 못했어요' }); return; }
+        extraRecords = extraRecords.concat(res.records);
+        added += res.records.length; badLines += res.bad.length;
+        extraSkipped.count += res.bad.length;
+        res.problems.forEach(function (p) { extraSkipped.reasons.push({ file: list[idx].name, line: p.line, reason: p.reason }); });
+      });
+      showAgreement();
+      $('agree-status').textContent = '파일 ' + list.length + '개에서 채점 ' + added + '건을 더했어요' + (badLines ? ' (읽지 못한 줄 ' + badLines + '개는 건너뛰었어요)' : '') + '. ' + $('agree-status').textContent;
+    }
+    list.forEach(function (f, idx) {
       var reader = new FileReader();
       reader.onload = function () {
-        var parsed = parseJsonl(reader.result);
-        extraRecords = extraRecords.concat(parsed.records);
-        added += parsed.records.length; badLines += parsed.bad.length;
-        if (++done === list.length) {
-          showAgreement();
-          $('agree-status').textContent = '파일 ' + list.length + '개에서 채점 ' + added + '건을 더했습니다' + (badLines ? ' (읽지 못한 줄 ' + badLines + '개는 뺐습니다)' : '') + '. ' + $('agree-status').textContent;
-        }
+        results[idx] = parseJsonl(reader.result, rubric);
+        if (++done === list.length) finish();
       };
-      reader.onerror = function () { if (++done === list.length) showAgreement(); };
+      reader.onerror = function () { if (++done === list.length) finish(); };
       reader.readAsText(f, 'UTF-8');
     });
   }
