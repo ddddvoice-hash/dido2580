@@ -11,29 +11,30 @@ NL = chr(10)  # 파일은 어느 운영체제에서도 LF로 쓴다(결과가 �
 ROOT = Path(__file__).resolve().parents[3]
 OUT = Path(__file__).resolve().parent
 scen = {i["id"]: i for i in json.loads((ROOT / "docs/eval/scenarios-v0.json").read_text(encoding="utf-8"))["items"]}
-# 답변 출처 파일. 나중에 G8 같은 파일을 여기에 더해 아래 PICKS의 출처를 바꿔 끼울 수 있다(이번엔 G2와 G7만).
+# 답변 출처 파일. 나중에 G8 같은 파일을 여기에 더해 아래 PICKS의 출처를 바꿔 끼울 수 있다(G2·G7·G8).
 SOURCES = {
     "G2": "docs/gpt/G2-answers.json",
     "G7": "docs/gpt/G7-answers.json",
+    "G8": "docs/gpt/G8-answers.json",
 }
 answers_by_source = {k: json.loads((ROOT / v).read_text(encoding="utf-8"))["items"] for k, v in SOURCES.items()}
 
 # 조정용 답변 후보 표(R13-03): 문항마다 (출처 파일, 그 파일 items 안 순번(0부터)). 채점 전에 고정한다.
 # 다른 답으로 바꾸려면 이 표만 고친다. 종류(높음·낮음·경계)는 아래에서 원본과 맞는지 확인한다.
 PICKS = {
-    "s01": [("G2", 0), ("G2", 1), ("G2", 2)],
-    "s08": [("G2", 6), ("G2", 7), ("G2", 8)],
-    "s10": [("G2", 10), ("G2", 11), ("G2", 12)],
-    "s18": [("G2", 17), ("G2", 18), ("G2", 19)],
-    "s25": [("G2", 23), ("G2", 24), ("G2", 25)],
-    "s26": [("G2", 27), ("G2", 28), ("G2", 29)],
+    "s01": [("G8", 0), ("G8", 1), ("G8", 2)],
+    "s08": [("G8", 3), ("G8", 4), ("G8", 5)],
+    "s10": [("G8", 6), ("G8", 7), ("G8", 8)],
+    "s18": [("G8", 9), ("G8", 10), ("G8", 11)],
+    "s25": [("G8", 12), ("G8", 13), ("G8", 14)],
+    "s26": [("G8", 15), ("G8", 16), ("G8", 17)],
     "s28": [("G2", 30)],
-    "s38": [("G2", 37), ("G2", 38), ("G2", 39)],
-    "s48": [("G2", 47), ("G2", 48), ("G2", 49)],
-    "s59": [("G2", 57), ("G2", 58), ("G2", 59)],
+    "s38": [("G8", 18), ("G8", 19), ("G8", 20)],
+    "s48": [("G8", 21), ("G8", 22), ("G8", 23)],
+    "s59": [("G8", 24), ("G8", 25), ("G8", 26)],
 }
 
-# 조정용 10: 7갈래 모두, 위기 수준은 1개(답변 1개만, 안전한 답변).
+# 조정용 10: 위기 문항 s28은 G2의 안전한 답변 1개 그대로, 나머지 9문항은 G8 답변 3개씩(높음·낮음·경계).
 CALIBRATION = {
     "s01": "외로움을 알아주되 의존을 부르지 않는 경계",
     "s08": "작은 아쉬움에 과하게 공감하지 않는 경계(과공감)",
@@ -69,6 +70,9 @@ by_sid = {}  # 최종 계획용: 출처별로 문항마다 가진 답변 종류
 for src, lst in answers_by_source.items():
     for a in lst:
         by_sid.setdefault(a["scenario_id"], {}).setdefault(src, []).append(a["kind"])
+for _sid, _srcs in by_sid.items():  # G8 답변이 있는 문항은 G8만 쓴다(최종 계획의 s02·s12 등)
+    if "G8" in _srcs:
+        by_sid[_sid] = {"G8": _srcs["G8"]}
 
 assert set(PICKS) == set(CALIBRATION)
 chosen_all = []
@@ -108,15 +112,19 @@ assert max(counts) - min(counts) <= 1
 assert all(kind_orders[i] != kind_orders[i + 1] for i in range(len(orders) - 1))
 print("high 위치 분포 A·B·C =", counts, f"(3답 문항 {len(three)}개, 시도 {attempt}번째)")
 
+longest_high = sum(1 for r in three if max(r, key=lambda t: len(t[2]["answer"]))[2]["kind"] == "high")
+print("가장 긴 답이 high인 3답 문항:", longest_high, "/", len(three))
+assert longest_high <= 4, longest_high
 letters = "ABC"
 items, key = [], []
 for n, (sid, chosen) in enumerate(zip(CALIBRATION, orders), 1):
     items.append({"id": f"c{n:02d}", "scenario_id": sid, "situation": scen[sid]["situation"],
                   "context": scen[sid].get("context", ""),
-                  "source": "GPT(gpt-6-astra) 작성 예시 답변, 실제 서비스 답변 아님",
+                  "source": "GPT(gpt-6-astra) 작성 예시 답변(" + "·".join(sorted({src for src, _, _ in chosen})) + "), 실제 서비스 답변 아님",
                   "answers": [{"text": a["answer"]} for _, _, a in chosen]})
     key.append({"id": f"c{n:02d}", "scenario_id": sid, "why_chosen": why(sid, CALIBRATION[sid]),
                 "answers": [{"letter": letters[i], "kind": a["kind"], "source_file": SOURCES[src], "source_index": idx,
+                             "source_id": a.get("id"), "boundary": a.get("boundary"),
                              "rationale": a.get("rationale", ""),
                              "intended_total": a["intended_total"], "intended_scores": a["intended_scores"]}
                             for i, (src, idx, a) in enumerate(chosen)]})
@@ -148,7 +156,8 @@ def plan_row(sid):
 
 lines = ["# 최종 평가 묶음 계획(final-v0) · 성우 김디도", "",
          "조정용과 겹치지 않게 채점 전에 고정한 20문항이에요(R8-11). 문항마다 쓸 답변 수는 아래 표와 같아요. 위기 수준이거나 안전한 답변뿐인 문항은 1개, 나머지는 높음·낮음·경계 하나씩 3개예요.",
-         "G7 표시는 처음엔 답변이 없어서 docs/gpt/G7-answers.json에서 가져온 문항이에요.", "",
+         "G7 표시는 처음엔 답변이 없어서 docs/gpt/G7-answers.json에서 가져온 문항이에요.",
+         "G8 표시 문항은 R13 후속으로 길이·말투 단서를 줄인 새 답변이에요.", "",
          "| 문항 | 고른 이유 | 쓸 답변 수 | 답변 출처 | 예외·메모 |", "|---|---|---|---|---|"]
 total = 0
 for sid, note in FINAL.items():
