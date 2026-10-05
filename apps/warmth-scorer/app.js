@@ -135,6 +135,44 @@
 
   // 평가자 일치도. 같은 상황·같은 답변(글자 그대로)을 2명 이상이 채점한 것만 비교합니다.
   // 항목마다 평가자 두 명씩 짝지어 '점수가 같은 비율'과 '1점 이내 비율'을 셉니다(점수가 아니라 기준이 얼마나 같게 읽히는지 보는 값).
+  // 크리펜도르프 알파(서열 척도). units는 답변마다 평가자들이 준 점수 배열(빈칸은 null).
+  // 우연히 같은 점수가 나올 몫을 뺀 일치도라, 평가자 수가 달라도·빠진 점수가 있어도 쓸 수 있다.
+  // 1이면 완전 일치, 0이면 우연 수준. 모두 같은 점수뿐이면 우연 기대치가 0이라 계산할 수 없어 null.
+  function krippendorffAlpha(units) {
+    var counts = {}, o = {}, n = 0;
+    units.forEach(function (vals) {
+      var v = vals.filter(function (x) { return typeof x === 'number' && isFinite(x); });
+      var m = v.length;
+      if (m < 2) return;
+      for (var i = 0; i < m; i++) for (var j = 0; j < m; j++) {
+        if (i === j) continue;
+        var key = v[i] + '|' + v[j];
+        o[key] = (o[key] || 0) + 1 / (m - 1);
+      }
+      v.forEach(function (x) { counts[x] = (counts[x] || 0) + 1; });
+      n += m;
+    });
+    var cats = Object.keys(counts).map(Number).sort(function (a, b) { return a - b; });
+    if (n < 2 || cats.length < 2) return null;
+    function delta2(c, k) {   // 서열 거리: c와 k 사이(양 끝은 반만) 값들의 개수 합의 제곱
+      var lo = Math.min(c, k), hi = Math.max(c, k), s = 0;
+      cats.forEach(function (g) { if (g >= lo && g <= hi) s += counts[g]; });
+      s -= (counts[lo] + counts[hi]) / 2;
+      return s * s;
+    }
+    var dObs = 0, dExp = 0;
+    cats.forEach(function (c) {
+      cats.forEach(function (k) {
+        if (c === k) return;
+        var d = delta2(c, k);
+        dObs += (o[c + '|' + k] || 0) * d;
+        dExp += counts[c] * counts[k] * d;
+      });
+    });
+    dObs /= n; dExp /= n * (n - 1);
+    return dExp === 0 ? null : 1 - dObs / dExp;
+  }
+
   function computeAgreement(rubric, records) {
     var groups = {};
     (records || []).forEach(function (r) {
@@ -143,7 +181,7 @@
       var g = groups[key] || (groups[key] = { situation: r.situation || '', answer_id: r.answer_id || '', answer: r.answer || '', byRater: {} });
       g.byRater[r.rater] = r;   // 같은 평가자가 두 번이면 나중 것
     });
-    var crit = rubric.criteria.map(function (c) { return { id: c.id, name: c.name, pairs: 0, exact: 0, within1: 0 }; });
+    var crit = rubric.criteria.map(function (c) { return { id: c.id, name: c.name, pairs: 0, exact: 0, within1: 0, units: [] }; });
     var pen = { pairs: 0, same: 0 };
     var compared = [], raters = {}, splits = [];
     Object.keys(groups).forEach(function (k) {
@@ -154,6 +192,7 @@
       names.forEach(function (n) { raters[n] = true; });
       crit.forEach(function (c) {
         var vals = names.map(function (n) { return g.byRater[n].scores[c.id]; });
+        c.units.push(vals.map(function (v) { return typeof v === 'number' ? v : null; }));
         for (var i = 0; i < vals.length; i++) for (var j = i + 1; j < vals.length; j++) {
           if (typeof vals[i] !== 'number' || typeof vals[j] !== 'number') continue;
           c.pairs++;
@@ -179,7 +218,8 @@
       raters: Object.keys(raters).sort(),
       criteria: crit.map(function (c) {
         return { id: c.id, name: c.name, pairs: c.pairs,
-          exact: c.pairs ? c.exact / c.pairs : null, within1: c.pairs ? c.within1 / c.pairs : null };
+          exact: c.pairs ? c.exact / c.pairs : null, within1: c.pairs ? c.within1 / c.pairs : null,
+          alpha: krippendorffAlpha(c.units) };
       }),
       penalties: { pairs: pen.pairs, same: pen.pairs ? pen.same / pen.pairs : null },
       splits: splits
@@ -194,6 +234,7 @@
     checkExample: checkExample,
     parseJsonl: parseJsonl,
     computeAgreement: computeAgreement,
+    krippendorffAlpha: krippendorffAlpha,
     nowKstIso: nowKstIso,
     dateStamp: dateStamp
   };
@@ -787,6 +828,12 @@
   /* ---------- 평가자 일치도 ---------- */
   var extraRecords = [];   // 다른 평가자 파일에서 읽은 기록(저장하지 않고 이 화면에서만 씀)
   function pct(v) { return v == null ? '-' : Math.round(v * 100) + '%'; }
+  // 알파 읽는 법(Krippendorff의 관례 기준): 0.80 이상 믿을 만함, 0.667 이상 잠정, 그 아래는 기준 문구를 다듬을 곳.
+  function alphaText(a) {
+    if (a == null) return '계산 불가';
+    var v = (Math.round(a * 100) / 100).toFixed(2);
+    return v + (a >= 0.8 ? ' 믿을 만함' : a >= 0.667 ? ' 잠정' : ' 다듬기');
+  }
   function showAgreement() {
     if (!rubric) { $('agree-status').textContent = '기준표를 먼저 불러오세요.'; return; }
     var mine = buildRecords(rubric, state);
@@ -800,7 +847,7 @@
     $('agree-status').textContent = '비교한 답변 ' + r.answers + '개 · 평가자 ' + r.raters.join(', ') + ' · 감점 신호가 같았던 비율 ' + pct(r.penalties.same);
     var t = el('table');
     var head = el('tr');
-    ['항목', '같은 점수', '1점 이내', '비교한 짝'].forEach(function (h) { head.appendChild(el('th', { scope: 'col' }, h)); });
+    ['항목', '같은 점수', '1점 이내', '신뢰도 α', '비교한 짝'].forEach(function (h) { head.appendChild(el('th', { scope: 'col' }, h)); });
     t.appendChild(el('thead')).appendChild(head);
     var body = t.appendChild(el('tbody'));
     r.criteria.forEach(function (c) {
@@ -808,10 +855,13 @@
       tr.appendChild(el('th', { scope: 'row' }, c.name));
       tr.appendChild(el('td', { class: 'n' }, pct(c.exact)));
       tr.appendChild(el('td', { class: 'n' }, pct(c.within1)));
+      tr.appendChild(el('td', { class: 'n' }, alphaText(c.alpha)));
       tr.appendChild(el('td', { class: 'n' }, String(c.pairs)));
       body.appendChild(tr);
     });
     box.appendChild(t);
+    box.appendChild(el('p', { class: 'hint' }, '신뢰도 α는 우연히 같은 점수가 나올 몫을 뺀 일치도입니다(크리펜도르프 알파, 1이 완전 일치, 0이 우연 수준). 0.80 이상은 믿을 만함, 0.67~0.80은 잠정, 그 아래는 기준 문구를 다듬을 항목입니다. 모두 같은 점수만 주면 계산할 수 없습니다.' +
+      (r.answers < 10 ? ' 지금은 비교한 답변이 ' + r.answers + '개뿐이라 숫자가 크게 흔들립니다. 답변 20개 이상에서 보세요.' : '')));
     if (r.splits.length) {
       box.appendChild(el('p', null, '많이 갈린 곳 (큰 차이부터, 10곳까지)'));
       var ul = el('ul');

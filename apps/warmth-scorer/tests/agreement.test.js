@@ -36,5 +36,15 @@ const jsonl = W.buildJsonl(records.map((x) => ({ ...x, evidence: {}, date: '2026
 const parsed = W.parseJsonl(jsonl + 'not json\n{"x":1}\n');
 ok('내보낸 JSONL을 다시 읽음(5줄), 깨진 줄 번호 보고', parsed.records.length === 5 && parsed.bad.join() === '6,7', parsed.bad.join());
 ok('다시 읽은 기록으로 같은 결과', W.computeAgreement(rubric, parsed.records).answers === 2);
+
+// 크리펜도르프 알파: 교과서 예시(Krippendorff 2011, 평가자 4명·단위 12개, 서열)는 0.815.
+// 같은 계산을 Python krippendorff 패키지와 무작위 299개 자료로 대조해 모두 일치했다(2026-10-05).
+const tb = [[1,1,null,1],[2,2,3,2],[3,3,3,3],[3,3,3,3],[2,2,2,2],[1,2,3,4],[4,4,4,4],[1,1,2,1],[2,2,2,2],[null,5,5,5],[null,null,1,1],[null,3,null,null]];
+ok('알파 교과서 예시 0.815', Math.abs(W.krippendorffAlpha(tb) - 0.815) < 0.0005, W.krippendorffAlpha(tb).toFixed(4));
+ok('알파: 완전 일치면 1', W.krippendorffAlpha([[0, 0], [2, 2], [1, 1]]) === 1);
+ok('알파: 모두 같은 점수면 계산 불가(null)', W.krippendorffAlpha([[1, 1], [1, 1]]) === null);
+ok('알파: 짝 없는 단위는 무시', W.krippendorffAlpha([[0, 0], [2, 2], [1, null]]) === 1);
+ok('알파: 정반대로 갈리면 0보다 작음', W.krippendorffAlpha([[0, 2], [2, 0], [0, 2], [2, 0]]) < 0);
+ok('일치도 결과에 항목별 알파(첫 항목 2·2, 0·0 → 1, 둘째 항목 2·1, 0·1 → 0.25)', r.criteria[0].alpha === 1 && Math.abs(r.criteria[1].alpha - 0.25) < 1e-9, String(r.criteria[1].alpha));
 console.log(fail ? `\n실패 ${fail}건` : `\n전부 통과 (${n}건)`);
 process.exitCode = fail ? 1 : 0;

@@ -39,6 +39,8 @@ const rubric = require('../rubric.json');
   const expect = Math.round((ex.answers.length - 1) / ex.answers.length * 100) + '%';
   ok(`첫 항목 같은 점수 ${expect}`, firstRow.includes(expect), firstRow);
   ok('갈린 곳 목록에 2점 차 한 줄', (await page.textContent('#agree-result ul')).includes(rubric.criteria[0].name));
+  ok('표에 신뢰도 α 칸', (await page.textContent('#agree-result thead')).includes('신뢰도 α'));
+  ok('답변이 적으면 숫자가 흔들린다는 안내', (await page.textContent('#agree-result .hint')).includes('흔들립니다'));
   ok('버튼 높이 48px 이상', (await page.$$eval('#agree-section button', (b) => b.every((x) => x.getBoundingClientRect().height >= 47.5))));
   ok('페이지 오류 없음', errors.length === 0, errors.join('; '));
   await browser.close();

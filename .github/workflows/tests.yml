@@ -69,7 +69,7 @@ jobs:
           node apps/reading-coach/tests/browser.test.js
 
   warmth-scorer:
-    name: 따뜻함 채점기 (실제 브라우저 29+8가지, 평가자 일치도)
+    name: 따뜻함 채점기 (실제 브라우저 29+10가지, 평가자 일치도·신뢰도 α)
     runs-on: ubuntu-latest
     defaults:
       run:
