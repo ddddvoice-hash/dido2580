@@ -85,8 +85,10 @@ jobs:
         env:
           CHROME: /usr/bin/google-chrome
         run: node tests/browser-check.mjs http://127.0.0.1:8765 "file://$PWD/index.html" rubric.json
-      - name: 평가자 일치도 계산
-        run: node tests/agreement.test.js
+      - name: 평가자 일치도 계산, 상황 문항 세트 형식
+        run: |
+          node tests/agreement.test.js
+          node tests/scenarios.test.js
       - name: 평가자 일치도 화면
         env:
           CHROMIUM: /usr/bin/google-chrome

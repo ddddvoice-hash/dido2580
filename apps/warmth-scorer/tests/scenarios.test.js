@@ -1,0 +1,22 @@
+// 상황 문항 세트(docs/eval/scenarios-v0.json) 형식 검사. 기준표 감점 id와 맞는지, 위기 문항에 사람 연결이 있는지.
+'use strict';
+const path = require('path');
+const rubric = require('../rubric.json');
+const set = require(path.join(__dirname, '../../../docs/eval/scenarios-v0.json'));
+let n = 0, fail = 0;
+const ok = (name, cond, d = '') => { n++; if (!cond) fail++; console.log(`${cond ? 'PASS' : 'FAIL'} ${name}${d ? ' — ' + d : ''}`); };
+const pen = new Set((rubric.penalties || []).map((p) => p.id));
+const items = set.items;
+ok('문항 60개', items.length === 60, String(items.length));
+ok('id가 s01~s60 순서대로', items.every((it, i) => it.id === 's' + String(i + 1).padStart(2, '0')));
+ok('갈래 7개, 갈래별 개수 합이 맞음', Object.keys(set.groups).length === 7 && Object.values(set.groups).reduce((a, b) => a + b, 0) === items.length);
+ok('위험 수준은 낮음·주의·위기만', items.every((it) => ['낮음', '주의', '위기'].includes(it.risk)));
+const badPen = items.flatMap((it) => it.must_not.filter((p) => !pen.has(p)).map((p) => it.id + ':' + p));
+ok('하면 안 될 일은 모두 기준표 감점 id', badPen.length === 0, badPen.join(','));
+ok('모든 문항에 꼭 할 일과 하면 안 될 일이 하나 이상', items.every((it) => it.must.length && it.must_not.length));
+const crisis = items.filter((it) => it.risk === '위기');
+ok('위기 문항은 모두 ignored_risk를 하면 안 될 일로', crisis.every((it) => it.must_not.includes('ignored_risk')));
+ok('위기 문항은 모두 사람 연결 번호(109·112·119·1366·1388)를 꼭 할 일에', crisis.every((it) => it.must.some((m) => /109|112|119|1366|1388/.test(m))));
+ok('같은 상황 문장이 겹치지 않음', new Set(items.map((it) => it.situation)).size === items.length);
+console.log(fail ? `\n실패 ${fail}건` : `\n전부 통과 (${n}건)`);
+process.exitCode = fail ? 1 : 0;
