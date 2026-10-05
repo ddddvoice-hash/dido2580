@@ -1,4 +1,4 @@
-// 디도 녹음 부스 — 화면 동작. 검사는 wav-check.js, 대본은 lines.js.
+// 김디도 녹음 부스 — 화면 동작. 검사는 wav-check.js, 대본은 lines.js.
 (function () {
   "use strict";
 

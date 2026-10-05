@@ -263,13 +263,13 @@ python tools/calibrate.py 3000      # 축 기준선 다시 뽑기
 사주 패키지 말고도 목소리·낭독 작업용 앱이 `apps/` 아래에 있습니다. 처음이라면 탐색기에서 `apps/start.cmd`를 두 번 누르세요. 이 컴퓨터 안에서만 도는 작은 서버가 켜지고 시작 화면이 브라우저에 열립니다(하고 싶은 일을 고르면 맞는 앱이 열리고, 채점기 기준표도 자동으로 불러옵니다). 서버 없이 `start apps/index.html`로 열어도 됩니다. 바탕화면 아이콘(`apps/icon/icon.ico`)은 PowerShell에 아래 한 줄을 붙여 넣으면 만들어지고 바로 열립니다(엣지 앱 창으로 열리고, 작은 검은 창은 작업 표시줄에 내려가 있습니다. 그 창을 닫으면 작업실이 꺼집니다).
 
 ```
-$w=New-Object -ComObject WScript.Shell; $l=$w.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) '디도 보이스 작업실.lnk')); $l.TargetPath="$HOME\dido2580\apps\start.cmd"; $l.WorkingDirectory="$HOME\dido2580\apps"; $l.IconLocation="$HOME\dido2580\apps\icon\icon.ico"; $l.WindowStyle=7; $l.Save(); Start-Process $l.FullName
+$w=New-Object -ComObject WScript.Shell; $l=$w.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) '성우 김디도 보이스 작업실.lnk')); $l.TargetPath="$HOME\dido2580\apps\start.cmd"; $l.WorkingDirectory="$HOME\dido2580\apps"; $l.IconLocation="$HOME\dido2580\apps\icon\icon.ico"; $l.WindowStyle=7; $l.Save(); Start-Process $l.FullName
 ```
  두 방법은 브라우저 저장 공간이 따로라서, 문장 목록·채점 기록을 쓰던 쪽으로 계속 여세요. 모두 녹음 파일을 저장소에 올리지 않고, 외부 AI API를 부르지 않습니다.
 
 | 앱 | 하는 일 | 여는 법 (Windows PowerShell) |
 |---|---|---|
-| `apps/voice-studio` 디도 녹음 부스 | 대본 96줄 녹음, WAV 바로 검사, 시선·동선·호흡·동작 메모 | `start apps/voice-studio/index.html` |
+| `apps/voice-studio` 김디도 녹음 부스 | 대본 96줄 녹음, WAV 바로 검사, 시선·동선·호흡·동작 메모 | `start apps/voice-studio/index.html` |
 | `apps/voice-persona` 보이스 페르소나 실험실 | 안내 원문 사실 보존, 같은 원고 A/B 녹음의 말소리·쉼 비교 (Streamlit) | `cd apps/voice-persona; if ($?) { python -m streamlit run app.py }` |
 | `apps/voice-check` 녹음 검사기 | 반려 코드(V02·V05·V08), 기준 프로필, 일괄 검사, AI 음성 비교 (Node) | `node apps/voice-check/check.js <폴더>` |
 | `apps/reading-coach` 낭독 따라 읽기 코치 | 시범 낭독과 따라 읽기의 속도·쉼 비교 | `start apps/reading-coach/index.html` |
