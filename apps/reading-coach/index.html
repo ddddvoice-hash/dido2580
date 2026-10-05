@@ -357,7 +357,10 @@ function renderSentences() {
   sel.value = String(current);
 }
 
+// 문장을 빨리 바꾸면 앞서 시작한 시범 찾기가 나중에 끝나 화면을 덮을 수 있어, 마지막 호출 결과만 쓴다.
+let selectToken = 0;
 async function selectSentence(i) {
+  const token = ++selectToken;
   current = Math.max(0, Math.min(i, sentences.length - 1));
   $("sentence-select").value = String(current);
   $("sentence-text").textContent = sentences[current].text;
@@ -368,8 +371,11 @@ async function selectSentence(i) {
   $("mine-status").textContent = "";
   $("result").classList.add("hidden");
   renderChecklist();
+  $("demo-play").disabled = true;
   const blob = await getDemo(currentId());
-  demoResult = blob ? await decode(blob).catch(() => null) : null;
+  const decoded = blob ? await decode(blob).catch(() => null) : null;
+  if (token !== selectToken) return;
+  demoResult = decoded;
   $("demo-play").disabled = !blob;
   $("demo-status").textContent = blob
     ? `시범 길이 ${demoResult ? demoResult.duration.toFixed(1) : "?"}초, 쉼 ${demoResult ? demoResult.pauses.length : "?"}곳`

@@ -82,8 +82,10 @@ function wav(file, parts, rate = 16000) {
   await page.fill("#sentence-new", "<b>굵게</b> 새 문장입니다. 천천히 읽어 보세요.");
   await page.click("#sentence-add");
   ok("새 문장 추가 → 13번, 글자 그대로(HTML로 안 바뀜)", (await page.textContent("#sentence-text")).startsWith("<b>굵게</b>") && (await page.$$eval("#sentence-select option", (o) => o.length)) === 13);
+  // 새 문장(시범 없음)으로 바뀐 것을 확인한 뒤 올려야, 앞 문장의 '듣기 켜짐'을 올리기 끝으로 착각하지 않는다(CI 25번 실패 원인).
+  await page.waitForFunction(() => document.getElementById("demo-play").disabled && document.getElementById("demo-status").textContent.includes("아직 시범 녹음이 없습니다"));
   await page.setInputFiles("#demo-file", demo);
-  await page.waitForFunction(() => !document.getElementById("demo-play").disabled, null, { timeout: 15000 });
+  await page.waitForFunction(() => !document.getElementById("demo-play").disabled && document.getElementById("demo-status").textContent.includes("시범 길이"), null, { timeout: 15000 });
   await page.fill("#sentence-edit", "고친 문장입니다. 끝까지 또렷하게.");
   await page.click("#sentence-save");
   ok("문장 고치기", (await page.textContent("#sentence-text")) === "고친 문장입니다. 끝까지 또렷하게.");
