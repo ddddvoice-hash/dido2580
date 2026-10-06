@@ -1,0 +1,451 @@
+<title>따뜻함 채점 베타</title>
+<style>
+/* 레이아웃: 위에 안내와 평가자 코드, 아래는 왼쪽 문항 목록 + 오른쪽 채점 칸(좁으면 한 줄로 쌓임). 소개 페이지와 같은 색 토큰. */
+:root {
+  --bg: #f3f6f5; --paper: #ffffff; --ink: #142b30; --muted: #4c6168; --line: #d4dfdd;
+  --accent: #176b67; --accent-soft: #e0f0ed; --sun: #8a5300; --sun-soft: #fbf0dc;
+  --bad: #b42328; --bad-soft: #fbe9ea; --chip: #eef3f2; --focus: #1f5fbf;
+  --serif: "Batang", "Noto Serif KR", "AppleMyungjo", serif;
+  --sans: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e191c; --paper: #15252a; --ink: #e7f0f1; --muted: #a7bbc0; --line: #2a4047;
+    --accent: #5cc7b9; --accent-soft: #143633; --sun: #f0c06b; --sun-soft: #3a2c16;
+    --bad: #ff8f94; --bad-soft: #3a1c1f; --chip: #1c3036; --focus: #8fb7ff; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e191c; --paper: #15252a; --ink: #e7f0f1; --muted: #a7bbc0; --line: #2a4047;
+  --accent: #5cc7b9; --accent-soft: #143633; --sun: #f0c06b; --sun-soft: #3a2c16;
+  --bad: #ff8f94; --bad-soft: #3a1c1f; --chip: #1c3036; --focus: #8fb7ff; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); margin: 0; font: 400 16px/1.65 var(--sans); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 72px; display: grid; gap: 28px; }
+.wrap > * { min-width: 0; }
+h1, h2 { font-family: var(--serif); font-weight: 700; text-wrap: balance; margin: 0; line-height: 1.3; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.3rem); }
+h2 { font-size: 1.3rem; }
+h3 { margin: 0; font-size: 1.05rem; }
+p { margin: 0; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.eyebrow { font-size: .82rem; letter-spacing: .1em; color: var(--muted); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.eyebrow svg { width: 32px; height: 32px; flex: none; }
+.hero { display: grid; gap: 12px; }
+.lead { max-width: 64ch; }
+.muted { color: var(--muted); }
+.small { font-size: .9rem; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: var(--chip); font-size: .85rem; }
+.chip.ok { background: var(--accent-soft); color: var(--accent); }
+.chip.warn { background: var(--sun-soft); color: var(--sun); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.panel { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 14px; }
+.rules { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+label { font-weight: 700; }
+input[type=text], textarea { font: inherit; color: var(--ink); background: var(--paper); border: 2px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 48px; width: 100%; }
+textarea { min-height: 72px; resize: vertical; }
+input[type=text]:focus, textarea:focus { border-color: var(--accent); }
+#rater { max-width: 220px; text-transform: uppercase; }
+.btn { font: inherit; font-weight: 700; min-height: 48px; padding: 0 18px; border-radius: 10px; border: 2px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+.btn.primary { background: var(--accent); color: var(--paper); }
+.btn.warn { border-color: var(--sun); color: var(--sun); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.work { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: start; }
+.work > * { min-width: 0; }
+@media (max-width: 760px) { .work { grid-template-columns: 1fr; } }
+.list { display: grid; gap: 6px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+@media (max-width: 760px) { .list { position: static; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); } }
+.item-btn { font: inherit; text-align: left; min-height: 48px; padding: 8px 12px; border-radius: 10px; border: 2px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; display: grid; gap: 2px; }
+.item-btn[aria-current="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.item-btn .meta { font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.progress { font-variant-numeric: tabular-nums; }
+.situation { font-family: var(--serif); font-size: 1.2rem; line-height: 1.5; }
+.gate { border: 2px solid var(--sun); background: var(--sun-soft); border-radius: 12px; padding: 16px; display: grid; gap: 12px; }
+.answer { border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 14px; }
+.answer-text { background: var(--chip); border-radius: 10px; padding: 14px 16px; max-width: 70ch; }
+.crit { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; margin: 0; }
+.crit legend { font-weight: 700; padding: 0 4px; }
+.levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (max-width: 560px) { .levels { grid-template-columns: 1fr; } }
+.lv { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; border: 2px solid var(--line); border-radius: 10px; padding: 8px 10px; min-height: 48px; cursor: pointer; font-size: .92rem; }
+.lv input { margin-top: 4px; width: 20px; height: 20px; flex: none; }
+.lv:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.lv b { font-variant-numeric: tabular-nums; }
+.pens { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
+.pen { display: flex; gap: 8px; align-items: center; font-weight: 400; min-height: 44px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; }
+.pen input { width: 20px; height: 20px; }
+.pen.zero { color: var(--bad); }
+.total { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.say { min-height: 1.6em; }
+pre.out { max-height: 220px; overflow: auto; background: var(--chip); border-radius: 10px; padding: 12px; font-size: .8rem; white-space: pre-wrap; word-break: break-all; margin: 0; }
+.kbd { font-family: ui-monospace, Consolas, monospace; background: var(--chip); border-radius: 4px; padding: 0 5px; }
+@media (prefers-reduced-motion: no-preference) { .lv, .item-btn { transition: background .12s, border-color .12s; } }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">
+      <svg viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="56" fill="#176b67"/><path d="M58 92a60 60 0 0 0 0 88" fill="none" stroke="#f2b632" stroke-width="14" stroke-linecap="round"/><path d="M198 92a60 60 0 0 1 0 88" fill="none" stroke="#f2b632" stroke-width="14" stroke-linecap="round"/><rect x="98" y="40" width="60" height="112" rx="30" fill="#ffffff"/><path d="M78 128a50 50 0 0 0 100 0" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/><path d="M128 178v30M98 214h60" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/></svg>
+      <span>성우 김디도 · 따뜻한 AI 목소리 평가 키트 · 베타 <span id="beta-ver"></span></span>
+    </div>
+    <h1>따뜻함 채점 베타</h1>
+    <p class="lead">AI 답변 28개를 성우 김디도의 기준표로 채점해 주세요. 점수를 맞히는 시험이 아니라, <strong>기준표의 어느 낱말이 사람마다 다르게 읽히는지</strong> 찾는 베타테스트예요. 헷갈린 점과 불편한 점도 함께 남겨 주세요.</p>
+    <div class="row"><span id="store-chip" class="chip">저장 위치 확인 중</span><span class="chip progress" id="progress-chip">0 / 28</span></div>
+  </header>
+
+  <section class="panel" aria-labelledby="h-start">
+    <h2 id="h-start">시작 전에</h2>
+    <ul class="rules">
+      <li>다른 평가자와 상의하지 말고 혼자 채점해요. 다른 사람의 점수는 이 화면에 보이지 않아요.</li>
+      <li>기준 다섯 개마다 0·1·2점을 고르고, 그렇게 본 <strong>근거</strong>를 한 줄 적어요(답변에서 문장을 옮겨도 돼요).</li>
+      <li>위기 문항(c07)은 본문이 접혀 있어요. 읽을지 건너뛸지 먼저 골라요. 건너뛰면 0점이 아니라 '평가하지 않음'으로 남아요.</li>
+      <li>예상 시간은 1시간 30분~2시간이에요(답변 하나 2~3분으로 잡은 추측). 언제든 쉬어도 되고, 저장한 것은 남아요.</li>
+      <li>답변은 GPT가 쓴 예시예요. 실제 서비스의 답변이 아니에요.</li>
+      <li>키보드: 기준 칸 안에서 <span class="kbd">0</span> <span class="kbd">1</span> <span class="kbd">2</span>를 누르면 그 점수가 골라져요.</li>
+    </ul>
+    <div class="row">
+      <div style="display:grid;gap:6px;flex:1 1 220px;max-width:260px">
+        <label for="rater">평가자 코드</label>
+        <input type="text" id="rater" autocomplete="off" placeholder="예: R-K7" aria-describedby="rater-hint" maxlength="20">
+      </div>
+      <button class="btn primary" id="start" type="button">채점 시작</button>
+    </div>
+    <p id="rater-hint" class="small muted">이름 대신 운영자(성우 김디도)에게 받은 코드를 써요. 기록에는 코드만 남아요.</p>
+  </section>
+
+  <section class="work" id="work" hidden>
+    <nav class="list" id="list" aria-label="문항 목록"></nav>
+    <article class="panel" id="item" aria-live="polite"></article>
+  </section>
+
+  <section class="panel" id="finish" hidden aria-labelledby="h-finish">
+    <h2 id="h-finish">마치며: 베타 의견</h2>
+    <p class="muted small">다 채점하지 않았어도 남길 수 있어요. 개인 경험이나 건강 정보는 적지 않아도 돼요.</p>
+    <label for="fb-time">실제로 걸린 시간 (대략)</label>
+    <input type="text" id="fb-time" placeholder="예: 1시간 40분, 두 번 나눠서">
+    <label for="fb-words">가장 헷갈린 기준과 그 낱말</label>
+    <textarea id="fb-words" placeholder="예: '절제'의 '받아들일 수 있는 만큼'이 사람마다 다를 것 같아요"></textarea>
+    <label for="fb-ui">화면에서 불편했던 점</label>
+    <textarea id="fb-ui"></textarea>
+    <div class="row"><button class="btn primary" id="fb-save" type="button">의견 저장</button><span class="say small" id="fb-say" role="status"></span></div>
+    <hr style="border:0;border-top:1px solid var(--line);width:100%">
+    <h3>기록 내보내기 (JSONL)</h3>
+    <p class="small muted">서버 저장이 안 되는 경우에만 필요해요. 아래 내용을 복사해 운영자에게 보내 주세요. 따뜻함 채점기의 "다른 평가자 JSONL 더하기"에 그대로 넣을 수 있어요.</p>
+    <div class="row"><button class="btn" id="copy" type="button">복사</button><button class="btn" id="save-file" type="button" hidden>파일로 저장</button><span class="say small" id="out-say" role="status"></span></div>
+    <pre class="out" id="out" tabindex="0" aria-label="JSONL 기록"></pre>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var DATA = /*__DATA__*/null;
+  var rubric = DATA.rubric, pack = DATA.pack;
+  var KEY = 'kdd-warmth-beta-v1';
+  var $ = function (id) { return document.getElementById(id); };
+  var state = load() || { rater: '', ratings: {}, itemNotes: {}, opened: {}, overall: {} };
+  var cur = 0, db = null, uid = null, remote = 'checking';
+  var totalAnswers = pack.items.reduce(function (n, it) { return n + it.answers.length; }, 0);
+  $('beta-ver').textContent = DATA.version;
+
+  function load() { try { var s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+  function persist() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function letter(i) { return String.fromCharCode(65 + i); }
+  function akey(it, i) { return it.id + '-' + letter(i); }
+  function nowKst() { var d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 19) + '+09:00'; }
+  function el(tag, attrs, kids) {
+    var e = document.createElement(tag);
+    for (var k in (attrs || {})) {
+      if (k === 'text') e.textContent = attrs[k];
+      else if (k === 'class') e.className = attrs[k];
+      else e.setAttribute(k, attrs[k]);
+    }
+    (kids || []).forEach(function (c) { if (c) e.appendChild(c); });
+    return e;
+  }
+
+  // 따뜻함 채점기 computeTotal과 같은 규칙: 항목 합계에서 감점 신호마다 effect, 같은 신호는 한 번, zero는 0점, 0 아래로 내리지 않음
+  function computeTotal(scores, penalties) {
+    var sum = 0;
+    for (var i = 0; i < rubric.criteria.length; i++) {
+      var v = scores[rubric.criteria[i].id];
+      if (v !== 0 && v !== 1 && v !== 2) return null;
+      sum += v;
+    }
+    var list = penalties.filter(function (p, i, a) { return a.indexOf(p) === i; });
+    for (var j = 0; j < list.length; j++) {
+      for (var k = 0; k < rubric.penalties.length; k++) {
+        var d = rubric.penalties[k];
+        if (d.id !== list[j]) continue;
+        if (d.effect === 'zero') return 0;
+        if (typeof d.effect === 'number') sum += d.effect;
+      }
+    }
+    return sum < 0 ? 0 : sum;
+  }
+
+  function doneCount() {
+    var n = 0;
+    for (var k in state.ratings) { var r = state.ratings[k]; if (r && (r.total != null || r.skipped)) n++; }
+    return n;
+  }
+  function itemDone(it) {
+    return it.answers.every(function (a, i) { var r = state.ratings[akey(it, i)]; return r && (r.total != null || r.skipped); });
+  }
+
+  function setStoreChip() {
+    var c = $('store-chip');
+    if (remote === 'on') { c.className = 'chip ok'; c.textContent = '저장: 운영자에게 바로 전달돼요'; }
+    else if (remote === 'checking') { c.className = 'chip'; c.textContent = '저장 위치 확인 중'; }
+    else { c.className = 'chip warn'; c.textContent = '저장: 이 브라우저에만 (끝나면 JSONL을 복사해 보내 주세요)'; }
+    $('progress-chip').textContent = doneCount() + ' / ' + totalAnswers;
+  }
+
+  // ---- 서버 저장(db). 쓸 수 없으면 이 브라우저에만 저장하고 JSONL 복사로 보냄 ----
+  function remoteWrite(path, body) {
+    if (!db || !uid || remote !== 'on') return Promise.resolve(false);
+    return db.doc('beta/' + uid + (path ? '/' + path : '')).set(body).then(function () { return true; }, function (e) {
+      if (e && (e.code === 'invalid_argument' || e.code === 'revoked' || e.code === 'not_granted')) { remote = 'off'; setStoreChip(); }
+      return false;
+    });
+  }
+  function initRemote() {
+    if (!window.claude || !window.claude.use) { remote = 'off'; setStoreChip(); return; }
+    Promise.all([window.claude.use('db'), window.claude.use('user')]).then(function (r) {
+      db = r[0]; var user = r[1];
+      if (!db || !user) { remote = 'off'; setStoreChip(); return; }
+      return user.id().then(function (id) {
+        uid = id;
+        if (!uid) { remote = 'off'; setStoreChip(); return; }
+        // 다른 기기에서 저장한 채점을 가져와 합침(더 최근 것이 이김)
+        return db.collection('beta/' + uid + '/ratings').get().then(function (snap) {
+          remote = 'on';
+          snap.docs.forEach(function (d) {
+            var v = d.data(); if (!v) return;
+            var mine = state.ratings[d.id];
+            if (!mine || (v.date || '') > (mine.date || '')) state.ratings[d.id] = v;
+          });
+          persist(); setStoreChip();
+          if (state.rater) { remoteWrite('', { rater: state.rater, version: DATA.version, started: nowKst() }); render(); }
+        }, function () { remote = 'off'; setStoreChip(); });
+      });
+    }, function () { remote = 'off'; setStoreChip(); });
+  }
+
+  // ---- 화면 ----
+  function renderList() {
+    var nav = $('list'); nav.textContent = '';
+    pack.items.forEach(function (it, i) {
+      var done = it.answers.filter(function (a, j) { var r = state.ratings[akey(it, j)]; return r && (r.total != null || r.skipped); }).length;
+      var b = el('button', { type: 'button', class: 'item-btn', 'aria-current': i === cur ? 'true' : 'false' }, [
+        el('span', { text: it.id + (it.sensitive ? ' · 위기 문항' : '') }),
+        el('span', { class: 'meta', text: '답변 ' + done + ' / ' + it.answers.length + (done === it.answers.length ? ' · 끝' : '') })
+      ]);
+      b.addEventListener('click', function () { cur = i; render(); $('item').focus(); });
+      nav.appendChild(b);
+    });
+  }
+
+  function renderItem() {
+    var it = pack.items[cur], box = $('item');
+    box.setAttribute('tabindex', '-1'); box.textContent = '';
+    box.appendChild(el('div', { class: 'row' }, [
+      el('span', { class: 'chip', text: it.id + ' · ' + (cur + 1) + ' / ' + pack.items.length }),
+      it.sensitive ? el('span', { class: 'chip bad', text: '위기 문항' }) : null
+    ]));
+    var hidden = it.sensitive && !state.opened[it.id];
+    if (hidden) {
+      var allSkipped = it.answers.every(function (a, i) { var r = state.ratings[akey(it, i)]; return r && r.skipped; });
+      var gate = el('div', { class: 'gate', role: 'region', 'aria-label': '위기 문항 안내' }, [
+        el('p', { text: DATA.crisisNotice }),
+        el('p', { class: 'small', text: '힘들 때 도움을 구할 곳: 109 자살예방상담전화 · 긴급하면 112(경찰)·119(구조·구급).' }),
+        allSkipped ? el('p', { class: 'chip warn', text: '건너뛰었어요(평가하지 않음).' }) : null
+      ]);
+      var row = el('div', { class: 'row' });
+      var read = el('button', { type: 'button', class: 'btn', text: '읽기' });
+      var skip = el('button', { type: 'button', class: 'btn warn', text: '건너뛰기' });
+      read.addEventListener('click', function () { state.opened[it.id] = true; persist(); render(); });
+      skip.addEventListener('click', function () {
+        it.answers.forEach(function (a, i) {
+          var rec = { item_id: it.id, answer_id: letter(i), skipped: true, scores: {}, evidence: {}, penalties: [], total: null, rater: state.rater, date: nowKst() };
+          state.ratings[akey(it, i)] = rec; remoteWrite('ratings/' + akey(it, i), rec);
+        });
+        persist(); next();
+      });
+      row.appendChild(read); row.appendChild(skip); gate.appendChild(row);
+      box.appendChild(gate);
+      box.appendChild(navRow());
+      return;
+    }
+    box.appendChild(el('p', { class: 'situation', text: '“' + it.situation + '”' }));
+    box.appendChild(el('p', { class: 'muted small', text: '상황: ' + it.context + ' · ' + it.source }));
+    it.answers.forEach(function (a, i) { box.appendChild(renderAnswer(it, a, i)); });
+    var note = el('textarea', { id: 'note-' + it.id, 'aria-label': '이 문항에서 헷갈렸거나 불편했던 점' });
+    note.value = state.itemNotes[it.id] || '';
+    var noteSay = el('span', { class: 'say small', role: 'status' });
+    var noteBtn = el('button', { type: 'button', class: 'btn', text: '메모 저장' });
+    noteBtn.addEventListener('click', function () {
+      state.itemNotes[it.id] = note.value.trim(); persist();
+      remoteWrite('feedback/' + it.id, { item_id: it.id, text: note.value.trim(), rater: state.rater, date: nowKst() })
+        .then(function (ok) { noteSay.textContent = ok ? '저장했어요(운영자에게 전달됨).' : '이 브라우저에 저장했어요.'; });
+    });
+    box.appendChild(el('div', { class: 'answer' }, [
+      el('label', { for: 'note-' + it.id, text: '이 문항에서 헷갈렸거나 불편했던 점 (선택)' }), note,
+      el('div', { class: 'row' }, [noteBtn, noteSay])
+    ]));
+    box.appendChild(navRow());
+  }
+
+  function renderAnswer(it, a, i) {
+    var k = akey(it, i);
+    var saved = state.ratings[k] && !state.ratings[k].skipped ? state.ratings[k] : null;
+    var draft = { scores: saved ? Object.assign({}, saved.scores) : {}, evidence: {}, penalties: saved ? saved.penalties.slice() : [] };
+    rubric.criteria.forEach(function (c) { draft.evidence[c.id] = saved && saved.evidence[c.id] ? saved.evidence[c.id][0] || '' : ''; });
+    var wrap = el('section', { class: 'answer', 'aria-label': '답변 ' + letter(i) });
+    var head = el('div', { class: 'row' }, [el('h3', { text: '답변 ' + letter(i) })]);
+    var status = el('span', { class: saved ? 'chip ok' : 'chip', text: saved ? '저장됨 · ' + saved.total + '점' : '아직 안 함' });
+    head.appendChild(status);
+    wrap.appendChild(head);
+    wrap.appendChild(el('p', { class: 'answer-text', text: a.text }));
+    var totalEl = el('span', { class: 'total', 'aria-live': 'polite' });
+    function updateTotal() {
+      var t = computeTotal(draft.scores, draft.penalties);
+      totalEl.textContent = t == null ? '합계: 다섯 기준을 모두 고르면 나와요' : '합계 ' + t + '점 / 10';
+    }
+    rubric.criteria.forEach(function (c) {
+      var fs = el('fieldset', { class: 'crit' }, [el('legend', { text: c.name + ' — ' + c.question })]);
+      var levels = el('div', { class: 'levels' });
+      [0, 1, 2].forEach(function (v) {
+        var id = k + '-' + c.id + '-' + v;
+        var inp = el('input', { type: 'radio', name: k + '-' + c.id, id: id, value: String(v) });
+        if (draft.scores[c.id] === v) inp.checked = true;
+        inp.addEventListener('change', function () { draft.scores[c.id] = v; updateTotal(); });
+        levels.appendChild(el('label', { class: 'lv', for: id }, [inp, el('span', {}, [el('b', { text: v + '점 ' }), document.createTextNode(c.levels[String(v)])])]));
+      });
+      fs.appendChild(levels);
+      fs.addEventListener('keydown', function (e) {
+        if (e.target.tagName === 'INPUT' && e.target.type === 'text') return;
+        if (e.key === '0' || e.key === '1' || e.key === '2') {
+          var r = fs.querySelector('input[value="' + e.key + '"]'); r.checked = true; r.focus();
+          draft.scores[c.id] = Number(e.key); updateTotal(); e.preventDefault();
+        }
+      });
+      var ev = el('input', { type: 'text', id: k + '-' + c.id + '-ev', 'aria-label': c.name + ' 근거', placeholder: c.name + ' 근거 (한 줄)' });
+      ev.value = draft.evidence[c.id];
+      ev.addEventListener('input', function () { draft.evidence[c.id] = ev.value; });
+      fs.appendChild(ev);
+      wrap.appendChild(fs);
+    });
+    var pens = el('fieldset', { class: 'crit' }, [el('legend', { text: '감점 신호 (해당하면 체크)' })]);
+    var pgrid = el('div', { class: 'pens' });
+    rubric.penalties.forEach(function (p) {
+      var id = k + '-p-' + p.id;
+      var inp = el('input', { type: 'checkbox', id: id });
+      inp.checked = draft.penalties.indexOf(p.id) >= 0;
+      inp.addEventListener('change', function () {
+        draft.penalties = draft.penalties.filter(function (x) { return x !== p.id; });
+        if (inp.checked) draft.penalties.push(p.id);
+        updateTotal();
+      });
+      pgrid.appendChild(el('label', { class: 'pen' + (p.effect === 'zero' ? ' zero' : ''), for: id, title: p.why }, [inp,
+        el('span', { text: p.name + (p.effect === 'zero' ? ' (0점)' : ' (' + p.effect + ')') })]));
+    });
+    pens.appendChild(pgrid);
+    wrap.appendChild(pens);
+    var say = el('span', { class: 'say small', role: 'status' });
+    var btn = el('button', { type: 'button', class: 'btn primary', text: '답변 ' + letter(i) + ' 저장' });
+    btn.addEventListener('click', function () {
+      var t = computeTotal(draft.scores, draft.penalties);
+      if (t == null) { say.textContent = '다섯 기준의 점수를 모두 골라 주세요.'; return; }
+      var missing = rubric.criteria.filter(function (c) { return !String(draft.evidence[c.id] || '').trim(); });
+      if (missing.length) { say.textContent = '근거를 적어 주세요: ' + missing.map(function (c) { return c.name; }).join(', '); return; }
+      var ev = {}; rubric.criteria.forEach(function (c) { ev[c.id] = [String(draft.evidence[c.id]).trim()]; });
+      var rec = { item_id: it.id, answer_id: letter(i), scores: Object.assign({}, draft.scores), evidence: ev, penalties: draft.penalties.slice(), total: t, rater: state.rater, date: nowKst() };
+      state.ratings[k] = rec; persist();
+      status.className = 'chip ok'; status.textContent = '저장됨 · ' + t + '점';
+      remoteWrite('ratings/' + k, rec).then(function (ok) { say.textContent = ok ? '저장했어요(운영자에게 전달됨).' : '이 브라우저에 저장했어요.'; });
+      renderList(); setStoreChip(); refreshOut();
+    });
+    wrap.appendChild(el('div', { class: 'row' }, [totalEl, btn, say]));
+    updateTotal();
+    return wrap;
+  }
+
+  function navRow() {
+    var row = el('div', { class: 'row' });
+    var prev = el('button', { type: 'button', class: 'btn', text: '← 이전 문항' });
+    var nxt = el('button', { type: 'button', class: 'btn', text: cur === pack.items.length - 1 ? '마치며로 →' : '다음 문항 →' });
+    prev.disabled = cur === 0;
+    prev.addEventListener('click', function () { cur--; render(); $('item').focus(); });
+    nxt.addEventListener('click', next);
+    row.appendChild(prev); row.appendChild(nxt);
+    return row;
+  }
+  function next() {
+    if (cur < pack.items.length - 1) { cur++; render(); $('item').focus(); }
+    else { render(); $('fb-time').focus(); $('finish').scrollIntoView(); }
+  }
+
+  // ---- JSONL: 따뜻함 채점기와 같은 필드 순서 ----
+  function jsonl() {
+    var lines = [];
+    pack.items.forEach(function (it) {
+      it.answers.forEach(function (a, i) {
+        var r = state.ratings[akey(it, i)]; if (!r || (r.total == null && !r.skipped)) return;
+        var scores = {}, evidence = {};
+        rubric.criteria.forEach(function (c) { scores[c.id] = r.skipped ? null : r.scores[c.id]; evidence[c.id] = (r.evidence && r.evidence[c.id]) || []; });
+        var o = { situation: it.situation, answer_id: letter(i), answer: a.text, scores: scores, evidence: evidence, penalties: r.penalties || [], total: r.skipped ? null : r.total, rater: r.rater || state.rater, date: r.date, rubric_version: rubric.version };
+        if (r.skipped) o.skipped = true;
+        lines.push(JSON.stringify(o));
+      });
+    });
+    return lines.length ? lines.join('\n') + '\n' : '';
+  }
+  function refreshOut() { $('out').textContent = jsonl() || '(아직 저장한 채점이 없어요)'; }
+
+  function render() { renderList(); renderItem(); setStoreChip(); refreshOut(); }
+
+  // ---- 시작·마치며 ----
+  $('rater').value = state.rater || '';
+  function start() {
+    var code = $('rater').value.trim().toUpperCase();
+    if (!code) { $('rater').focus(); $('rater-hint').textContent = '평가자 코드를 넣어 주세요(예: R-K7).'; return; }
+    state.rater = code; persist();
+    // beta/<uid> 문서: 운영자가 'beta' 목록에서 평가자를 찾는 표지
+    remoteWrite('', { rater: code, version: DATA.version, started: nowKst() });
+    $('work').hidden = false; $('finish').hidden = false;
+    render(); $('item').focus();
+  }
+  $('start').addEventListener('click', start);
+  $('rater').addEventListener('keydown', function (e) { if (e.key === 'Enter') start(); });
+  ['time', 'words', 'ui'].forEach(function (f) { $('fb-' + f).value = state.overall[f] || ''; });
+  $('fb-save').addEventListener('click', function () {
+    ['time', 'words', 'ui'].forEach(function (f) { state.overall[f] = $('fb-' + f).value.trim(); });
+    persist();
+    remoteWrite('feedback/overall', { time: state.overall.time, words: state.overall.words, ui: state.overall.ui, rater: state.rater, done: doneCount(), date: nowKst() })
+      .then(function (ok) { $('fb-say').textContent = ok ? '저장했어요(운영자에게 전달됨). 고마워요.' : '이 브라우저에 저장했어요. 아래 기록과 함께 보내 주세요.'; });
+  });
+  $('copy').addEventListener('click', function () {
+    var text = jsonl();
+    function fallback() { var r = document.createRange(); r.selectNodeContents($('out')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); $('out-say').textContent = '선택해 두었어요. Ctrl+C로 복사해 주세요.'; }
+    if (!text) { $('out-say').textContent = '아직 저장한 채점이 없어요.'; return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { $('out-say').textContent = '복사했어요.'; }, fallback);
+    else fallback();
+  });
+  if (window.claude && window.claude.use) {
+    window.claude.use('downloads').then(function (dl) {
+      if (!dl) return;
+      var b = $('save-file'); b.hidden = false;
+      b.addEventListener('click', function () {
+        var text = jsonl(); if (!text) { $('out-say').textContent = '아직 저장한 채점이 없어요.'; return; }
+        dl.save({ filename: 'warmth-beta-' + (state.rater || 'rater') + '.jsonl', data: text })
+          .then(function () { $('out-say').textContent = '파일 저장을 요청했어요.'; }, function () { $('out-say').textContent = '파일로 저장하지 못했어요. 복사를 써 주세요.'; });
+      });
+    });
+  }
+  setStoreChip(); refreshOut(); initRemote();
+  if (state.rater) { $('work').hidden = false; $('finish').hidden = false; render(); }
+})();
+</script>
