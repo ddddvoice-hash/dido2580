@@ -134,6 +134,7 @@ jobs:
           node tests/pack.browser.js
           node tests/sensitive.browser.js
           node tests/testonly.browser.js
+          NODE_PATH="$PWD/node_modules" node ../../docs/beta/tests/beta.browser.js
       - name: 평가 묶음 파일이 만드는 스크립트 결과와 같은지
         run: |
           python3 ../../docs/eval/packs/build_packs.py
@@ -143,7 +144,9 @@ jobs:
       - name: "평가자 안내문·동의서 템플릿 칸 검사"
         run: python3 ../../docs/eval/rater-kit/fill.py --check
       - name: "베타테스트 판이 기준표·조정용 묶음과 같은지"
-        run: python3 ../../docs/beta/build.py --check
+        run: |
+          python3 ../../docs/beta/build.py --check
+          python3 ../../docs/beta/tests/test_build_zip.py
       - name: 크리펜도르프 α를 공개 패키지(krippendorff)와 무작위 300묶음으로 대조
         run: |
           python3 -m pip install --quiet krippendorff numpy
