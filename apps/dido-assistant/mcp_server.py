@@ -30,6 +30,7 @@ import pathlib
 import sys
 import threading
 import time
+import unicodedata
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -72,6 +73,7 @@ MAX_OUT_FILES = 50         # voice/out에 남기는 파일 수
 MAX_OUT_BYTES = 100 * 1024 * 1024
 MAX_ATTACH_BYTES = 3 * 1024 * 1024  # 소리를 응답에 직접 실을 때의 상한
 MAX_AUDIT_BYTES = 1024 * 1024
+MAX_SYNTH_JOBS = 2         # 동시에 도는 합성 수(시간이 지나도 누적되지 않게)
 REMOTE = False             # --http로 열렸는지(이 서버의 스피커는 사용자 것이 아니에요)
 
 
@@ -94,13 +96,20 @@ def engine():
 BUILTIN_BLOCKED = ("송금하지않으면", "납치했", "아들을납치", "당장입금", "투표해주세요", "지지해주세요", "보이스피싱")
 
 
+def _fold(text: str) -> str:
+    """금지 문구 비교용으로 글을 같은 꼴로 맞춰요: NFKC(전각·호환 문자·한글 분해형), 소문자,
+    보이지 않는 글자(제로폭 등 Cf)와 모든 공백 제거."""
+    t = unicodedata.normalize("NFKC", text or "").casefold()
+    return "".join(ch for ch in t if not ch.isspace() and unicodedata.category(ch) != "Cf")
+
+
 def check_policy(text: str):
-    """목소리로 만들면 안 되는 문구면 이유를, 아니면 None을 돌려줘요(공백을 빼고 견줘요)."""
-    flat = "".join(text.split())
-    terms = list(BUILTIN_BLOCKED)
+    """목소리로 만들면 안 되는 문구면 이유를, 아니면 None을 돌려줘요(정규화하고 공백을 빼고 견줘요)."""
+    flat = _fold(text)
+    terms = [_fold(t) for t in BUILTIN_BLOCKED]
     try:
         extra = (VOICE_DIR / "blocklist.txt").read_text(encoding="utf-8").splitlines()
-        terms += ["".join(t.split()) for t in extra if t.strip() and not t.lstrip().startswith("#")]
+        terms += [_fold(t) for t in extra if t.strip() and not t.lstrip().startswith("#")]
     except OSError:
         pass
     for t in terms:
@@ -132,20 +141,29 @@ class RateLimit:
 LIMIT = RateLimit()
 
 
-def _prune_out():
-    """오래된 파일부터 지워서 voice/out이 계속 불어나지 않게 해요."""
+OUT_LOCK = threading.Lock()
+
+
+def _prune_out(incoming: int = 0) -> bool:
+    """새 파일(incoming 바이트)을 넣어도 상한 안이 되도록 오래된 파일부터 지워요.
+    규칙: (기존 + 새 파일) 용량이 MAX_OUT_BYTES 이하, 파일 수가 새 파일 포함 MAX_OUT_FILES 이하.
+    새 파일 하나가 상한보다 크거나 지워도 못 맞추면 False(저장하지 않아요)."""
+    if incoming > MAX_OUT_BYTES:
+        return False
     try:
         files = sorted((p for p in OUT_DIR.glob("dido-*") if p.is_file()), key=lambda p: p.stat().st_mtime)
     except OSError:
-        return
+        return False
     total = sum(p.stat().st_size for p in files)
-    while files and (len(files) >= MAX_OUT_FILES or total > MAX_OUT_BYTES):
+    while files and (len(files) >= MAX_OUT_FILES or total + incoming > MAX_OUT_BYTES):
         old = files.pop(0)
         try:
-            total -= old.stat().st_size
+            size = old.stat().st_size
             old.unlink()
+            total -= size
         except OSError:
             pass
+    return len(files) < MAX_OUT_FILES and total + incoming <= MAX_OUT_BYTES
 
 
 def _audit(spoken: str, ok: bool, eng_name: str, why: str = ""):
@@ -176,17 +194,36 @@ def _play(path: pathlib.Path) -> bool:
     return True
 
 
+BUSY = object()            # 동시 합성 상한을 넘어 새로 시작하지 않았다는 표시
+_JOBS: dict = {}           # 글 해시 -> (줄기, 결과 상자). 도는 중인 합성만 들어 있어요
+_JOBS_LOCK = threading.Lock()
+
+
 def _synth_with_budget(eng, spoken: str):
     """합성을 별도 줄기에서 돌려 시간 안에 안 끝나면 '준비 중'으로 답해요(AI 앱의 도구 제한 시간 대비).
-    줄기는 계속 돌아 결과를 저장해 두니, 같은 글로 다시 요청하면 바로 나와요."""
+    줄기는 계속 돌아 결과를 저장해 두니, 같은 글로 다시 요청하면 바로 나와요.
+    동시에 도는 합성은 MAX_SYNTH_JOBS개까지고, 같은 글이 이미 도는 중이면 그 줄기를 기다려요.
+    상한을 넘으면 새로 시작하지 않고 BUSY를 돌려줘요."""
     budget = float(os.environ.get("DIDO_MCP_BUDGET", "45"))
-    box = {}
+    key = hashlib.sha256(spoken.encode("utf-8")).hexdigest()
+    with _JOBS_LOCK:
+        job = _JOBS.get(key)
+        if job is None:
+            if len(_JOBS) >= MAX_SYNTH_JOBS:
+                return BUSY
+            box = {}
 
-    def work():
-        box["r"] = synth_or_none(eng, spoken)
+            def work():
+                try:
+                    box["r"] = synth_or_none(eng, spoken)
+                finally:
+                    with _JOBS_LOCK:
+                        _JOBS.pop(key, None)
 
-    t = threading.Thread(target=work, daemon=True)
-    t.start()
+            t = threading.Thread(target=work, daemon=True)
+            job = _JOBS[key] = (t, box)
+            t.start()
+    t, box = job
     t.join(budget)
     return box.get("r")  # None이면 아직 만드는 중
 
@@ -203,6 +240,10 @@ def speak_core(text: str, play: bool = True, return_audio=None):
     if not LIMIT.allow():
         return {"ok": False, "error": "요청이 너무 잦아요. 잠시 뒤에 다시 해 주세요."}, None, None
     spoken = normalize(text)
+    why = check_policy(spoken)  # 숫자를 풀어 읽은 뒤 생기는 문구도 막아요(원문·풀어 읽은 글 둘 다 검사)
+    if why:
+        _audit(spoken, False, "-", "policy")
+        return {"ok": False, "error": why}, None, None
     if len(spoken) > MAX_SPOKEN_CHARS:
         return {"ok": False, "spoken_text": spoken[:80] + "…",
                 "error": f"숫자를 풀어 읽으면 {MAX_SPOKEN_CHARS}자를 넘어요. 글을 나눠 주세요."}, None, None
@@ -213,6 +254,9 @@ def speak_core(text: str, play: bool = True, return_audio=None):
                 "error": "아직 성우 김디도 목소리 엔진이 없어요. "
                          + ("voice 폴더는 준비됐으니 setup-voice.cmd를 실행해 주세요." if ok else f"voice 폴더: {why}")}, None, None
     res = _synth_with_budget(eng, spoken)
+    if res is BUSY:
+        return {"ok": False, "status": "busy", "retry": True,
+                "error": "지금 다른 소리를 만드는 중이라 바빠요. 잠시 뒤 같은 글로 다시 요청해 주세요."}, None, None
     if res is None:
         return {"ok": False, "status": "preparing", "retry": True, "spoken_text": spoken,
                 "error": "목소리를 처음 준비하는 중이에요(이 컴퓨터는 처음에 오래 걸려요). "
@@ -222,12 +266,16 @@ def speak_core(text: str, play: bool = True, return_audio=None):
         _audit(spoken, False, eng.name, "synth")
         return {"ok": False, "spoken_text": spoken, "error": warn}, None, None
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    _prune_out()
     mime = getattr(eng, "mime", "") or "audio/wav"
     ext = ".mp3" if mime == "audio/mpeg" else ".wav"
     result_id = f"dido-{_dt.datetime.now():%Y%m%d-%H%M%S-%f}"
     path = OUT_DIR / (result_id + ext)
-    path.write_bytes(audio)
+    with OUT_LOCK:  # 정리와 저장을 한 묶음으로(동시에 저장해도 상한을 안 넘게)
+        if not _prune_out(len(audio)):
+            _audit(spoken, False, eng.name, "storage_full")
+            return {"ok": False, "spoken_text": spoken,
+                    "error": "저장 공간 상한(파일 수·용량)을 넘어서 소리를 저장하지 않았어요."}, None, None
+        path.write_bytes(audio)
     _audit(spoken, True, eng.name)
     # 만들기와 틀기는 따로예요: 틀기가 실패해도 만든 결과는 그대로 돌려줘요
     if REMOTE:

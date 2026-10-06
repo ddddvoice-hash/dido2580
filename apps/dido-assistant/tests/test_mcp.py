@@ -249,6 +249,88 @@ class Core(unittest.TestCase):
         for word in ("WAV 또는 MP3", "파일을 만들고", "클라우드", "preparing", "read_numbers_like_dido"):
             self.assertIn(word, doc)
 
+    def test_policy_survives_unicode_variants(self):
+        """R31-1(M1): 한글 분해형·전각·제로폭·띄어쓰기 끼우기로도 금지 문구를 통과하지 못해요."""
+        import unicodedata
+        for term in self.m.BUILTIN_BLOCKED:
+            variants = [term, " ".join(term), unicodedata.normalize("NFD", term), "​".join(term),
+                        "⁠".join(term), "﻿".join(term)]
+            for v in variants:
+                self.assertTrue(self.m.check_policy("앞 " + v + " 뒤"), repr(v))
+        (self.vd / "blocklist.txt").write_text("voice phishing\n", encoding="utf-8")
+        self.assertTrue(self.m.check_policy("VOICE　PHISHING"))
+        self.assertTrue(self.m.check_policy("ｖｏｉｃｅ ｐｈｉｓｈｉｎｇ"))
+        self.assertTrue(self.m.check_policy("Voice​Phishing"))
+        self.assertIsNone(self.m.check_policy("안녕하세요 반갑습니다"))
+        out, _, _ = self.m.speak_core("송금하지​않으면 큰일", play=False)
+        self.assertFalse(out["ok"])
+        self.assertEqual(self.calls, [])
+
+    def test_policy_checks_text_after_number_reading(self):
+        """R31-2(M2): 숫자를 풀어 쓴 뒤 생기는 금지 문구도 막고, 합성 함수에 닿지 않아요."""
+        (self.vd / "blocklist.txt").write_text("일 번\n", encoding="utf-8")
+        self.assertIsNone(self.m.check_policy("1번"))  # 원문만으로는 안 걸려요
+        out, _, _ = self.m.speak_core("1번", play=False)
+        self.assertFalse(out["ok"])
+        self.assertNotEqual(out.get("status"), "preparing")
+        self.assertEqual(self.calls, [])
+
+    def test_storage_limit_counts_new_file(self):
+        """R31-3(M3): (기존 + 새 파일) 용량이 상한을 넘으면 오래된 것부터 지우고, 새 파일 하나가 상한보다 크면 거절해요."""
+        from unittest import mock
+        out = self.vd / "out"
+        out.mkdir()
+        with mock.patch.object(self.m, "MAX_OUT_BYTES", 100):
+            old = out / "dido-old-1.wav"
+            old.write_bytes(b"x" * 100)  # 기존이 이미 상한
+            os.utime(old, (1000, 1000))
+            res, _, _ = self.m.speak_core("안녕하세요", play=False)
+            self.assertTrue(res["ok"])
+            self.assertFalse(old.exists())  # 오래된 것부터 지웠어요
+            files = list(out.glob("dido-*"))
+            self.assertLessEqual(sum(f.stat().st_size for f in files), 100)
+            self.eng.synth = lambda text: b"y" * 101  # 새 소리 하나가 상한보다 커요
+            before = sorted(f.name for f in out.glob("dido-*"))
+            res2, _, _ = self.m.speak_core("다른 문장이에요", play=False)
+            self.assertFalse(res2["ok"])
+            self.assertEqual(sorted(f.name for f in out.glob("dido-*")), before)
+            self.assertFalse(self.m._prune_out(101))
+
+    def test_synth_jobs_do_not_pile_up(self):
+        """R31-4(M4): 시간이 지나도 동시 합성은 상한까지만, 같은 글은 하나만, 넘치면 busy예요."""
+        import threading
+        release = threading.Event()
+        started = []
+
+        def slow(text):
+            started.append(text)
+            release.wait(5)
+            return b"RIFFslow"
+
+        self.eng.synth = slow
+        os.environ["DIDO_MCP_BUDGET"] = "0"
+        try:
+            st = lambda t: self.m.speak_core(t, play=False)[0].get("status")
+            self.assertEqual(st("첫째 글"), "preparing")
+            self.assertEqual(st("첫째 글"), "preparing")  # 같은 글은 같은 작업을 재사용
+            self.assertEqual(st("둘째 글"), "preparing")
+            for i in range(10):  # 상한(기본 2개)이 차 있으니 새로 시작하지 않아요
+                self.assertEqual(st(f"넘치는 글 {i}"), "busy")
+            deadline = time.time() + 3
+            while len(started) < 2 and time.time() < deadline:
+                time.sleep(0.02)
+            self.assertEqual(sorted(started), ["둘째 글", "첫째 글"])
+            self.assertLessEqual(len(self.m._JOBS), self.m.MAX_SYNTH_JOBS)
+        finally:
+            release.set()
+        for _ in range(100):
+            if not self.m._JOBS:
+                break
+            time.sleep(0.05)
+        self.assertEqual(self.m._JOBS, {})  # 끝나면 비워져 다시 받을 수 있어요
+        os.environ["DIDO_MCP_BUDGET"] = "5"
+        self.assertTrue(self.m.speak_core("셋째 글", play=False)[0]["ok"])
+
     def test_token_gate(self):
         import asyncio
         sent, reached = [], []
