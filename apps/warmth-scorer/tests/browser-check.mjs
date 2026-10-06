@@ -53,7 +53,20 @@ async function key(k) {
   await sleep(40);
 }
 async function keys(seq) { for (const k of seq) await key(k); }
-async function goto(url) { await send('Page.navigate', { url }); await sleep(900); }
+// 고정 대기 대신 조건이 참이 될 때까지 최대 ms만큼 기다린다(느린 CI 대비). 시간 안에 안 되면 마지막 값을 돌려주고 검사가 그 값으로 FAIL을 낸다.
+async function until(expr, ms = 15000) {
+  const end = Date.now() + ms; let v;
+  while (true) {
+    try { v = await ev(expr); } catch { v = false; }
+    if (v || Date.now() > end) return v;
+    await sleep(50);
+  }
+}
+async function goto(url) {
+  await ev('window.__old=1');
+  await send('Page.navigate', { url });
+  await until(`typeof window.__old==='undefined' && document.readyState==='complete' && /불러왔|읽지 못/.test((document.getElementById('rubric-status')||{}).textContent||'')`, 20000);
+}
 const txt = (sel) => ev(`(document.querySelector(${JSON.stringify(sel)})||{}).textContent||''`);
 
 try {
@@ -72,8 +85,8 @@ try {
   ok('기준표 자동 로드 (http)', (await txt('#rubric-status')).includes('1.0'), await txt('#rubric-status'));
 
   // 1. rubric 문구가 화면에 그대로
-  await ev(`document.getElementById('load-example').click()`); await sleep(300);
-  await ev(`document.getElementById('start-scoring').click()`); await sleep(300);
+  await ev(`document.getElementById('load-example').click()`); await until(`document.querySelectorAll('#answers-list .answer-row').length>=3`);
+  await ev(`document.getElementById('start-scoring').click()`); await until(`!document.getElementById('scoring-section').hidden && /\\d/.test(document.getElementById('total-C').textContent)`);
   const body = await ev('document.body.innerText');
   const want = [];
   for (const c of rubric.criteria) { want.push(c.name, c.question, ...Object.values(c.levels)); }
@@ -93,12 +106,12 @@ try {
   await keys([' ', ' ']); await keys([' ', ' ']);
   const posC = await txt('#answer-position');
   const before = await txt('#total');
-  await ev(`document.getElementById('penalty-ignored_risk').click()`); await sleep(100);
+  await ev(`document.getElementById('penalty-ignored_risk').click()`); await until(`document.getElementById('total').textContent.trim().startsWith('0')`);
   const afterRisk = await txt('#total');
   await ev(`document.getElementById('penalty-ignored_risk').click()`);
-  await ev(`document.getElementById('penalty-factual_error').click()`); await sleep(100);
+  await ev(`document.getElementById('penalty-factual_error').click()`); await until(`document.getElementById('total').textContent.trim().startsWith('0')`);
   const afterFact = await txt('#total');
-  await ev(`document.getElementById('penalty-factual_error').click()`); await sleep(100);
+  await ev(`document.getElementById('penalty-factual_error').click()`); await until(`document.getElementById('total').textContent.trim().startsWith('10')`);
   ok('Space 두 번(근거 없음 경고 후)으로 C까지 이동', /3\s*\/\s*3/.test(posC), posC);
   ok("'위험 신호 무시' 체크 → 합계 0", num(before) === '10' && num(afterRisk) === '0', `${before} → ${afterRisk}`);
   ok("'사실 오류' 체크 → 합계 0", num(afterFact) === '0', afterFact);
@@ -113,7 +126,7 @@ try {
     if(tas[1]){tas[1].value='두 번째 답변입니다.'; tas[1].dispatchEvent(new Event('input'));}
     document.getElementById('situation').dispatchEvent(new Event('input'));
     document.getElementById('start-scoring').click();})()`);
-  await sleep(300);
+  await until(`document.getElementById('answer-text').value.includes('첫 번째 답변')`);
   await ev(`document.getElementById('answer-text').focus()`);
   const pos1 = await txt('#answer-position');
   await keys(['1']); const banner = await txt('#mode-banner');
@@ -137,7 +150,7 @@ try {
   const focusAfterLast = await ev('document.activeElement && document.activeElement.id');
   ok('마지막 답변에서 Space → 내보내기로 이동', focusAfterLast === 'export-jsonl', String(focusAfterLast));
   // Space on checkbox toggles, not next
-  await ev(`document.getElementById('prev-answer').click()`); await sleep(100);
+  await ev(`document.getElementById('prev-answer').click()`); await until(`/1\\s*\\/\\s*2/.test(document.getElementById('answer-position').textContent)`);
   await ev(`document.getElementById('penalty-flattery').focus()`);
   const posBeforeCb = await txt('#answer-position');
   await keys([' ']);
@@ -171,7 +184,7 @@ try {
   ok('합계 aria-live', (await ev(`document.getElementById('total').getAttribute('aria-live')`)) === 'polite');
 
   // 6. JSONL 내보내기
-  await ev(`document.getElementById('export-jsonl').click()`); await sleep(400);
+  await ev(`document.getElementById('export-jsonl').click()`); await until('window.__exports.length>0');
   const exp = await ev('window.__exports.join("")');
   const lines = exp.split('\n').filter(Boolean);
   const fields = ['situation', 'answer_id', 'answer', 'scores', 'evidence', 'penalties', 'total', 'rater', 'date', 'rubric_version'];
@@ -183,41 +196,41 @@ try {
 
   // 7. 새로고침 후 유지
   const savedBefore = await txt('#saved-count');
-  await goto(HTTP + '/index.html'); await sleep(500);
+  await goto(HTTP + '/index.html');
   ok('새로고침해도 저장 유지', (await txt('#saved-count')) === savedBefore && savedBefore !== '0', `${savedBefore} → ${await txt('#saved-count')}`);
 
   // 8. 테스트 문항 불러오기
-  await ev(`document.getElementById('load-test-items').click()`); await sleep(500);
+  await ev(`document.getElementById('load-test-items').click()`); await until(`document.querySelectorAll('#test-item-select option').length>=30`);
   const optCount = await ev(`document.querySelectorAll('#test-item-select option').length`);
   const notice = await txt('#test-notice');
-  await ev(`(()=>{const s=document.getElementById('test-item-select');s.selectedIndex=s.options.length-1;s.dispatchEvent(new Event('change'));document.getElementById('start-scoring').click();})()`); await sleep(300);
+  await ev(`(()=>{const s=document.getElementById('test-item-select');s.selectedIndex=s.options.length-1;s.dispatchEvent(new Event('change'));document.getElementById('start-scoring').click();})()`); await until(`!document.getElementById('test-badge').hidden`);
   const badgeShown = await ev(`!document.getElementById('test-badge').hidden && document.getElementById('test-badge').offsetParent!==null`);
   ok('테스트 문항 30세트 불러오기', optCount >= 30, `option ${optCount}개, notice="${notice.trim()}"`);
   ok("테스트 문항 채점 시 '테스트용, 채점 기준 아님' 배지", badgeShown && (await txt('#test-badge')).includes('테스트용, 채점 기준 아님'), await txt('#test-badge'));
 
   // GPT 리뷰 1번: 테스트 문항을 불러와도 예시 채점에 test_only가 붙지 않음
   await ev('window.__exports.length=0');
-  await ev(`document.getElementById('export-jsonl').click()`); await sleep(400);
+  await ev(`document.getElementById('export-jsonl').click()`); await until('window.__exports.length>0');
   const recs = (await ev('window.__exports.join("")')).split(String.fromCharCode(10)).filter(Boolean).map((l) => JSON.parse(l));
   const exRecs = recs.filter((o) => o.rater === '예시');
   ok('테스트 문항을 불러와도 예시 채점에 test_only 없음', exRecs.length === 3 && exRecs.every((o) => !('test_only' in o)), `예시 ${exRecs.length}줄, test_only ${exRecs.filter((o) => o.test_only).length}줄`);
 
   // GPT 2차 리뷰 9번: 채점 화면이 열린 채로 예시를 불러오면 채점 화면을 닫음
   const openBefore = await ev(`!document.getElementById('scoring-section').hidden`);
-  await ev(`document.getElementById('load-example').click()`); await sleep(300);
+  await ev(`document.getElementById('load-example').click()`); await until(`document.getElementById('scoring-section').hidden`);
   const openAfter = await ev(`!document.getElementById('scoring-section').hidden`);
   ok('채점 중 예시 불러오기 → 채점 화면 닫힘', openBefore === true && openAfter === false, `열림 ${openBefore} → ${openAfter}`);
 
   // GPT 2차 리뷰 2번: 테스트 문항 본문을 고쳐도 테스트 표시 유지, 새 문항은 표시 없음
-  await ev(`document.getElementById('load-test-items').click()`); await sleep(500);
+  await ev(`document.getElementById('load-test-items').click()`); await until(`document.querySelectorAll('#test-item-select option').length>=30`);
   await ev(`(()=>{const s=document.getElementById('test-item-select');s.selectedIndex=1;s.dispatchEvent(new Event('change'));
     const t=document.querySelector('#answers-list textarea');t.value=t.value+' (고친 문장)';t.dispatchEvent(new Event('input'));
-    document.getElementById('start-scoring').click();})()`); await sleep(300);
+    document.getElementById('start-scoring').click();})()`); await until(`document.getElementById('answer-text').value.includes('(고친 문장)')`);
   const badgeEdited = await ev(`!document.getElementById('test-badge').hidden`);
   await ev(`(()=>{document.getElementById('new-item').click();
     document.getElementById('situation').value='직접 쓴 상황입니다.';document.getElementById('situation').dispatchEvent(new Event('input'));
     const t=document.querySelector('#answers-list textarea');t.value='직접 쓴 답변입니다.';t.dispatchEvent(new Event('input'));
-    document.getElementById('start-scoring').click();})()`); await sleep(300);
+    document.getElementById('start-scoring').click();})()`); await until(`document.getElementById('answer-text').value.includes('직접 쓴 답변')`);
   const badgeNew = await ev(`!document.getElementById('test-badge').hidden`);
   ok('테스트 문항 본문을 고쳐도 배지 유지, 새 문항은 배지 없음', badgeEdited === true && badgeNew === false, `고친 테스트 문항 ${badgeEdited}, 새 문항 ${badgeNew}`);
 

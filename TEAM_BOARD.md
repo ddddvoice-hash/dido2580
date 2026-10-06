@@ -215,6 +215,7 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 | A11 | 매니저 | A10 후속(팀장 코드 확인): 실제 평가용 묶음 문항 채점 기록에 `test_only: true`가 붙던 버그 재현·수정 | `apps/warmth-scorer/app.js`·`tests/testonly.browser.js` | 재현 후 수정, 새 테스트·기존 채점기 검사 통과 | 검토 (팀장 확인 통과 · 보고 칸) |
 | A12 | 매니저 | CI에 새 브라우저 검사 `sensitive.browser.js`·`testonly.browser.js` 추가 | `.github/workflows/tests.yml` | GitHub Actions에서 두 검사 실행·통과 | 검토 (팀장 확인 · CI 결과는 푸시 뒤 확인) |
 | A13 | 매니저 | A12 후속(팀장 재현): CI '녹음 부스' 단계 실패 원인 — 윈도우에서 만든 `profile-browser.js`의 빈 줄에 공백 두 칸이 들어가 리눅스(LF)에서 "오래됨"으로 판정. 생성기 줄바꿈 통일·빈 줄 처리, `.gitattributes`로 두 파일 LF 고정 | `apps/voice-studio/tools/build-profile.js`·`profile-browser.js`, `.gitattributes` | LF 체크아웃에서 parity·lines·reference·`--check` 통과, GitHub Actions 전부 통과 | 검토 (팀장 확인 · CI는 푸시 뒤 확인) |
+| A14 | 매니저 | CI에서 `browser-check.mjs`가 간헐 실패(채점기 코드 변경 없이 8715c97 통과 → cbdbbe4 실패): 고정 대기 15곳을 조건 대기로 | `apps/warmth-scorer/tests/browser-check.mjs` | 로컬 반복 통과, GitHub Actions 통과 | 검토 (CI 확인 중) |
 
 ### R17·G10·G11·Q9 요청 (클라우드 팀장 · 2026-10-05 6회차)
 
@@ -552,6 +553,11 @@ A/B 표는 측정값과 설계 참고값을 구분하고 점수·이해도·가�
 검토한 파일 목록: `AGENTS.md`, `TEAM_BOARD.md`, `HANDOFF.md`, 현재 `core.py`·`app.py`, 테스트 2개, `check.js`, `analysis.js`, 지정 커밋 변경. 실행해 본 것: venv에서 파일 쓰기를 차단한 core 39개·AppTest 4개 통과(AppTest 임시 폴더 생성은 메모리에서 대체), 추가 합성 입력·JS 비교·메모리 측정. 파일 생성·수정 없음.
 
 ## 보고
+
+### [A14] 팀장 확인 · 2026-10-06 (확정 아님)
+- 매니저 보고: 고친 뒤 10번 연속·CPU 부하 5번 모두 29/29.
+- 팀장 확인은 **확정 못 함**: 이 PC에서 같은 날 오후에는 고치기 **전** 판도 28·27·25/29로 흔들렸고, 고친 판도 3번 중 1번 4건 실패·2번은 중간에 끊김. 즉 지금 이 PC 자체가 브라우저 검사에 불안정한 상태(대표가 크롬을 쓰는 중일 가능성)라 비교가 안 돼요. 고친 판이 전보다 나쁘다는 증거는 없어서 올리고, **GitHub Actions 결과로 판정**해요.
+- 정리: 이전 매니저가 남긴 시험 프로세스(testonly.browser.js) 1개를 팀장이 끔.
 
 ### [A13] 팀장 확인 · 2026-10-06
 - A12 푸시 뒤 CI는 파일을 읽기 시작했지만 '녹음 부스' 작업 하나가 계속 실패. 로그는 관리자 권한이 필요해 받을 수 없어서, 팀장이 리눅스와 같은 LF 체크아웃(`git -c core.autocrlf=false archive`)으로 **재현**: `reference.test.js`가 "profile-browser.js가 오래됐습니다"로 실패, 차이는 빈 줄의 공백 두 칸뿐. 윈도우 작업 폴더에서는 줄바꿈 자동 변환 때문에 늘 통과로 보였음.
