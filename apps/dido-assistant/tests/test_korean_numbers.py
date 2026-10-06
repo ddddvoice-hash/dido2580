@@ -74,8 +74,8 @@ G15 = [
     ("상자 20개와 봉투 21개를 준비해요.", "상자 스무 개와 봉투 스물한 개를 준비해요."),  # 18
     ("가상 인물 두 명은 각각 20살과 22살이에요.", "가상 인물 두 명은 각각 스무 살과 스물두 살이에요."),  # 19
     ("가상 인물의 나이는 만 65세예요.", "가상 인물의 나이는 만 육십오 세예요."),  # 20
-    # 21번: 전화번호 형식 0X0-XXXX-XXXX는 글자가 섞인 설명용 형식이라 애매해요. G15의 '공 엑스 공 하이픈…' 읽기는 만들지 않고 원문을 그대로 남겨요(_safe 원칙).
-    ("가짜 전화번호 형식은 0X0-XXXX-XXXX예요.", "가짜 전화번호 형식은 0X0-XXXX-XXXX예요."),  # 21
+    # 21번: G15 정답은 '공 엑스 공 하이픈 엑스 엑스 엑스 엑스 하이픈 엑스 엑스 엑스 엑스'로 읽기예요. 아래 G15_PENDING 참고.
+    ("가짜 전화번호 형식은 0X0-XXXX-XXXX예요.", "가짜 전화번호 형식은 공 엑스 공 하이픈 엑스 엑스 엑스 엑스 하이픈 엑스 엑스 엑스 엑스예요."),  # 21
     ("가상 설문의 응답 비율은 12.5%예요.", "가상 설문의 응답 비율은 십이 점 오 퍼센트예요."),  # 22
     ("가상 산책로의 길이는 3.2㎞예요.", "가상 산책로의 길이는 삼 점 이 킬로미터예요."),  # 23
     ("연습용 상자의 질량은 0.75㎏이에요.", "연습용 상자의 질량은 영 점 칠 오 킬로그램이에요."),  # 24
@@ -85,6 +85,21 @@ G15 = [
     ("가상 기록의 작성 연도는 2026년이에요.", "가상 기록의 작성 연도는 이천이십육 년이에요."),  # 28
     ("가상 축구 경기의 점수는 0:2예요.", "가상 축구 경기의 점수는 영 대 이예요."),  # 29
     ("연습용 도구의 버전은 2.10.3이에요.", "연습용 도구의 버전은 이 점 십 점 삼이에요."),  # 30
+]
+
+# 대표 결정 대기: 21번은 구현이 G15 정답을 만들지 않고 원문을 그대로 남겨요(글자가 섞인 형식 낭독은 애매, _safe 원칙).
+# G15 정답과 다른 '원문 유지'는 승인된 예외가 아니에요. 대표가 정하면 이 표를 지우거나 형식 낭독을 구현해요.
+G15_PENDING = {21: "가짜 전화번호 형식은 0X0-XXXX-XXXX예요."}
+
+# R31-5~9 반례(docs/gpt/R31-review.md). 기대 읽기는 R31 제안 그대로예요.
+R31 = [
+    ("경기 점수는 3:10이에요.", "경기 점수는 삼 대 십이에요."),  # R31-5
+    ("시각은 9:5예요.", "시각은 아홉 시 오 분이에요."),  # R31-5
+    ("버전 2026.10.06", "버전 이천이십육 점 십 점 육"),  # R31-6
+    ("버전 2.10", "버전 이 점 십"),  # R31-6
+    ("범위는 20-10개예요.", "범위는 20-10개예요."),  # R31-7 보존한 덩어리는 뒤 규칙이 안 건드려요
+    ("제  3장과 제  4권", "제삼 장과 제사 권"),  # R31-8
+    ("가상 전화번호는 000 0000 0000이에요.", "가상 전화번호는 영영영, 영영영영, 영영영영이에요."),  # R31-9
 ]
 
 
@@ -101,9 +116,31 @@ class Numbers(unittest.TestCase):
 
     def test_g15_thirty_sentences(self):
         self.assertEqual(len(G15), 30)
-        for src, want in G15:
+        match = 0
+        for no, (src, want) in enumerate(G15, 1):
+            with self.subTest(no=no, src=src):
+                if no in G15_PENDING:  # 대표 결정 대기: G15 정답과 다르다는 것도 함께 확인해요
+                    self.assertNotEqual(G15_PENDING[no], want)
+                    self.assertEqual(normalize(src), G15_PENDING[no])
+                else:
+                    self.assertEqual(normalize(src), want)
+                    match += 1
+        self.assertEqual(match, 29)  # 30문장 중 29문장은 G15 정답과 같아요
+
+    def test_r31_counterexamples(self):
+        for src, want in R31:
             with self.subTest(src=src):
                 self.assertEqual(normalize(src), want)
+
+    def test_r31_extra(self):
+        self.assertEqual(normalize("v1.2.3"), "v 일 점 이 점 삼")
+        self.assertEqual(normalize("회의는 2:00예요."), "회의는 두 시예요.")
+        self.assertEqual(normalize("3:10"), "세 시 십 분")  # 단서 없이 분이 두 자리면 시각
+        self.assertEqual(normalize("비율 3:5"), "비율 3:5")  # 애매하면 원문
+        self.assertEqual(normalize("오후 2:30, 경기 1:2"), "오후 두 시 삼십 분, 경기 일 대 이")
+        self.assertEqual(normalize("제	3장"), "제삼 장")
+        self.assertEqual(normalize("전화는 02 123 4567"), "전화는 영이, 일이삼, 사오육칠")
+        self.assertEqual(normalize("연필 100 200개"), "연필 백 이백 개")
 
     def test_sino(self):
         self.assertEqual(sino(12500), "만 이천오백")
