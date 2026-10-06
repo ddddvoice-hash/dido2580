@@ -124,7 +124,7 @@
   // 점수는 기준표 범위의 유한한 정수만 받습니다. 빈칸(null)과 아예 없는 항목은 '결측'으로 두고, 숫자가 아닌 값·범위 밖·소수는 잘못된 값으로 봅니다.
   function validateRecord(rubric, r) {
     if (!r || typeof r !== 'object' || Array.isArray(r)) return '기록이 객체가 아니에요';
-    if (typeof r.rater !== 'string' || !r.rater.trim()) return '평가자 이름이 없어요';
+    if (typeof r.rater !== 'string' || !r.rater.trim()) return '평가자 코드가 없어요';
     if (typeof r.situation !== 'string') return '상황이 글이 아니에요';
     if (typeof r.answer !== 'string' || !r.answer) return '답변이 없어요';
     if (!r.scores || typeof r.scores !== 'object' || Array.isArray(r.scores)) return '점수가 객체가 아니에요';
@@ -740,7 +740,7 @@
 
   function startScoring() {
     if (!rubric) { say('기준표를 먼저 불러오세요.'); return; }
-    if (!state.rater.trim()) { say('평가자 이름을 입력하세요.'); $('rater').focus(); return; }
+    if (!state.rater.trim()) { say('평가자 코드를 입력해 주세요.'); $('rater').focus(); return; }
     var draft = readDraft();
     markDraftTest(draft);
     if (!draft.situation) { say('상황을 입력하세요.'); $('situation').focus(); return; }
@@ -830,7 +830,7 @@
 
   function needRater() {
     if (state.rater.trim()) return false;
-    say('평가자 이름을 입력하세요.');
+    say('평가자 코드를 입력해 주세요.');
     return true;
   }
 
@@ -1058,7 +1058,7 @@
     var box = $('agree-result');
     box.textContent = '';
     if (!r.answers) {
-      $('agree-status').textContent = '두 사람 이상이 채점한 같은 답변이 아직 없어요. 평가자 이름을 바꿔 같은 문항을 채점하거나, 다른 평가자의 JSONL을 더해 주세요.';
+      $('agree-status').textContent = '두 사람 이상이 채점한 같은 답변이 아직 없어요. 평가자 코드를 바꿔 같은 문항을 채점하거나, 다른 평가자의 JSONL을 더해 주세요.';
       agreementNotes(r).forEach(function (n) { box.appendChild(el('p', { class: 'hint' }, n)); });
       return;
     }

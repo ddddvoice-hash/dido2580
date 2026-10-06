@@ -76,8 +76,9 @@
 <section id="register-section" aria-labelledby="h-register">
   <h2 id="h-register">1. 문항 등록</h2>
 
-  <label for="rater">평가자 이름</label>
-  <input type="text" id="rater" autocomplete="name">
+  <label for="rater">평가자 코드</label>
+  <input type="text" id="rater" autocomplete="off" aria-describedby="rater-hint">
+  <p id="rater-hint" class="small">이름 대신 정해 받은 코드를 써요(예: R-K7). 한 사람은 늘 같은 코드를 써요. 내보낸 기록에 이 코드가 그대로 남아요.</p>
 
   <p id="rubric-status" class="small">기준표를 불러오는 중입니다.</p>
   <div id="rubric-file-wrap" hidden>
