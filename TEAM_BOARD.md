@@ -213,9 +213,9 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 | A10 | 매니저 | G10 후속 화면 기능: `docs/eval/packs/build_packs.py`가 위기 문항에 `sensitive: true`를 넣고(묶음 다시 만들기, `cue_check.py --strict` 통과 유지), 따뜻함 채점기는 그런 문항을 고르면 **본문을 접은 채** 안내 문구와 [읽기]/[건너뛰기] 버튼만 보여 줌(키보드로 가능). 건너뛰면 점수 없이 결측으로 남고 일치도 계산에서 빠짐. 안내 문구는 `calibration.md` '위기 문항을 채점할 때'의 인용문 그대로 | `build_packs.py`·`packs/*.json`·`apps/warmth-scorer/`·`tests/` | 새 브라우저 테스트(접힘·읽기·건너뛰기·결측), 기존 `agreement`·`pack`·`browser-check` 통과 | 검토 (팀장 확인 통과 · 보고 칸) |
 | B9 | 사원 | G12·Q10·R18 해요체·맞춤법·이름·전화번호·G12 분량 숫자·표 점검(고치지 않고 지적만) | 이 게시판 '보고' 칸 | 지적 목록 | 검토 (팀장 확인 통과 · 보고 칸) |
 | A11 | 매니저 | A10 후속(팀장 코드 확인): 실제 평가용 묶음 문항 채점 기록에 `test_only: true`가 붙던 버그 재현·수정 | `apps/warmth-scorer/app.js`·`tests/testonly.browser.js` | 재현 후 수정, 새 테스트·기존 채점기 검사 통과 | 검토 (팀장 확인 통과 · 보고 칸) |
-| A12 | 매니저 | CI에 새 브라우저 검사 `sensitive.browser.js`·`testonly.browser.js` 추가 | `.github/workflows/tests.yml` | GitHub Actions에서 두 검사 실행·통과 | 검토 (팀장 확인 · CI 결과는 푸시 뒤 확인) |
-| A13 | 매니저 | A12 후속(팀장 재현): CI '녹음 부스' 단계 실패 원인 — 윈도우에서 만든 `profile-browser.js`의 빈 줄에 공백 두 칸이 들어가 리눅스(LF)에서 "오래됨"으로 판정. 생성기 줄바꿈 통일·빈 줄 처리, `.gitattributes`로 두 파일 LF 고정 | `apps/voice-studio/tools/build-profile.js`·`profile-browser.js`, `.gitattributes` | LF 체크아웃에서 parity·lines·reference·`--check` 통과, GitHub Actions 전부 통과 | 검토 (팀장 확인 · CI는 푸시 뒤 확인) |
-| A14 | 매니저 | CI에서 `browser-check.mjs`가 간헐 실패(채점기 코드 변경 없이 8715c97 통과 → cbdbbe4 실패): 고정 대기 15곳을 조건 대기로 | `apps/warmth-scorer/tests/browser-check.mjs` | 로컬 반복 통과, GitHub Actions 통과 | 검토 (CI 확인 중) |
+| A12 | 매니저 | CI에 새 브라우저 검사 `sensitive.browser.js`·`testonly.browser.js` 추가 | `.github/workflows/tests.yml` | GitHub Actions에서 두 검사 실행·통과 | 검토 (팀장 확인 통과 · GitHub Actions 4a77d4d 네 작업 모두 성공) |
+| A13 | 매니저 | A12 후속(팀장 재현): CI '녹음 부스' 단계 실패 원인 — 윈도우에서 만든 `profile-browser.js`의 빈 줄에 공백 두 칸이 들어가 리눅스(LF)에서 "오래됨"으로 판정. 생성기 줄바꿈 통일·빈 줄 처리, `.gitattributes`로 두 파일 LF 고정 | `apps/voice-studio/tools/build-profile.js`·`profile-browser.js`, `.gitattributes` | LF 체크아웃에서 parity·lines·reference·`--check` 통과, GitHub Actions 전부 통과 | 검토 (팀장 확인 통과 · GitHub Actions 4a77d4d 네 작업 모두 성공) |
+| A14 | 매니저 | CI에서 `browser-check.mjs`가 간헐 실패(채점기 코드 변경 없이 8715c97 통과 → cbdbbe4 실패): 고정 대기 15곳을 조건 대기로 | `apps/warmth-scorer/tests/browser-check.mjs` | 로컬 반복 통과, GitHub Actions 통과 | 검토 (팀장 확인 통과 · GitHub Actions 4a77d4d 네 작업 모두 성공) |
 
 ### R17·G10·G11·Q9 요청 (클라우드 팀장 · 2026-10-05 6회차)
 
@@ -553,6 +553,11 @@ A/B 표는 측정값과 설계 참고값을 구분하고 점수·이해도·가�
 검토한 파일 목록: `AGENTS.md`, `TEAM_BOARD.md`, `HANDOFF.md`, 현재 `core.py`·`app.py`, 테스트 2개, `check.js`, `analysis.js`, 지정 커밋 변경. 실행해 본 것: venv에서 파일 쓰기를 차단한 core 39개·AppTest 4개 통과(AppTest 임시 폴더 생성은 메모리에서 대체), 추가 합성 입력·JS 비교·메모리 측정. 파일 생성·수정 없음.
 
 ## 보고
+
+### [CI] 팀장 확인 · 2026-10-06
+- **GitHub Actions 초록불**: 커밋 4a77d4d 실행 37405265078 — 사주·페르소나·녹음 검사기/부스·따뜻함 채점기(브라우저 29+10+13+38+7) **네 작업 모두 성공**. d3d9d71 이후 처음.
+- 과정: ① A12 — 워크플로 YAML 오류로 파일 자체를 못 읽던 것 고침 → ② A13 — 윈도우에서 만든 `profile-browser.js` 빈 줄 공백 때문에 리눅스에서 '오래됨' 판정 → ③ A14 — 브라우저 검수의 고정 대기를 조건 대기로.
+- 팀장 실수와 정리: 앞서 보고를 끝낸 A11 매니저가 배경에서 계속 돌며 크롬을 끄고 `app.js`의 `test_item_id` 한 줄을 되돌려 놓은 것을 늦게 발견. 그 매니저를 멈추고 `app.js`는 커밋된 판으로 되돌림(잘못된 내용이 푸시되지는 않음). 그 때문에 오후 한때 이 PC의 브라우저 검사가 흔들렸고, 정리 뒤 29/29 세 번 연속 통과.
 
 ### [A14] 팀장 확인 · 2026-10-06 (확정 아님)
 - 매니저 보고: 고친 뒤 10번 연속·CPU 부하 5번 모두 29/29.
