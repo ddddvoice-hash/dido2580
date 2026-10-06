@@ -209,8 +209,8 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 
 | 번호 | 담당 | 업무 | 결과 파일 | 완료 조건 | 상태 |
 |---|---|---|---|---|---|
-| R29 | GPT(아스트라) | v0.2 비판: `mcp_server.py`(도구 설명이 AI 앱에서 잘 고르게 쓰였는지, 악용 막기, 400자 제한, 윈도우 재생), `connect.py`(Codex `config.toml`·Gemini `settings.json`·Claude 데스크톱 설정 형식이 **2026년 10월 현재 각 앱 문서와 맞는지 웹으로 확인**, 출처 링크), `tts.py`의 자동 선택과 CPU 실행, `apps/setup-voice.cmd`의 윈도우 배치 문법 오류(괄호·인용), ChatGPT 웹 연결에 필요한 것 | `docs/gpt/R29-review.md` | 지적마다 파일:줄, 앱 문서 출처 | 대기 |
-| R30 | GPT(아스트라) | R28 반영 다시 보기 + 클라우드 목소리 엔진 비판: A18과 클라우드 작업을 합친 `apps/dido-assistant/`(server.py `_guard`·`_body`, tts.py `ElevenEngine`·`make_engine` 순서·`_NoRedirect`, korean_numbers.py 날짜 규칙과 `_safe`, index.html `audio_type` 재생). ElevenLabs 글→소리 API(주소·머리글 `xi-api-key`·`model_id`·응답 형식)와 **한국어에 맞는 현재 모델 ID**를 2026년 10월 공식 문서로 확인(출처 링크). R28 13건이 실제로 닫혔는지 재현 명령으로 확인 | `docs/gpt/R30-review.md` | R28 항목마다 닫힘/남음 + 재현 명령, 새 지적은 파일:줄·출처 | 대기 |
+| R29 | GPT(아스트라) | v0.2 비판: `mcp_server.py`(도구 설명이 AI 앱에서 잘 고르게 쓰였는지, 악용 막기, 400자 제한, 윈도우 재생), `connect.py`(Codex `config.toml`·Gemini `settings.json`·Claude 데스크톱 설정 형식이 **2026년 10월 현재 각 앱 문서와 맞는지 웹으로 확인**, 출처 링크), `tts.py`의 자동 선택과 CPU 실행, `apps/setup-voice.cmd`의 윈도우 배치 문법 오류(괄호·인용), ChatGPT 웹 연결에 필요한 것 | `docs/gpt/R29-review.md` | 지적마다 파일:줄, 앱 문서 출처 | 검토 (아스트라 결과 `docs/gpt/R29-review.md` · 12건(높음 4: connect.py가 기존 TOML 손상·같은 서버의 다른 JSON 설정 삭제, MCP 서버가 악용 금지를 강제 안 함, 원격에서 소리 못 받음) · 반영 A20) |
+| R30 | GPT(아스트라) | R28 반영 다시 보기 + 클라우드 목소리 엔진 비판: A18과 클라우드 작업을 합친 `apps/dido-assistant/`(server.py `_guard`·`_body`, tts.py `ElevenEngine`·`make_engine` 순서·`_NoRedirect`, korean_numbers.py 날짜 규칙과 `_safe`, index.html `audio_type` 재생). ElevenLabs 글→소리 API(주소·머리글 `xi-api-key`·`model_id`·응답 형식)와 **한국어에 맞는 현재 모델 ID**를 2026년 10월 공식 문서로 확인(출처 링크). R28 13건이 실제로 닫혔는지 재현 명령으로 확인 | `docs/gpt/R30-review.md` | R28 항목마다 닫힘/남음 + 재현 명령, 새 지적은 파일:줄·출처 | 검토 (아스트라 결과 `docs/gpt/R30-review.md` · **R28 13건 중 12건 닫힘**, R28-4(본문 크기) 일부 남음 · R27 숫자 반례 남음(`2026/10/06`·`20-10`·`제3장과 제4권` 등) · 반영 A19(숫자)·A20(나머지)) |
 
 ### ★ AI 비서 v0.1 완성 · 인계 · G16·R28 요청 (클라우드 팀장 · 2026-10-06, 아스트라만)
 
@@ -296,7 +296,8 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 | B10 | 사원 | G13·G14 맞춤법·해요체·브랜드·이름 점검(고치지 않고 지적만) | 이 게시판 '보고' 칸 | 지적 목록 | 검토 (팀장 확인 통과 · 보고 칸) |
 | A17 | 매니저 | CI에 베타 검사 추가: `docs/beta/tests/beta.browser.js`(61)·`test_build_zip.py`(10)·`build.py --check` | `.github/workflows/tests.yml` | GitHub Actions에서 실행·통과 | 검토 (팀장 확인 통과 · GitHub Actions 106c8a2 성공) |
 | A18 | 매니저 | R28 반영: AI 비서 보안(Origin·Host 검사, 토큰 리디렉션, 본문 크기), 숫자 변환 예외·순서 표현·쉼표 소수, 도구 실패 보고, 화면(Esc·새 대화·실패 안내), 실행 파일 | `apps/dido-assistant/`, `apps/start-assistant.cmd` | R28 재현이 새 동작, 기존 테스트·화면 검사 통과 | 검토 (팀장 확인 통과 · 보고 칸) |
-| A19 | 매니저 | R27 숫자 반례 + 날짜(`2026-10-06`이 한 자리씩 읽힘) 반영: `korean_numbers.py`가 틀리게 읽는 문장을 고치고 G15 30문장·R27 반례를 테스트로 | `apps/dido-assistant/korean_numbers.py`·`tests/` | R27 반례·G15 30문장 기대 읽기와 일치, 기존 테스트 통과 | 대기 (날짜 `2026-10-06` → "이천이십육 년 시월 육 일"은 클라우드가 합칠 때 반영·시험 추가. R27 반례는 남음) |
+| A19 | 매니저 | R27 숫자 반례 + 날짜(`2026-10-06`이 한 자리씩 읽힘) 반영: `korean_numbers.py`가 틀리게 읽는 문장을 고치고 G15 30문장·R27 반례를 테스트로 | `apps/dido-assistant/korean_numbers.py`·`tests/` | R27 반례·G15 30문장 기대 읽기와 일치, 기존 테스트 통과 | 진행 (R27·R30 반례 + G15 30문장 테스트) |
+| A20 | 매니저 | R29 12건 + R30 남은 R28-4·새 지적: 설정 파일을 망가뜨리지 않게(백업·우리 항목만·원자적 쓰기), MCP 악용 막기를 서버가 강제, 합성량 제한, 재생 실패 분리, 엔진 선택·캐시, setup-voice.cmd 실패 안내 | `apps/dido-assistant/`(숫자 파일 제외), `apps/setup-voice.cmd` | R29·R30 재현이 새 동작, 기존 시험·화면 검사 통과 | 진행 |
 | B12 | 사원 | G16 맞춤법·해요체·이름 점검(동의서 서명 문장의 '~합니다'는 관례로 표시만, 고치지 않고 지적만) | 이 게시판 '보고' 칸 | 지적 목록 | 검토 (팀장 확인 통과 · 보고 칸) |
 | B11 | 사원 | G15 형식(30줄·칸 수·번호)·정답 읽기에 숫자 남음·이름·문체 점검(고치지 않고 지적만) | 이 게시판 '보고' 칸 | 지적 목록 | 검토 (팀장 확인 통과 · 보고 칸) |
 
