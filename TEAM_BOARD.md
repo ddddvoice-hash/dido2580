@@ -293,7 +293,7 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 | A15 | 매니저 | R20 반영: 베타 페이지·zip(건너뛴 위기 문항 노출, 다시 접기, 평가자 코드, 답 열쇠는 허용 필드 목록으로 막기, 가상환경 제외 등) | `docs/beta/`, `tools/make_beta_zip.py` | 베타 JSONL이 채점기 validateRecord 통과, 새 브라우저 테스트, zip 목록에 열쇠·원본·.venv 없음 | 검토 (팀장 확인 통과 · 보고 칸) |
 | A16 | 매니저 | R19-01·02 반영: `fill.py` 평가자 코드 형식 제한·out/ 밖 쓰기 거부·빈 값 더 잡기, 테스트 | `docs/eval/rater-kit/fill.py`·`test_fill.py` | 단위 테스트 통과, R19 재현 거부 | 검토 (팀장 확인 통과 · 보고 칸) |
 | B10 | 사원 | G13·G14 맞춤법·해요체·브랜드·이름 점검(고치지 않고 지적만) | 이 게시판 '보고' 칸 | 지적 목록 | 검토 (팀장 확인 통과 · 보고 칸) |
-| A17 | 매니저 | CI에 베타 검사 추가: `docs/beta/tests/beta.browser.js`(61)·`test_build_zip.py`(10)·`build.py --check` | `.github/workflows/tests.yml` | GitHub Actions에서 실행·통과 | 검토 (팀장 확인 통과 · CI는 다음 푸시에서 확인) |
+| A17 | 매니저 | CI에 베타 검사 추가: `docs/beta/tests/beta.browser.js`(61)·`test_build_zip.py`(10)·`build.py --check` | `.github/workflows/tests.yml` | GitHub Actions에서 실행·통과 | 검토 (팀장 확인 통과 · GitHub Actions 106c8a2 성공) |
 | A18 | 매니저 | R28 반영: AI 비서 보안(Origin·Host 검사, 토큰 리디렉션, 본문 크기), 숫자 변환 예외·순서 표현·쉼표 소수, 도구 실패 보고, 화면(Esc·새 대화·실패 안내), 실행 파일 | `apps/dido-assistant/`, `apps/start-assistant.cmd` | R28 재현이 새 동작, 기존 테스트·화면 검사 통과 | 검토 (팀장 확인 통과 · 보고 칸) |
 | A19 | 매니저 | R27 숫자 반례 + 날짜(`2026-10-06`이 한 자리씩 읽힘) 반영: `korean_numbers.py`가 틀리게 읽는 문장을 고치고 G15 30문장·R27 반례를 테스트로 | `apps/dido-assistant/korean_numbers.py`·`tests/` | R27 반례·G15 30문장 기대 읽기와 일치, 기존 테스트 통과 | 대기 (다음 회차) |
 | B12 | 사원 | G16 맞춤법·해요체·이름 점검(동의서 서명 문장의 '~합니다'는 관례로 표시만, 고치지 않고 지적만) | 이 게시판 '보고' 칸 | 지적 목록 | 검토 (팀장 확인 통과 · 보고 칸) |
@@ -651,6 +651,9 @@ A/B 표는 측정값과 설계 참고값을 구분하고 점수·이해도·가�
 검토한 파일 목록: `AGENTS.md`, `TEAM_BOARD.md`, `HANDOFF.md`, 현재 `core.py`·`app.py`, 테스트 2개, `check.js`, `analysis.js`, 지정 커밋 변경. 실행해 본 것: venv에서 파일 쓰기를 차단한 core 39개·AppTest 4개 통과(AppTest 임시 폴더 생성은 메모리에서 대체), 추가 합성 입력·JS 비교·메모리 측정. 파일 생성·수정 없음.
 
 ## 보고
+
+### [CI] 팀장 확인 · 2026-10-06 저녁
+- GitHub Actions **106c8a2 네 작업 모두 성공**(A17·A18·tts.py 합침·클라우드 v0.2 포함). CI는 `mcp`를 설치한 뒤 `test_mcp.py`를 돌리므로, 이 PC에서 건너뛴 MCP 시험도 CI에서 통과.
 
 ### [A18-2] 팀장 확인 · 2026-10-06
 - 클라우드 v0.2와 A18이 같은 때 `tts.py`를 고쳐 병합 충돌 → 매니저가 v0.2 구조에 A18 안전장치(주소 검사·리디렉션 안 따라감)를 얹어 합침. 팀장 확인: 충돌 표시 0, `test_server`·`test_korean_numbers`·`test_connect` OK, `test_mcp`는 이 PC에 mcp 패키지가 없어 건너뜀 → **CI에서 확인**.
