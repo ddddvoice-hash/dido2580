@@ -365,5 +365,106 @@ class Core(unittest.TestCase):
         self.assertFalse(self.m.REMOTE)
 
 
+class R32(unittest.TestCase):
+    """R32-1~4: 정규화 조합 우회, 숫자 표기 변형, 삭제 실패 개수, 시간 초과 뒤 결과 재사용."""
+
+    def setUp(self):
+        from unittest import mock
+        import mcp_server as m
+        self.m = m
+        self.eng = types.SimpleNamespace(name="test", label="성우 김디도", mime="audio/wav")
+        self.patches = [mock.patch.object(m.pathlib.Path, "read_text", return_value=""),
+                        mock.patch.object(m, "BUILTIN_BLOCKED", ("시험", "abcd", "일 번")),
+                        mock.patch.object(m, "_audit"), mock.patch.object(m, "engine", return_value=self.eng),
+                        mock.patch.object(m, "LIMIT", types.SimpleNamespace(allow=lambda: True))]
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in reversed(self.patches):
+            p.stop()
+
+    def test_P_combinations_blocked(self):
+        from unittest import mock
+        import unicodedata as u
+        variants = ["시험", "시 험", u.normalize("NFD", "시험"), "시​험",
+                    "​".join(u.normalize("NFD", "시험")), "시͏험", "시️험", "시⃝험",
+                    "시ः험", "시\x00험", "시ㅤ험", "시.험", "ㅅㅣㅎㅓㅁ", "aBcD", "ＡＢＣＤ",
+                    "ㅅ.ㅣ​ㅎㅓ-ㅁ", "시​́험", "a​.b c-d"]
+        with mock.patch.object(self.m, "_synth_with_budget", return_value=None) as syn:
+            for s in variants:
+                syn.reset_mock()
+                out = self.m.speak_core(s, False)[0]
+                self.assertFalse(out["ok"], repr(s))
+                self.assertIsNone(out.get("status"), repr(s))
+                self.assertEqual(syn.call_count, 0, repr(s))
+            self.assertIsNone(self.m.check_policy("안녕하세요 좋은 아침이에요"))
+
+    def test_D_digit_variants_blocked(self):
+        from unittest import mock
+        with mock.patch.object(self.m, "_synth_with_budget", return_value=None) as syn:
+            for s in ["1번", "１번", "١번", "①번", "¹번", "一번"]:
+                syn.reset_mock()
+                out = self.m.speak_core(s, False)[0]
+                self.assertFalse(out["ok"], s)
+                self.assertIsNone(out.get("status"), s)
+                self.assertEqual(syn.call_count, 0, s)
+
+    def test_S_prune_keeps_count_when_delete_fails(self):
+        from unittest import mock
+        fs = [mock.Mock(), mock.Mock()]
+        out = mock.MagicMock()
+        out.glob.return_value = fs
+        for f in fs:
+            f.is_file.return_value = True
+            f.stat.return_value = types.SimpleNamespace(st_size=50, st_mtime=0)
+            f.unlink.side_effect = PermissionError("mock")
+        with mock.patch.object(self.m, "OUT_DIR", out), mock.patch.object(self.m, "MAX_OUT_FILES", 2),                 mock.patch.object(self.m, "MAX_OUT_BYTES", 100):
+            self.assertFalse(self.m._prune_out(101))
+            self.assertFalse(self.m._prune_out(1))
+            for f in fs:
+                f.stat.return_value = types.SimpleNamespace(st_size=1, st_mtime=0)
+            with mock.patch.object(self.m, "_synth_with_budget", return_value=(b"x", None)):
+                r = self.m.speak_core("안녕하세요", False)[0]
+            self.assertFalse(r["ok"])
+            self.assertEqual(out.__truediv__.return_value.write_bytes.call_count, 0)
+            for f in fs:  # 지우기가 되면 저장돼요
+                f.unlink.side_effect = None
+            self.assertTrue(self.m._prune_out(1))
+
+    def test_J_finished_result_is_reused(self):
+        import threading
+        from unittest import mock
+        release, entered, calls = threading.Event(), threading.Event(), []
+
+        def fake(e, s):
+            calls.append(s)
+            entered.set()
+            release.wait()
+            return b"x", None
+
+        with mock.patch.dict(os.environ, {"DIDO_MCP_BUDGET": "0"}),                 mock.patch.object(self.m, "synth_or_none", side_effect=fake),                 mock.patch.object(self.m, "_JOBS", {}), mock.patch.object(self.m, "_DONE", {}):
+            self.assertIsNone(self.m._synth_with_budget(self.eng, "첫째"))
+            self.assertTrue(entered.wait(2))
+            ts = [t for t, b in self.m._JOBS.values()]
+            release.set()
+            for t in ts:
+                t.join()
+            self.assertEqual(self.m._JOBS, {})
+            self.assertEqual(self.m._synth_with_budget(self.eng, "첫째"), (b"x", None))
+            self.assertEqual(calls, ["첫째"])  # 다시 만들지 않았어요
+            self.assertEqual(self.m._DONE, {})  # 한 번 돌려주면 비워요
+            # 시간 안에 끝나 이미 받은 결과는 보관하지 않아요
+            self.m.os.environ["DIDO_MCP_BUDGET"] = "5"
+            self.assertEqual(self.m._synth_with_budget(self.eng, "둘째"), (b"x", None))
+            self.assertEqual(self.m._DONE, {})
+            # 보관 상한·유효기간
+            for i in range(20):
+                self.m._DONE[str(i)] = (time.time(), (b"x", None))
+            self.m._DONE["old"] = (time.time() - 10 ** 6, (b"x", None))
+            self.m._synth_with_budget(self.eng, "셋째")
+            self.assertNotIn("old", self.m._DONE)
+
+
 if __name__ == "__main__":
     unittest.main()

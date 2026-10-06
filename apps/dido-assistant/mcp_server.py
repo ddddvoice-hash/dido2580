@@ -96,11 +96,87 @@ def engine():
 BUILTIN_BLOCKED = ("송금하지않으면", "납치했", "아들을납치", "당장입금", "투표해주세요", "지지해주세요", "보이스피싱")
 
 
+def _jamo_table() -> dict:
+    """한글 자모(첫·가운데·끝소리, 호환 자모)를 같은 호환 자모 글자로 맞추는 표(겹자모는 낱자로 풀어요)."""
+    vowels = {"WA": ["O", "A"], "WAE": ["O", "AE"], "OE": ["O", "I"], "WEO": ["U", "EO"],
+              "WE": ["U", "E"], "WI": ["U", "I"], "YI": ["EU", "I"]}
+    table = {}
+    for cp in list(range(0x1100, 0x1200)) + list(range(0x3131, 0x318F)):
+        try:
+            name = unicodedata.name(chr(cp))
+        except ValueError:
+            continue
+        for kind in ("CHOSEONG ", "JUNGSEONG ", "JONGSEONG ", "LETTER "):
+            if name.startswith("HANGUL " + kind):
+                key = name[len("HANGUL " + kind):]
+                break
+        else:
+            continue
+        if key in vowels:
+            parts = vowels[key]
+        elif key.startswith("SSANG"):
+            parts = [key[5:], key[5:]]
+        elif "-" in key:
+            parts = key.split("-")
+        else:
+            parts = [key]
+        letters = []
+        for part in parts:
+            try:
+                letters.append(unicodedata.lookup("HANGUL LETTER " + part))
+            except KeyError:
+                letters = None
+                break
+        if letters:
+            table[chr(cp)] = "".join(letters)
+    return table
+
+
+_JAMO = _jamo_table()
+_VOWEL_LETTERS = {chr(c) for c in range(0x314F, 0x3164)}
+_FILLERS = {"ᅟ", "ᅠ", "ㅤ", "ﾠ", "឴", "឵", "᠎"}
+
+
 def _fold(text: str) -> str:
-    """금지 문구 비교용으로 글을 같은 꼴로 맞춰요: NFKC(전각·호환 문자·한글 분해형), 소문자,
-    보이지 않는 글자(제로폭 등 Cf)와 모든 공백 제거."""
-    t = unicodedata.normalize("NFKC", text or "").casefold()
-    return "".join(ch for ch in t if not ch.isspace() and unicodedata.category(ch) != "Cf")
+    """금지 문구 비교용으로 글을 같은 꼴로 맞춰요. 순서와 상관없이 안정될 때까지 되풀이해요:
+    NFKC(전각·호환 문자·한글 분해형 합치기), 소문자, 공백·보이지 않는 글자·결합 표시·문장부호·기호·채움 글자 제거.
+    마지막에 한글을 자모로 풀어 같은 호환 자모로 맞춰요(분리·합친 글, 호환 자모가 모두 같아져요)."""
+    t = text or ""
+    for _ in range(8):
+        nxt = unicodedata.normalize("NFKC", t).casefold()
+        nxt = "".join(ch for ch in nxt if ch not in _FILLERS and unicodedata.category(ch)[0] not in "ZCMPS")
+        if nxt == t:
+            break
+        t = nxt
+    t = unicodedata.normalize("NFKD", t)
+    t = "".join(_JAMO.get(ch, ch) for ch in t)
+    # 소리 없는 첫소리 ㅇ은 모음 앞에서 빼요(음절 '아'와 낱자 'ㅏ'를 같게)
+    out = []
+    for i, ch in enumerate(t):
+        if ch == "ㅇ" and i + 1 < len(t) and t[i + 1] in _VOWEL_LETTERS:
+            continue
+        out.append(ch)
+    return "".join(out)
+
+
+_HANJA_DIGITS = {"〇": "0", "零": "0", "一": "1", "二": "2", "三": "3", "四": "4", "五": "5",
+                 "六": "6", "七": "7", "八": "8", "九": "9"}
+
+
+def _unify_digits(text: str, hanja: bool = False) -> str:
+    """숫자 표기(전각·아랍·①·¹ 등, hanja=True면 한자 낱자 숫자도)를 ASCII 숫자로 통일해요."""
+    out = []
+    for ch in text:
+        if hanja and ch in _HANJA_DIGITS:
+            out.append(_HANJA_DIGITS[ch])
+        elif ch.isascii():
+            out.append(ch)
+        elif unicodedata.category(ch) == "Nd":
+            out.append(str(unicodedata.digit(ch)))
+        else:
+            k = unicodedata.normalize("NFKC", ch)
+            out.append(k if k.isascii() and k.isdigit() else ch)
+    return "".join(out)
 
 
 def check_policy(text: str):
@@ -155,15 +231,21 @@ def _prune_out(incoming: int = 0) -> bool:
     except OSError:
         return False
     total = sum(p.stat().st_size for p in files)
-    while files and (len(files) >= MAX_OUT_FILES or total + incoming > MAX_OUT_BYTES):
-        old = files.pop(0)
+    count = len(files)
+    for old in files:  # 오래된 것부터. 못 지운 파일은 개수·용량에 그대로 남겨 둬요
+        if count < MAX_OUT_FILES and total + incoming <= MAX_OUT_BYTES:
+            break
         try:
             size = old.stat().st_size
             old.unlink()
-            total -= size
+        except FileNotFoundError:
+            count -= 1  # 이미 없어졌어요
+            continue
         except OSError:
-            pass
-    return len(files) < MAX_OUT_FILES and total + incoming <= MAX_OUT_BYTES
+            continue
+        count -= 1
+        total -= size
+    return count < MAX_OUT_FILES and total + incoming <= MAX_OUT_BYTES
 
 
 def _audit(spoken: str, ok: bool, eng_name: str, why: str = ""):
@@ -197,16 +279,25 @@ def _play(path: pathlib.Path) -> bool:
 BUSY = object()            # 동시 합성 상한을 넘어 새로 시작하지 않았다는 표시
 _JOBS: dict = {}           # 글 해시 -> (줄기, 결과 상자). 도는 중인 합성만 들어 있어요
 _JOBS_LOCK = threading.Lock()
+_DONE: dict = {}           # 글 해시 -> (끝난 시각, 결과). 시간 초과 뒤 끝난 결과(개수·유효기간 상한 있음)
+MAX_DONE = 8
+DONE_TTL = 600             # 초
 
 
 def _synth_with_budget(eng, spoken: str):
     """합성을 별도 줄기에서 돌려 시간 안에 안 끝나면 '준비 중'으로 답해요(AI 앱의 도구 제한 시간 대비).
-    줄기는 계속 돌아 결과를 저장해 두니, 같은 글로 다시 요청하면 바로 나와요.
+    줄기는 계속 돌아, 시간 초과 뒤 끝난 결과는 잠시(DONE_TTL초, 최대 MAX_DONE개) 보관해요.
+    같은 글로 다시 요청하면 보관한 결과를 한 번 돌려줘요.
     동시에 도는 합성은 MAX_SYNTH_JOBS개까지고, 같은 글이 이미 도는 중이면 그 줄기를 기다려요.
     상한을 넘으면 새로 시작하지 않고 BUSY를 돌려줘요."""
     budget = float(os.environ.get("DIDO_MCP_BUDGET", "45"))
     key = hashlib.sha256(spoken.encode("utf-8")).hexdigest()
     with _JOBS_LOCK:
+        now = time.time()
+        for k in [k for k, (t0, _) in _DONE.items() if now - t0 > DONE_TTL]:
+            _DONE.pop(k, None)
+        if key in _DONE:
+            return _DONE.pop(key)[1]
         job = _JOBS.get(key)
         if job is None:
             if len(_JOBS) >= MAX_SYNTH_JOBS:
@@ -219,13 +310,22 @@ def _synth_with_budget(eng, spoken: str):
                 finally:
                     with _JOBS_LOCK:
                         _JOBS.pop(key, None)
+                        r = box.get("r")
+                        if box.get("abandoned") and r and r[0]:
+                            _DONE[key] = (time.time(), r)
+                            while len(_DONE) > MAX_DONE:
+                                _DONE.pop(min(_DONE, key=lambda k: _DONE[k][0]), None)
 
             t = threading.Thread(target=work, daemon=True)
             job = _JOBS[key] = (t, box)
             t.start()
     t, box = job
     t.join(budget)
-    return box.get("r")  # None이면 아직 만드는 중
+    with _JOBS_LOCK:
+        if "r" in box:
+            return box["r"]
+        box["abandoned"] = True  # 끝나면 결과를 보관해 둬요
+    return None  # 아직 만드는 중
 
 
 def speak_core(text: str, play: bool = True, return_audio=None):
@@ -239,8 +339,9 @@ def speak_core(text: str, play: bool = True, return_audio=None):
         return {"ok": False, "error": why}, None, None
     if not LIMIT.allow():
         return {"ok": False, "error": "요청이 너무 잦아요. 잠시 뒤에 다시 해 주세요."}, None, None
-    spoken = normalize(text)
-    why = check_policy(spoken)  # 숫자를 풀어 읽은 뒤 생기는 문구도 막아요(원문·풀어 읽은 글 둘 다 검사)
+    spoken = normalize(_unify_digits(text))
+    # 숫자를 풀어 읽은 뒤 생기는 문구도 막아요(원문·풀어 읽은 글, 숫자 표기를 통일해 풀어 읽은 글 모두 검사)
+    why = check_policy(spoken) or check_policy(normalize(_unify_digits(text, hanja=True)))
     if why:
         _audit(spoken, False, "-", "policy")
         return {"ok": False, "error": why}, None, None
