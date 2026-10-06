@@ -74,6 +74,10 @@ TOOLS = [
 WEEKDAYS = "월화수목금토일"
 
 
+class ToolError(Exception):
+    """예상할 수 있는 도구 실패. 대화에는 안내로, 도구 결과에는 오류 표시로 남아요(R28-9)."""
+
+
 def now_kst() -> _dt.datetime:
     return _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=9)))
 
@@ -110,17 +114,23 @@ def tool_check_recordings(args: dict) -> str:
     sub = str(args.get("folder", "")).strip()
     target = (root / sub).resolve() if sub else root
     if root != target and root not in target.parents:
-        return "녹음 기본 폴더 밖은 검사하지 않아요."
+        raise ToolError("녹음 기본 폴더 밖은 검사하지 않아요.")
     if not target.is_dir():
-        return f"폴더를 찾지 못했어요: {target.name or target}"
+        raise ToolError(f"폴더를 찾지 못했어요: {target.name or target}")
+    # 폴더 안의 바로가기(링크)가 바깥을 가리키면 검사하지 않아요(R28-3)
+    for dirpath, dirnames, filenames in os.walk(target, followlinks=False):
+        for name in dirnames + filenames:
+            real = pathlib.Path(dirpath, name).resolve()
+            if real != root and root not in real.parents:
+                raise ToolError("녹음 폴더 안에 바깥을 가리키는 바로가기가 있어서 검사하지 않았어요.")
     checker = ROOT / "apps" / "voice-check" / "check.js"
     try:
         out = subprocess.run(["node", str(checker), str(target)], capture_output=True, text=True,
                              timeout=300, encoding="utf-8", errors="replace")
     except FileNotFoundError:
-        return "Node.js를 찾지 못해 녹음 검사기를 실행하지 못했어요."
+        raise ToolError("Node.js를 찾지 못해 녹음 검사기를 실행하지 못했어요.")
     except subprocess.TimeoutExpired:
-        return "녹음 검사가 5분 안에 끝나지 않았어요."
+        raise ToolError("녹음 검사가 5분 안에 끝나지 않았어요.")
     text = (out.stdout or "") + (out.stderr or "")
     tail = "\n".join(text.strip().splitlines()[-15:])
     return tail or "검사 결과가 비어 있어요."
@@ -142,8 +152,10 @@ def run_tool(name: str, args: dict) -> tuple[str, bool]:
         return "도구 입력이 올바르지 않아요.", True
     try:
         return fn(args), False
-    except Exception as e:  # 도구 하나의 실패가 대화를 멈추지 않게
-        return f"도구 실행 중 문제가 생겼어요: {e}", True
+    except ToolError as e:
+        return str(e), True
+    except Exception as e:  # 도구 하나의 실패가 대화를 멈추지 않게(원문에 비밀값이 섞일 수 있어 종류만)
+        return f"도구 실행 중 문제가 생겼어요({type(e).__name__}).", True
 
 
 # ---- 오프라인 모드 -----------------------------------------------------------
@@ -190,7 +202,10 @@ class Brain:
                 or pathlib.Path.home().joinpath(".config", "anthropic").exists()):
             return
         import anthropic
-        self.client = anthropic.Anthropic()
+        try:
+            self.client = anthropic.Anthropic()
+        except Exception:  # 자격 증명이 이상하면 오프라인으로 시작해요(R28-8)
+            return
         self.mode = "claude"
 
     def reply(self, text: str) -> dict:
@@ -227,7 +242,11 @@ class Brain:
                 for block in resp.content:
                     if block.type != "tool_use":
                         continue
-                    out, err = run_tool(block.name, block.input if isinstance(block.input, dict) else json.loads(block.input))
+                    try:
+                        args = block.input if isinstance(block.input, dict) else json.loads(block.input)
+                    except (TypeError, ValueError):
+                        args = None  # run_tool이 '입력이 올바르지 않아요'로 돌려줘요(R28-8)
+                    out, err = run_tool(block.name, args)
                     events.append({"tool": block.name, "result": out})
                     results.append({"type": "tool_result", "tool_use_id": block.id, "content": out, "is_error": err})
                 self.history.append({"role": "user", "content": results})
@@ -248,6 +267,10 @@ class Brain:
         except anthropic.APIStatusError as e:
             del self.history[start:]
             msg = f"AI 연결에 문제가 생겼어요({e.status_code}). 잠시 뒤에 다시 해 주세요."
+            return {"text": msg, "speak": msg, "events": events, "mode": self.mode}
+        except Exception as e:  # 그 밖의 문제도 대화 기록을 깨끗이 되돌려요(R28-8)
+            del self.history[start:]
+            msg = f"대답을 만들다 문제가 생겼어요({type(e).__name__}). 다시 말씀해 주세요."
             return {"text": msg, "speak": msg, "events": events, "mode": self.mode}
         return {"text": answer, "speak": normalize(answer), "events": events, "mode": self.mode}
 

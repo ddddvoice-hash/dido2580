@@ -17,16 +17,26 @@ FAKES = HERE / "tests" / "fakes"
 try:
     import anyio
     from mcp import StdioServerParameters
-    from mcp.client import Client
     HAVE_MCP = True
 except ImportError:
     HAVE_MCP = False
+if HAVE_MCP:
+    try:  # mcp 2.x
+        from mcp.client import Client
+    except ImportError:  # mcp 1.x
+        Client = None
+        from mcp import ClientSession
+        from mcp.client.stdio import stdio_client
 
 
 def run_session(env, steps):
     async def go():
         params = StdioServerParameters(command=sys.executable, args=[str(HERE / "mcp_server.py")], env=env)
-        async with Client(params) as c:
+        if Client is not None:
+            async with Client(params) as c:
+                return await steps(c)
+        async with stdio_client(params) as (r, w), ClientSession(r, w) as c:
+            await c.initialize()
             return await steps(c)
     return anyio.run(go)
 

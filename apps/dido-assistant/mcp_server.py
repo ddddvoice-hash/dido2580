@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import os
 import pathlib
 import sys
 
@@ -51,8 +52,11 @@ def _play(path: pathlib.Path) -> bool:
     """윈도우면 바로 틀어요. 다른 곳에서는 파일만 남겨요."""
     if sys.platform != "win32":
         return False
-    import winsound
-    winsound.PlaySound(str(path), winsound.SND_FILENAME | winsound.SND_ASYNC)
+    if path.suffix == ".wav":
+        import winsound
+        winsound.PlaySound(str(path), winsound.SND_FILENAME | winsound.SND_ASYNC)
+    else:
+        os.startfile(str(path))  # mp3는 기본 재생 프로그램으로
     return True
 
 
@@ -76,7 +80,8 @@ def speak_as_dido(text: str, play: bool = True) -> dict:
     if not audio:
         return {"ok": False, "spoken_text": spoken, "error": warn}
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = OUT_DIR / f"dido-{_dt.datetime.now():%Y%m%d-%H%M%S-%f}.wav"
+    ext = ".mp3" if getattr(eng, "mime", "") == "audio/mpeg" else ".wav"
+    path = OUT_DIR / f"dido-{_dt.datetime.now():%Y%m%d-%H%M%S-%f}{ext}"
     path.write_bytes(audio)
     played = _play(path) if play else False
     return {"ok": True, "spoken_text": spoken, "file": str(path), "played": played,

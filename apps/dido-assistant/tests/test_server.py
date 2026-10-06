@@ -103,6 +103,21 @@ class Offline(unittest.TestCase):
                 urllib.request.urlopen(f"http://127.0.0.1:{self.port}{p}")
             self.assertEqual(cm.exception.code, 404, p)
 
+    def test_other_websites_blocked(self):
+        """다른 웹페이지가 몰래 부르는 요청은 막아요(R28-1)."""
+        def raw(headers, body=b"{}"):
+            req = urllib.request.Request(f"http://127.0.0.1:{self.port}/api/reset", data=body, headers=headers)
+            try:
+                with urllib.request.urlopen(req) as r:
+                    return r.status
+            except urllib.error.HTTPError as e:
+                return e.code
+        self.assertEqual(raw({"Content-Type": "application/json", "Origin": "http://evil.example"}), 403)
+        self.assertEqual(raw({"Content-Type": "text/plain"}, b'{"text":"x"}'), 400)
+        self.assertEqual(raw({"Content-Type": "application/json", "Host": "evil.example"}), 403)
+        self.assertEqual(raw({"Content-Type": "application/json", "Content-Length": "abc"}), 400)
+        self.assertEqual(call(self.port, "/api/status")["service"], "seongwoo-kimdido-assistant")
+
     def test_ui_served(self):
         with urllib.request.urlopen(f"http://127.0.0.1:{self.port}/") as r:
             html = r.read().decode("utf-8")
@@ -140,14 +155,96 @@ class HttpVoice(unittest.TestCase):
             os.environ.pop("DIDO_TTS_URL", None)
 
 
+class Redirect(BaseHTTPRequestHandler):
+    def log_message(self, *a):
+        pass
+
+    def do_POST(self):
+        self.send_response(302)
+        self.send_header("Location", f"http://127.0.0.1:{FakeTTS_port[0]}/tts")
+        self.end_headers()
+
+
+FakeTTS_port = [0]
+
+
+class FakeEleven(BaseHTTPRequestHandler):
+    seen = []
+
+    def log_message(self, *a):
+        pass
+
+    def do_POST(self):
+        n = int(self.headers.get("Content-Length") or 0)
+        FakeEleven.seen.append((self.path, self.headers.get("xi-api-key"), json.loads(self.rfile.read(n))))
+        self.send_response(200)
+        self.send_header("Content-Type", "audio/mpeg")
+        self.end_headers()
+        self.wfile.write(b"ID3fake")
+
+
+class CloudVoice(unittest.TestCase):
+    def test_cloud_voice_engine(self):
+        """클라우드 맞춤 목소리(Q14 1순위): 키·목소리 ID만 있으면 자동 선택, 다듬은 글을 보내요."""
+        fake = serve(FakeEleven)
+        os.environ.update(ELEVENLABS_API_KEY="k", DIDO_ELEVEN_VOICE_ID="voice/1",
+                          DIDO_ELEVEN_API=f"http://127.0.0.1:{fake.server_address[1]}/v1/text-to-speech/")
+        try:
+            app = start_app()
+            r = call(app.server_address[1], "/api/speak", {"text": "오전 9시 30분"})
+            self.assertEqual(base64.b64decode(r["audio"]), b"ID3fake")
+            self.assertEqual(r["audio_type"], "audio/mpeg")
+            path, key, body = FakeEleven.seen[-1]
+            self.assertEqual((path, key), ("/v1/text-to-speech/voice%2F1", "k"))
+            self.assertEqual(body["text"], "오전 아홉 시 삼십 분")
+            app.shutdown()
+        finally:
+            fake.shutdown()
+            for k in ("ELEVENLABS_API_KEY", "DIDO_ELEVEN_VOICE_ID", "DIDO_ELEVEN_API"):
+                os.environ.pop(k, None)
+
+
+class VoiceSecurity(unittest.TestCase):
+    def test_token_not_sent_on_redirect(self):
+        """목소리 서버가 다른 곳으로 보내도 토큰을 따라 보내지 않아요(R28-2)."""
+        fake = serve(FakeTTS)
+        FakeTTS_port[0] = fake.server_address[1]
+        red = serve(Redirect)
+        FakeTTS.seen.clear()
+        os.environ["DIDO_TTS_TOKEN"] = "secret"
+        try:
+            from tts import HttpEngine, synth_or_none
+            audio, warn = synth_or_none(HttpEngine(f"http://127.0.0.1:{red.server_address[1]}/tts"), "x")
+            self.assertIsNone(audio)
+            self.assertEqual(FakeTTS.seen, [])
+            self.assertNotIn("secret", warn)
+        finally:
+            os.environ.pop("DIDO_TTS_TOKEN")
+            fake.shutdown(); red.shutdown()
+
+    def test_remote_http_url_refused(self):
+        from tts import make_engine
+        os.environ.update(DIDO_TTS="http", DIDO_TTS_URL="http://example.com/tts")
+        try:
+            self.assertEqual(make_engine().name, "browser")
+        finally:
+            os.environ.pop("DIDO_TTS"); os.environ.pop("DIDO_TTS_URL")
+
+
 class Tools(unittest.TestCase):
     def test_recordings_stay_inside_root(self):
-        from brain import tool_check_recordings
         with tempfile.TemporaryDirectory() as d:
             os.environ["DIDO_RECORDINGS"] = d
             try:
-                self.assertIn("밖은", tool_check_recordings({"folder": "../../etc"}))
-                self.assertIn("찾지 못했어요", tool_check_recordings({"folder": "없는폴더"}))
+                from brain import run_tool
+                out, err = run_tool("check_recordings", {"folder": "../../etc"})
+                self.assertTrue(err); self.assertIn("밖은", out)
+                out, err = run_tool("check_recordings", {"folder": "없는폴더"})
+                self.assertTrue(err); self.assertIn("찾지 못했어요", out)  # 실패는 오류로 표시(R28-9)
+                outside = tempfile.mkdtemp()
+                os.symlink(outside, os.path.join(d, "link"))
+                out, err = run_tool("check_recordings", {"folder": ""})
+                self.assertTrue(err); self.assertIn("바로가기", out)  # R28-3
             finally:
                 os.environ.pop("DIDO_RECORDINGS")
 

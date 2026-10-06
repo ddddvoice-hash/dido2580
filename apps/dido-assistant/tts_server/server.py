@@ -22,6 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 MODEL_ID = os.environ.get("DIDO_TTS_MODEL", "Qwen/Qwen3-TTS-12Hz-1.7B-Base")
 MAX_CHARS = 400
+MAX_BODY = 8_000  # 400자 글을 담기에 충분한 바이트
 _model = None
 
 
@@ -63,7 +64,12 @@ class Handler(BaseHTTPRequestHandler):
         token = os.environ.get("DIDO_TTS_TOKEN")
         if token and self.headers.get("Authorization") != f"Bearer {token}":
             return self._err(401, "접근 토큰이 맞지 않아요")
-        n = int(self.headers.get("Content-Length") or 0)
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return self._err(400, "길이 정보가 올바르지 않아요")
+        if n <= 0 or n > MAX_BODY:  # 읽기 전에 크기부터 막아요(R28-4)
+            return self._err(413, "보낸 내용이 비었거나 너무 커요")
         try:
             text = str(json.loads(self.rfile.read(n).decode("utf-8")).get("text", "")).strip()
         except (ValueError, UnicodeDecodeError, AttributeError):

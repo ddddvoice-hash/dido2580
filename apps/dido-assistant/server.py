@@ -23,6 +23,7 @@ from korean_numbers import normalize  # noqa: E402
 from tts import make_engine, synth_or_none  # noqa: E402
 
 MAX_BODY = 200_000  # 대본도 받을 수 있게 200KB까지
+SERVICE = "seongwoo-kimdido-assistant"
 
 
 class State:
@@ -54,8 +55,24 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _allowed(self) -> bool:
+        """이 컴퓨터의 비서 화면에서 온 요청만 받아요(다른 웹페이지가 몰래 부르는 것을 막음, R28-1)."""
+        port = self.server.server_address[1]
+        hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
+        if self.headers.get("Host") not in hosts:
+            return False
+        origin = self.headers.get("Origin")
+        if origin and origin not in {f"http://{h}" for h in hosts}:
+            return False
+        return True
+
     def _body(self) -> dict | None:
-        n = int(self.headers.get("Content-Length") or 0)
+        if (self.headers.get("Content-Type") or "").split(";")[0].strip() != "application/json":
+            return None
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return None
         if n <= 0 or n > MAX_BODY:
             return None
         try:
@@ -65,9 +82,11 @@ class Handler(SimpleHTTPRequestHandler):
         return obj if isinstance(obj, dict) else None
 
     def do_GET(self):
+        if not self._allowed():
+            return self._json(403, {"error": "이 컴퓨터의 비서 화면에서만 쓸 수 있어요"})
         if self.path == "/api/status":
             s = STATE
-            return self._json(200, {"mode": s.brain.mode, "engine": s.engine.name,
+            return self._json(200, {"service": SERVICE, "mode": s.brain.mode, "engine": s.engine.name,
                                     "engine_label": s.engine.label, "greeting": GREETING})
         if self.path in ("/", ""):
             self.path = "/index.html"
@@ -76,6 +95,8 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
+        if not self._allowed():
+            return self._json(403, {"error": "이 컴퓨터의 비서 화면에서만 쓸 수 있어요"})
         body = self._body()
         if body is None:
             return self._json(400, {"error": "보낸 내용을 읽지 못했어요"})
@@ -97,6 +118,7 @@ class Handler(SimpleHTTPRequestHandler):
             audio, warn = synth_or_none(s.engine, out["speak"])
             if audio:
                 out["audio"] = base64.b64encode(audio).decode("ascii")
+                out["audio_type"] = s.engine.mime
             if warn:
                 out["note"] = warn
             out["engine"] = s.engine.name
@@ -106,6 +128,7 @@ class Handler(SimpleHTTPRequestHandler):
             out = {"speak": normalize(text), "engine": s.engine.name}
             if audio:
                 out["audio"] = base64.b64encode(audio).decode("ascii")
+                out["audio_type"] = s.engine.mime
             if warn:
                 out["note"] = warn
             return self._json(200, out)
@@ -118,7 +141,11 @@ def main(argv=None):
     ap.add_argument("--port", type=int, default=8770)
     args = ap.parse_args(argv)
     STATE = State()
-    srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    try:
+        srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    except OSError:
+        print(f"[포트 사용 중] {args.port}번 포트를 다른 프로그램이 쓰고 있어요. 그 프로그램을 닫거나 --port로 다른 번호를 주세요.")
+        raise SystemExit(2)
     print(f"성우 김디도 AI 비서: http://127.0.0.1:{args.port}  (생각: {STATE.brain.mode}, 목소리: {STATE.engine.label})")
     print("이 창을 닫으면 비서도 꺼져요.")
     try:
