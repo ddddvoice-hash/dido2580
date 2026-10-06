@@ -135,6 +135,13 @@ jobs:
           node tests/sensitive.browser.js
           node tests/testonly.browser.js
           NODE_PATH="$PWD/node_modules" node ../../docs/beta/tests/beta.browser.js
+      - name: AI 비서 화면(오프라인 모드)
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+        run: |
+          (cd ../dido-assistant && DIDO_OFFLINE=1 python3 server.py --port 8770 > /tmp/assistant.log 2>&1 &)
+          for i in $(seq 1 30); do curl -fsS -o /dev/null http://127.0.0.1:8770/api/status && break; sleep 1; done
+          NODE_PATH="$PWD/node_modules" node ../dido-assistant/tests/assistant.browser.js
       - name: 평가 묶음 파일이 만드는 스크립트 결과와 같은지
         run: |
           python3 ../../docs/eval/packs/build_packs.py
