@@ -1,0 +1,91 @@
+<title>성우 김디도 링크 모음</title>
+<style>
+/* 레이아웃: 한 줄 머리말 아래, 누구를 위한 링크인지로 두 묶음(참여하는 분 / 둘러보는 분). 소개 페이지와 같은 색 토큰. */
+:root {
+  --bg: #f3f6f5; --paper: #ffffff; --ink: #142b30; --muted: #4c6168; --line: #d4dfdd;
+  --accent: #176b67; --accent-soft: #e0f0ed; --sun: #8a5300; --sun-soft: #fbf0dc; --focus: #1f5fbf;
+  --serif: "Batang", "Noto Serif KR", "AppleMyungjo", serif;
+  --sans: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e191c; --paper: #15252a; --ink: #e7f0f1; --muted: #a7bbc0; --line: #2a4047;
+    --accent: #5cc7b9; --accent-soft: #143633; --sun: #f0c06b; --sun-soft: #3a2c16; --focus: #8fb7ff; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e191c; --paper: #15252a; --ink: #e7f0f1; --muted: #a7bbc0; --line: #2a4047;
+  --accent: #5cc7b9; --accent-soft: #143633; --sun: #f0c06b; --sun-soft: #3a2c16; --focus: #8fb7ff; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); margin: 0; font: 400 16px/1.65 var(--sans); }
+.wrap { max-width: 860px; margin: 0 auto; padding-inline: 16px; padding-block: 36px 64px; display: grid; gap: 32px; }
+.wrap > * { min-width: 0; }
+h1, h2 { font-family: var(--serif); font-weight: 700; margin: 0; line-height: 1.3; text-wrap: balance; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.3rem); }
+h2 { font-size: 1.2rem; }
+p { margin: 0; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.eyebrow { font-size: .82rem; letter-spacing: .1em; color: var(--muted); display: flex; gap: 10px; align-items: center; }
+.eyebrow svg { width: 32px; height: 32px; flex: none; }
+.lead { color: var(--muted); max-width: 60ch; }
+section { display: grid; gap: 12px; }
+.cards { display: grid; gap: 12px; }
+a.card { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: center; text-decoration: none; color: var(--ink); background: var(--paper); border: 2px solid var(--line); border-radius: 14px; padding: 16px 18px; min-height: 48px; }
+a.card:hover { border-color: var(--accent); }
+a.card.main { border-color: var(--accent); background: var(--accent-soft); }
+a.card > * { min-width: 0; }
+.name { font-weight: 700; font-size: 1.08rem; }
+.desc { grid-column: 1; color: var(--muted); font-size: .95rem; }
+.go { grid-row: 1 / span 2; grid-column: 2; color: var(--accent); font-weight: 700; white-space: nowrap; }
+.tag { display: inline-block; font-size: .8rem; padding: 0 8px; border-radius: 999px; background: var(--sun-soft); color: var(--sun); margin-left: 6px; vertical-align: 2px; font-weight: 400; }
+.note { font-size: .9rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 6px; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:12px">
+    <div class="eyebrow">
+      <svg viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="56" fill="#176b67"/><path d="M58 92a60 60 0 0 0 0 88" fill="none" stroke="#f2b632" stroke-width="14" stroke-linecap="round"/><path d="M198 92a60 60 0 0 1 0 88" fill="none" stroke="#f2b632" stroke-width="14" stroke-linecap="round"/><rect x="98" y="40" width="60" height="112" rx="30" fill="#ffffff"/><path d="M78 128a50 50 0 0 0 100 0" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/><path d="M128 178v30M98 214h60" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/></svg>
+      <span>성우 김디도 · 따뜻한 AI 목소리 평가 키트</span>
+    </div>
+    <h1>성우 김디도 링크 모음</h1>
+    <p class="lead">한국어 AI 답변이 정말 따뜻한지, 사람이 같은 기준표로 채점하고 판단이 갈리는 곳을 찾아 기준을 다듬는 평가 키트예요. 필요한 링크 하나만 골라 여시면 돼요.</p>
+  </header>
+
+  <section aria-labelledby="h-join">
+    <h2 id="h-join">참여해 주시는 분</h2>
+    <div class="cards">
+      <a class="card main" href="https://claude.ai/artifact/QwR41yrRWr9vt81jvSFKCF">
+        <span class="name">따뜻함 채점 베타<span class="tag">베타 v0.1</span></span>
+        <span class="go">열기 →</span>
+        <span class="desc">AI 답변 28개를 기준표로 채점하고 헷갈린 점을 남겨요. 1시간 30분~2시간(추측), 나눠서 해도 돼요. 평가자 코드는 성우 김디도에게 받아요.</span>
+      </a>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-look">
+    <h2 id="h-look">둘러보시는 분</h2>
+    <div class="cards">
+      <a class="card" href="https://claude.ai/artifact/YPtGriGSp9ZNDP2KHxuFcf">
+        <span class="name">성우 김디도 평가 키트</span>
+        <span class="go">열기 →</span>
+        <span class="desc">키트 소개. 다정해 보이는 답이 왜 0점인지 예시 채점부터, 된 것과 남은 것까지.</span>
+      </a>
+      <a class="card" href="https://claude.ai/artifact/2i36rhLE3Lt1ZkEiwZmgAZ">
+        <span class="name">AI 답변의 따뜻함 평가 기준표</span>
+        <span class="go">열기 →</span>
+        <span class="desc">기준 다섯 개(알아차림·정확함·존중·절제·다음 걸음)와 감점 신호 여덟 개, v1.0.</span>
+      </a>
+      <a class="card" href="https://claude.ai/artifact/LhVBtrcTYe8Wd1KNYBifRN">
+        <span class="name">성우 김디도 포트폴리오</span>
+        <span class="go">열기 →</span>
+        <span class="desc">17년 경력 성우 김디도의 작업 모음.</span>
+      </a>
+    </div>
+  </section>
+
+  <div class="note">
+    <p>링크가 열리지 않으면 성우 김디도에게 열람을 요청해 주세요. 평가 기록에는 이름 대신 평가자 코드만 남아요.</p>
+    <p>답변 예시는 GPT가 쓴 것이며 실제 서비스 답변이 아니에요. 힘든 마음이 들면 109 자살예방상담전화, 긴급하면 112·119.</p>
+  </div>
+</div>

@@ -134,12 +134,14 @@ footer { color: var(--muted); font-size: .88rem; display: grid; gap: 6px; }
           <li>평가자 일치도 계산: 같은 점수 비율과 크리펜도르프 α(서열). 교과서 예시 0.815 재현, 공개 패키지와 무작위 300묶음 대조(<a href="__GH__/apps/warmth-scorer/tests/alpha_crosscheck.py">재현 스크립트</a>)</li>
           <li>평가용 한국어 상황 문항 초안 __N__개(승인 전)</li>
           <li>독립 채점 절차: 조정용 10개와 최종 20개를 미리 나눔(<a href="__GH__/docs/eval/calibration.md">절차</a>)</li>
+          <li>조정용 묶음 답변 28개: 겉모양 단서로 의도를 맞힐 수 없는지 자동 검사(180조합) 통과, 위기 문항은 본문을 접어 두고 먼저 묻기</li>
+          <li>일치도의 95% 구간: 같은 상황의 답변을 묶어 다시 뽑는 방식, 계산할 수 없을 때는 이유를 표시</li>
+          <li><a href="https://claude.ai/artifact/QwR41yrRWr9vt81jvSFKCF">채점 베타테스트</a> 열림(2026-10-06): 참여 결과는 아직 없음</li>
         </ul>
       </section>
       <section class="todo" aria-labelledby="h-todo"><h3 id="h-todo">남은 것</h3>
         <ul>
           <li>두 번째 평가자와 독립 채점, 항목별 결과와 갈린 사례 공개</li>
-          <li>상황 단위로 묶은 신뢰구간 계산</li>
           <li>같은 상담 문장을 두 방식으로 읽은 녹음 비교(사례 비교이며 일반화하지 않음)</li>
           <li>기준표 v1.1 검토(제안서 있음, 결정은 성우 김디도)</li>
         </ul>
