@@ -10,7 +10,7 @@ const W = require('../../../apps/warmth-scorer/app.js');
 const rubric = require('../../../apps/warmth-scorer/rubric.json');
 const pack = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../docs/eval/packs/calibration-v0.json'), 'utf8'));
 const calib = fs.readFileSync(path.join(__dirname, '../../../docs/eval/calibration.md'), 'utf8').replace(/\r\n/g, '\n');
-const URL_ = 'file:///' + path.join(__dirname, '../index.html').replace(/\\/g, '/');
+const URL_ = require('url').pathToFileURL(path.join(__dirname, '../index.html')).href;
 const section = calib.slice(calib.indexOf('## 위기 문항을 채점할 때'));
 const QUOTE = section.split('\n').find((l) => /^\s*> "/.test(l)).replace(/^\s*> "/, '').replace(/"\s*$/, '');
 const sItem = pack.items.find((i) => i.sensitive);
