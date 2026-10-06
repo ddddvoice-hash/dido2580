@@ -105,45 +105,78 @@ def recordings_root() -> pathlib.Path:
     return pathlib.Path(os.environ.get("DIDO_RECORDINGS", str(default))).resolve()
 
 
-def tool_check_recordings(args: dict) -> str:
+MAX_SCAN_ENTRIES = 20_000
+
+
+def _has_link(root: pathlib.Path, target: pathlib.Path) -> bool:
+    """폴더 안에 링크(심볼릭 링크·정션)가 있거나 너무 많으면 True. 링크는 따라가지 않고 거절해요."""
+    count = 0
+    for dirpath, dirnames, filenames in os.walk(target, followlinks=False):
+        real_dir = os.path.realpath(dirpath)
+        for name in dirnames + filenames:
+            count += 1
+            if count > MAX_SCAN_ENTRIES:
+                return True
+            if os.path.realpath(os.path.join(dirpath, name)) != os.path.join(real_dir, name):
+                return True
+    return False
+
+
+def tool_check_recordings_ex(args: dict) -> tuple[str, bool]:
+    """(결과 글, 실패 여부). 예상할 수 있는 실패도 실패로 알려요."""
     root = recordings_root()
     sub = str(args.get("folder", "")).strip()
     target = (root / sub).resolve() if sub else root
     if root != target and root not in target.parents:
-        return "녹음 기본 폴더 밖은 검사하지 않아요."
+        return "녹음 기본 폴더 밖은 검사하지 않아요.", True
     if not target.is_dir():
-        return f"폴더를 찾지 못했어요: {target.name or target}"
+        return f"폴더를 찾지 못했어요: {target.name or target}", True
+    if _has_link(root, target):
+        return "폴더 안에 바로가기(링크)가 있거나 파일이 너무 많아 검사하지 않아요.", True
     checker = ROOT / "apps" / "voice-check" / "check.js"
     try:
         out = subprocess.run(["node", str(checker), str(target)], capture_output=True, text=True,
                              timeout=300, encoding="utf-8", errors="replace")
     except FileNotFoundError:
-        return "Node.js를 찾지 못해 녹음 검사기를 실행하지 못했어요."
+        return "Node.js를 찾지 못해 녹음 검사기를 실행하지 못했어요.", True
     except subprocess.TimeoutExpired:
-        return "녹음 검사가 5분 안에 끝나지 않았어요."
+        return "녹음 검사가 5분 안에 끝나지 않았어요.", True
     text = (out.stdout or "") + (out.stderr or "")
     tail = "\n".join(text.strip().splitlines()[-15:])
-    return tail or "검사 결과가 비어 있어요."
+    # 검사기는 반려 파일이 있으면 1, 실행 오류면 2 등을 돌려줘요. 0·1은 검사가 끝난 것.
+    return tail or "검사 결과가 비어 있어요.", out.returncode not in (0, 1) or not tail
+
+
+def tool_check_recordings(args: dict) -> str:
+    return tool_check_recordings_ex(args)[0]
 
 
 HANDLERS = {
     "get_datetime": tool_get_datetime,
     "read_numbers": tool_read_numbers,
     "check_script": tool_check_script,
-    "check_recordings": tool_check_recordings,
+    "check_recordings": tool_check_recordings_ex,  # (글, 실패 여부)를 돌려줘요
 }
 
 
-def run_tool(name: str, args: dict) -> tuple[str, bool]:
+def run_tool(name: str, args) -> tuple[str, bool]:
     fn = HANDLERS.get(name)
     if fn is None:
         return f"알 수 없는 도구: {name}", True
+    if isinstance(args, str):  # 입력이 JSON 글로 올 수 있어요. 깨졌으면 실패로 알려요.
+        try:
+            args = json.loads(args)
+        except ValueError:
+            return "도구 입력을 읽지 못했어요.", True
     if not isinstance(args, dict):
         return "도구 입력이 올바르지 않아요.", True
     try:
-        return fn(args), False
-    except Exception as e:  # 도구 하나의 실패가 대화를 멈추지 않게
-        return f"도구 실행 중 문제가 생겼어요: {e}", True
+        res = fn(args)
+    except Exception as e:  # 도구 하나의 실패가 대화를 멈추지 않게. 예외 글은 비밀이 샐 수 있어 종류만 알려요.
+        return f"도구 실행 중 문제가 생겼어요({type(e).__name__}).", True
+    if isinstance(res, tuple):
+        return res[0], bool(res[1])
+    return res, False
 
 
 # ---- 오프라인 모드 -----------------------------------------------------------
@@ -189,8 +222,12 @@ class Brain:
         if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
                 or pathlib.Path.home().joinpath(".config", "anthropic").exists()):
             return
-        import anthropic
-        self.client = anthropic.Anthropic()
+        try:
+            import anthropic
+            self.client = anthropic.Anthropic()
+        except Exception:  # 연결 정보가 이상해도 켜지게: 오프라인으로
+            self.client = None
+            return
         self.mode = "claude"
 
     def reply(self, text: str) -> dict:
@@ -227,7 +264,7 @@ class Brain:
                 for block in resp.content:
                     if block.type != "tool_use":
                         continue
-                    out, err = run_tool(block.name, block.input if isinstance(block.input, dict) else json.loads(block.input))
+                    out, err = run_tool(block.name, block.input)
                     events.append({"tool": block.name, "result": out})
                     results.append({"type": "tool_result", "tool_use_id": block.id, "content": out, "is_error": err})
                 self.history.append({"role": "user", "content": results})
@@ -248,6 +285,10 @@ class Brain:
         except anthropic.APIStatusError as e:
             del self.history[start:]
             msg = f"AI 연결에 문제가 생겼어요({e.status_code}). 잠시 뒤에 다시 해 주세요."
+            return {"text": msg, "speak": msg, "events": events, "mode": self.mode}
+        except Exception:  # 예상 못 한 문제도 반쯤 남은 기록 없이 정리하고 알려요
+            del self.history[start:]
+            msg = "대답을 만드는 중에 문제가 생겼어요. 다시 말씀해 주세요."
             return {"text": msg, "speak": msg, "events": events, "mode": self.mode}
         return {"text": answer, "speak": normalize(answer), "events": events, "mode": self.mode}
 

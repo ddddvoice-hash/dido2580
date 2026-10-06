@@ -51,6 +51,29 @@ class Numbers(unittest.TestCase):
     def test_native(self):
         self.assertEqual([native(n) for n in (1, 3, 20, 21, 30, 99)], ["한", "세", "스무", "스물한", "서른", "아흔아홉"])
 
+    # --- R28 지적 5·6·7: 예외 없이, 값은 그대로 ---
+    def test_hyphen_and_date_do_not_raise(self):  # R28-5
+        self.assertEqual(normalize("시험 번호는 12-12예요."), "시험 번호는 일이, 일이예요.")
+        out = normalize("날짜는 2026-10-06이에요.")  # 번호처럼 한 자리씩 읽고, 숫자는 남기지 않아요
+        self.assertFalse(any(c.isdigit() for c in out), out)
+
+    def test_too_big_keeps_original(self):  # R28-5: 지원 범위를 넘으면 원문을 남겨요
+        self.assertEqual(normalize("10000000000000000원이에요."), "10000000000000000원이에요.")
+        self.assertEqual(normalize("9" * 5000 + "개"), "9" * 5000 + "개")
+        self.assertEqual(normalize("3시, 10000000000000000원"), "세 시, 10000000000000000원")
+
+    def test_comma_decimal(self):  # R28-6
+        self.assertEqual(normalize("1,234.56원이에요."), "천이백삼십사 점 오 육 원이에요.")
+        self.assertEqual(normalize("1,234,567.5%"), "백이십삼만 사천오백육십칠 점 오 퍼센트")
+
+    def test_comma_list_is_not_one_number(self):  # 쉼표가 3자리 묶음이 아니면 따로 읽어요
+        self.assertEqual(normalize("1,2,3"), "일,이,삼")
+
+    def test_ordinal(self):  # R28-7
+        self.assertEqual(normalize("1번째예요."), "첫 번째예요.")
+        self.assertEqual(normalize("2번째, 3번째, 11번째, 20번째, 21번째"),
+                         "두 번째, 세 번째, 열한 번째, 스무 번째, 스물한 번째")
+
     def test_no_digits_left(self):
         for src, _ in CASES:
             self.assertFalse(any(c.isdigit() for c in normalize(src)), src)

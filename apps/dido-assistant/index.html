@@ -67,6 +67,8 @@ textarea { min-height: 140px; resize: vertical; }
     <button class="tab" role="tab" id="t-num" aria-selected="false" aria-controls="p-num">숫자 읽기</button>
   </div>
 
+  <p class="say" id="say" role="status" aria-live="polite"></p>
+
   <section class="panel" role="tabpanel" id="p-chat" aria-labelledby="t-chat">
     <div class="log" id="log" aria-live="polite"></div>
     <div class="row">
@@ -75,7 +77,7 @@ textarea { min-height: 140px; resize: vertical; }
       <button class="btn" id="mic" type="button" aria-pressed="false">말로 하기</button>
       <button class="btn primary" id="send" type="button">보내기</button>
     </div>
-    <div class="row"><button class="btn" id="again" type="button">다시 듣기</button><button class="btn" id="stop" type="button">멈추기</button><button class="btn" id="reset" type="button">새 대화</button><span class="say" id="say" role="status"></span></div>
+    <div class="row"><button class="btn" id="again" type="button">다시 듣기</button><button class="btn" id="stop" type="button">멈추기</button><button class="btn" id="reset" type="button">새 대화</button></div>
     <p class="keys">왼손 단축키: <span class="kbd">Alt+Q</span> 말로 하기 · <span class="kbd">Alt+W</span> 다시 듣기 · <span class="kbd">Esc</span> 멈추기 · <span class="kbd">Enter</span> 보내기</p>
   </section>
 
@@ -99,9 +101,10 @@ textarea { min-height: 140px; resize: vertical; }
   var $ = function (id) { return document.getElementById(id); };
   var lastSpeak = '', lastAudio = null, audioEl = null;
 
+  var NET_FAIL = '비서 서버에 닿지 못했어요. 비서 창이 켜져 있는지 확인해 주세요.';
   function post(path, body) {
     return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      .then(function (r) { return r.json(); });
+      .then(function (r) { return r.json().catch(function () { return { error: '비서의 대답을 읽지 못했어요.' }; }); });
   }
 
   // ---- 소리 내기: 서버가 WAV를 주면 그것, 아니면 브라우저 한국어 합성음 ----
@@ -134,34 +137,56 @@ textarea { min-height: 140px; resize: vertical; }
     if (extra && extra.events && extra.events.length) { var t = document.createElement('span'); t.className = 'tools'; t.textContent = '쓴 도구: ' + extra.events.map(function (e) { return e.tool; }).join(', '); d.appendChild(t); }
     $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight;
   }
+  var gen = 0, resetting = false;  // 새 대화를 누르면 gen이 올라가 이전 대답은 버려요
   function send(text) {
     text = (text || '').trim(); if (!text) return;
+    if (resetting) { $('say').textContent = '새 대화를 준비하는 중이에요. 잠시 뒤에 다시 보내 주세요.'; return; }
+    var mine = gen;
     add('me', text); $('q').value = ''; $('say').textContent = '생각하는 중…';
     post('/api/chat', { text: text }).then(function (r) {
+      if (mine !== gen) return;
       $('say').textContent = r.note || '';
       if (r.error) { $('say').textContent = r.error; return; }
       add('ai', r.text, r); speak(r.speak, r.audio);
       if (r.mode) setMode(r.mode);
-    }).catch(function () { $('say').textContent = '비서 서버에 닿지 못했어요. 비서 창이 켜져 있는지 확인해 주세요.'; });
+    }).catch(function () { if (mine === gen) $('say').textContent = NET_FAIL; });
   }
   $('send').addEventListener('click', function () { send($('q').value); });
   $('q').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); send($('q').value); } });
   $('again').addEventListener('click', function () { speak(lastSpeak, lastAudio); });
   $('stop').addEventListener('click', stop);
-  $('reset').addEventListener('click', function () { post('/api/reset', { text: 'x' }); $('log').textContent = ''; greet(); });
+  $('reset').addEventListener('click', function () {
+    if (resetting) return;
+    gen++; resetting = true; stop(); cancelListen(); lastSpeak = ''; lastAudio = null;
+    $('say').textContent = '새 대화를 준비하는 중…';
+    post('/api/reset', { text: 'x' }).then(function (r) {
+      if (r.error) { $('say').textContent = r.error; return; }
+      $('log').textContent = ''; $('say').textContent = ''; greet();
+    }).catch(function () { $('say').textContent = NET_FAIL; })
+      .then(function () { resetting = false; });
+  });
 
   // ---- 말로 하기(브라우저 음성 인식, 엣지·크롬) ----
-  var Rec = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null;
+  var Rec = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null, cancelled = false;
+  // Esc·새 대화: 듣던 것을 끊고, 이미 들린 글을 자동으로 보내지 않아요.
+  function cancelListen() {
+    if (!rec) return false;
+    cancelled = true;
+    try { rec.abort(); } catch (e) { try { rec.stop(); } catch (e2) { /* 이미 끝남 */ } }
+    return true;
+  }
   if (!Rec) { $('mic').disabled = true; $('mic').title = '이 브라우저는 음성 인식을 지원하지 않아요(엣지·크롬에서 돼요)'; }
   function listen() {
     if (!Rec) return;
     if (rec) { rec.stop(); return; }
-    stop();
+    stop(); cancelled = false;
     rec = new Rec(); rec.lang = 'ko-KR'; rec.interimResults = true;
     $('mic').classList.add('listening'); $('mic').setAttribute('aria-pressed', 'true'); $('mic').textContent = '듣는 중… (다시 누르면 끝)';
     rec.onresult = function (e) { var t = ''; for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript; $('q').value = t; };
     rec.onerror = function (e) { $('say').textContent = e.error === 'not-allowed' ? '마이크 사용을 허락해 주세요.' : '잘 듣지 못했어요. 다시 해 주세요.'; };
-    rec.onend = function () { rec = null; $('mic').classList.remove('listening'); $('mic').setAttribute('aria-pressed', 'false'); $('mic').textContent = '말로 하기'; if ($('q').value.trim()) send($('q').value); };
+    rec.onend = function () { rec = null; $('mic').classList.remove('listening'); $('mic').setAttribute('aria-pressed', 'false'); $('mic').textContent = '말로 하기';
+      if (cancelled) { cancelled = false; $('say').textContent = '듣기를 멈췄어요. 보내려면 Enter를 눌러 주세요.'; return; }
+      if ($('q').value.trim()) send($('q').value); };
     rec.start();
   }
   $('mic').addEventListener('click', listen);
@@ -169,7 +194,7 @@ textarea { min-height: 140px; resize: vertical; }
   document.addEventListener('keydown', function (e) {
     if (e.altKey && (e.key === 'q' || e.key === 'Q' || e.code === 'KeyQ')) { e.preventDefault(); listen(); }
     else if (e.altKey && (e.key === 'w' || e.key === 'W' || e.code === 'KeyW')) { e.preventDefault(); speak(lastSpeak, lastAudio); }
-    else if (e.key === 'Escape') stop();
+    else if (e.key === 'Escape') { stop(); cancelListen(); }
   });
 
   // ---- 탭 ----
@@ -187,11 +212,18 @@ textarea { min-height: 140px; resize: vertical; }
   // ---- 대본 점검·숫자 읽기 ----
   $('script-go').addEventListener('click', function () {
     var t = $('script').value.trim(); if (!t) return;
-    post('/api/script', { text: t }).then(function (r) { $('script-out').textContent = r.result || r.error; });
+    post('/api/script', { text: t }).then(function (r) {
+      $('script-out').textContent = r.result || r.error || '';
+      if (r.error) $('say').textContent = r.error;
+    }).catch(function () { $('say').textContent = NET_FAIL; });
   });
   $('num-go').addEventListener('click', function () {
     var t = $('num').value.trim(); if (!t) return;
-    post('/api/speak', { text: t }).then(function (r) { $('num-out').textContent = r.speak; speak(r.speak, r.audio); if (r.note) $('say').textContent = r.note; });
+    post('/api/speak', { text: t }).then(function (r) {
+      if (r.error) { $('say').textContent = r.error; return; }
+      $('say').textContent = r.note || '';
+      $('num-out').textContent = r.speak; speak(r.speak, r.audio);
+    }).catch(function () { $('say').textContent = NET_FAIL; });
   });
   $('num').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) $('num-go').click(); });
 
