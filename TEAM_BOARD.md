@@ -207,10 +207,13 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 
 | 번호 | 담당 | 업무 | 결과 파일 | 완료 조건 | 상태 |
 |---|---|---|---|---|---|
-| R18 | GPT(아스트라) | 클라우드가 G10·Q9를 옮긴 결과 비판: `docs/eval/calibration.md`의 '준비'(평가자 코드)·'순서'(28·56)·'위기 문항을 채점할 때'가 G10·Q9 원안에서 빠뜨리거나 바꾼 것, 근거표 v3.1 `docs/eval/voice-evidence.md`의 R17 반영(특히 여백 '1초로 시작 + 예비 녹음'이 맞는지, B05 처리), 채점기 입력칸 변경(`apps/warmth-scorer/index.html` 79~81줄) | `docs/gpt/R18-review.md` | 지적마다 파일:줄 | 대기 |
-| G12 | GPT(아스트라) | 두 번째 평가자 **안내문 + 참여 동의서 초안**(Q9-5·7·8·9·10 후속): 실제 분량(조정용 10문항·28답, 최종 20문항·56답), 순서, 위기 문항 안내, 건너뛰기·중단, 보상 칸(금액은 빈칸), 기록 항목·보관·공개 범위 선택(집계만/인용 허용), 철회 방법. 법률 요건은 '확인 필요'로 표시. 사람·회사 이름 없이 | `docs/gpt/G12-rater-consent.md` | 그대로 출력해 쓸 수 있는 문안 + 칸마다 근거 파일 | 대기 |
-| Q10 | GPT(아스트라) | ① 여백 규칙을 실제 목소리로 정하는 **예비 녹음** 설계: 문장 몇 개·길이·여백 조건 몇 가지, 무엇을 보면 규칙을 확정하는지(`analysis.js` 검출 기준 기준) ② B05 원고의 "바로 연결할 수 있어요"를 실제 연결 기능 없이도 정확한 문장으로 바꾼 **대안 2개**(안전 확인 질문을 넣는 안과 번호 안내만 하는 안), 대표가 고를 수 있게 장단점 | `docs/gpt/Q10-answer.md` | 항목마다 이유, 추측 표시 | 대기 |
-| A10 | 매니저 | G10 후속 화면 기능: `docs/eval/packs/build_packs.py`가 위기 문항에 `sensitive: true`를 넣고(묶음 다시 만들기, `cue_check.py --strict` 통과 유지), 따뜻함 채점기는 그런 문항을 고르면 **본문을 접은 채** 안내 문구와 [읽기]/[건너뛰기] 버튼만 보여 줌(키보드로 가능). 건너뛰면 점수 없이 결측으로 남고 일치도 계산에서 빠짐. 안내 문구는 `calibration.md` '위기 문항을 채점할 때'의 인용문 그대로 | `build_packs.py`·`packs/*.json`·`apps/warmth-scorer/`·`tests/` | 새 브라우저 테스트(접힘·읽기·건너뛰기·결측), 기존 `agreement`·`pack`·`browser-check` 통과 | 대기 |
+| R18 | GPT(아스트라) | 클라우드가 G10·Q9를 옮긴 결과 비판: `docs/eval/calibration.md`의 '준비'(평가자 코드)·'순서'(28·56)·'위기 문항을 채점할 때'가 G10·Q9 원안에서 빠뜨리거나 바꾼 것, 근거표 v3.1 `docs/eval/voice-evidence.md`의 R17 반영(특히 여백 '1초로 시작 + 예비 녹음'이 맞는지, B05 처리), 채점기 입력칸 변경(`apps/warmth-scorer/index.html` 79~81줄) | `docs/gpt/R18-review.md` | 지적마다 파일:줄 | 검토 (아스트라 결과 `docs/gpt/R18-review.md` · 13건 · 평가자 코드 저장·28/56은 맞음. calibration.md가 G10에서 줄인 것(보상 감액 금지·건너뛴 문항 보충 의무 없음·도움 경로 사전 지정·결측 계산 단위)·B05 확정 시점은 **calibration.md·근거표 담당** 반영 대기) |
+| G12 | GPT(아스트라) | 두 번째 평가자 **안내문 + 참여 동의서 초안**(Q9-5·7·8·9·10 후속): 실제 분량(조정용 10문항·28답, 최종 20문항·56답), 순서, 위기 문항 안내, 건너뛰기·중단, 보상 칸(금액은 빈칸), 기록 항목·보관·공개 범위 선택(집계만/인용 허용), 철회 방법. 법률 요건은 '확인 필요'로 표시. 사람·회사 이름 없이 | `docs/gpt/G12-rater-consent.md` | 그대로 출력해 쓸 수 있는 문안 + 칸마다 근거 파일 | 검토 (아스트라 작성 `docs/gpt/G12-rater-consent.md` · 문체·숫자 B9 · 법률 요건은 "확인 필요"로 남음 — 대표 확인) |
+| Q10 | GPT(아스트라) | ① 여백 규칙을 실제 목소리로 정하는 **예비 녹음** 설계: 문장 몇 개·길이·여백 조건 몇 가지, 무엇을 보면 규칙을 확정하는지(`analysis.js` 검출 기준 기준) ② B05 원고의 "바로 연결할 수 있어요"를 실제 연결 기능 없이도 정확한 문장으로 바꾼 **대안 2개**(안전 확인 질문을 넣는 안과 번호 안내만 하는 안), 대표가 고를 수 있게 장단점 | `docs/gpt/Q10-answer.md` | 항목마다 이유, 추측 표시 | 답변 (아스트라 `docs/gpt/Q10-answer.md` · 예비 녹음 설계 + B05 가안(안전 확인 질문)·나안(번호 안내만) — 팀장 확인: 두 안 모두 해칠 방법 표현 없음, 112·119 먼저·109 상담 역할 맞음, 연결 기능 약속 없음. **B05 선택은 대표**, 아스트라 추천은 가안 · 문체 B9) |
+| A10 | 매니저 | G10 후속 화면 기능: `docs/eval/packs/build_packs.py`가 위기 문항에 `sensitive: true`를 넣고(묶음 다시 만들기, `cue_check.py --strict` 통과 유지), 따뜻함 채점기는 그런 문항을 고르면 **본문을 접은 채** 안내 문구와 [읽기]/[건너뛰기] 버튼만 보여 줌(키보드로 가능). 건너뛰면 점수 없이 결측으로 남고 일치도 계산에서 빠짐. 안내 문구는 `calibration.md` '위기 문항을 채점할 때'의 인용문 그대로 | `build_packs.py`·`packs/*.json`·`apps/warmth-scorer/`·`tests/` | 새 브라우저 테스트(접힘·읽기·건너뛰기·결측), 기존 `agreement`·`pack`·`browser-check` 통과 | 검토 (팀장 확인 통과 · 보고 칸) |
+| B9 | 사원 | G12·Q10·R18 해요체·맞춤법·이름·전화번호·G12 분량 숫자·표 점검(고치지 않고 지적만) | 이 게시판 '보고' 칸 | 지적 목록 | 검토 (팀장 확인 통과 · 보고 칸) |
+| A11 | 매니저 | A10 후속(팀장 코드 확인): 실제 평가용 묶음 문항 채점 기록에 `test_only: true`가 붙던 버그 재현·수정 | `apps/warmth-scorer/app.js`·`tests/testonly.browser.js` | 재현 후 수정, 새 테스트·기존 채점기 검사 통과 | 검토 (팀장 확인 통과 · 보고 칸) |
+| A12 | 매니저 | CI에 새 브라우저 검사 `sensitive.browser.js`·`testonly.browser.js` 추가 | `.github/workflows/tests.yml` | GitHub Actions에서 두 검사 실행·통과 | 대기 (다음 회차) |
 
 ### R17·G10·G11·Q9 요청 (클라우드 팀장 · 2026-10-05 6회차)
 
@@ -548,6 +551,29 @@ A/B 표는 측정값과 설계 참고값을 구분하고 점수·이해도·가�
 검토한 파일 목록: `AGENTS.md`, `TEAM_BOARD.md`, `HANDOFF.md`, 현재 `core.py`·`app.py`, 테스트 2개, `check.js`, `analysis.js`, 지정 커밋 변경. 실행해 본 것: venv에서 파일 쓰기를 차단한 core 39개·AppTest 4개 통과(AppTest 임시 폴더 생성은 메모리에서 대체), 추가 합성 입력·JS 비교·메모리 측정. 파일 생성·수정 없음.
 
 ## 보고
+
+### [A10] 팀장 확인 · 2026-10-06
+- 통과. 직접 실행: 새 `sensitive.browser.js` **38건**(접힘·안내 문구가 calibration.md와 같음·읽기·건너뛰기→결측·일치도 제외·키보드·48px) 통과, `pack.browser.js` 13·`agreement.browser.js` 10·`agreement.test.js` 73·`scenarios.test.js` 9·`browser-check.mjs` 29/29, `cue_check.py --strict` 통과, `rubric.json` 변경 없음.
+- 대표 판단 남김: calibration.md 인용문 끝의 "오늘은 마치기"는 버튼이 없음(지시대로 [읽기]/[건너뛰기]만). calibration.md 49행의 "화면 기능(A10)이 생기기 전에는…" 문구는 이제 갱신 대상(calibration.md 담당).
+
+### [A10] 매니저 · 2026-10-06
+- `build_packs.py`가 위기 문항(c07)에 `sensitive: true`, 채점기는 그 문항을 접고 인용문과 [읽기]/[건너뛰기], 건너뛰면 `skipped: true`·점수 null로 남고 일치도에서 빠짐, 목록에도 본문 대신 "(위기 문항, 본문 접힘)".
+- 바꾼 파일: `docs/eval/packs/{build_packs.py,calibration-v0.json}`, `apps/warmth-scorer/{app.js,index.html,tests/sensitive.browser.js}`.
+
+### [A11] 팀장 확인 · 2026-10-06
+- 통과. A10 보고에서 나온 의심을 팀장이 코드로 확인해 맡김 → 매니저가 **재현**: 실제 평가용 묶음 문항을 채점해 내보내면 `test_only: true`가 붙고, 같은 문항이 테스트용으로 하나 더 생겼어요(실제 채점이 테스트로 표시되던 버그). 고친 뒤 새 `testonly.browser.js` **7건** 통과(묶음 기록엔 test_only 없음, 테스트 문항은 true 그대로), 위 채점기 검사 전부 다시 통과.
+- **대표 확인:** 이 수정 전에 브라우저에 저장된 묶음 채점 기록이 있으면 test_only가 붙어 있을 수 있어요. 실제 채점은 아직 시작 전이라면 영향 없음.
+
+### [A11] 매니저 · 2026-10-06
+- `fillFormFromTestItem`은 문항이 `test_only: true`일 때만 표시, `markDraftTest`는 그때만 `test_only`를 붙임, 묶음 문항 id(`test_item_id`) 유지.
+- 바꾼 파일: `apps/warmth-scorer/{app.js,tests/testonly.browser.js}`.
+
+### [B9] 팀장 확인 · 2026-10-06
+- 통과. 팀장 스크립트로 세 파일 표 칸 수 어긋남 0, G12의 10문항·28답·20문항·56답 맞음, 세 자리 숫자는 시간(112~168분)·줄 번호뿐이고 전화번호는 Q10의 109·112·119뿐.
+- 사원 제안 1건(G12 173행 "동의서 사본을 받아요" → 다른 체크 문장처럼 "받았어요")은 **타당**. GPT 파일은 고치지 않고, 동의서를 옮길 때 반영하도록 남김.
+
+### [B9] 사원 · 2026-10-06
+- G12 지적 1건(173행 시제), Q10·R18 지적 없음, 숫자·표 정상.
 
 ### [A9] 팀장 확인 · 2026-10-06
 - 통과. 직접 실행: 소리 10초+앞뒤 무음 0.3·0.5초 → `failed: true, reason: threshold`(전에는 오류 없이 0), 1.0초 → 1~11초 그대로, 완전 무음 → `no_speech`. `test-analysis.js` 37·낭독 코치 `browser.test.js` 48 통과, voice-studio parity·lines·reference 실패 0·`build-profile.js --check` 통과, voice-check 테스트 5개(test-profile 38·test·test-screen 43·test-align·test-compare-ai 48) 통과, 페르소나 실험실 단위 테스트 OK. 검출 규칙은 그대로라 기준값 변화 없음.

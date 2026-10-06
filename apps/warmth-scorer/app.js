@@ -47,6 +47,7 @@
       rubric_version: r.rubric_version == null ? '' : r.rubric_version
     };
     if (r.test_only === true) o.test_only = true;
+    if (r.skipped === true) o.skipped = true; // 위기 문항 건너뛰기: 점수 없이 '평가하지 않음'(결측)
     return JSON.stringify(o);
   }
 
@@ -81,13 +82,14 @@
         var ans = item.answers[a];
         for (var s = 0; s < scorings.length; s++) {
           var sc = scorings[s];
-          if (sc.item_id !== item.id || sc.answer_id !== ans.id || sc.total == null) continue;
+          if (sc.item_id !== item.id || sc.answer_id !== ans.id) continue;
+          if (sc.total == null && sc.skipped !== true) continue;
           var evidence = {};
           var scores = {};
           for (var c = 0; c < rubric.criteria.length; c++) {
             var cid = rubric.criteria[c].id;
             evidence[cid] = (sc.evidence && sc.evidence[cid]) ? sc.evidence[cid].slice() : [];
-            scores[cid] = sc.scores[cid];
+            scores[cid] = sc.skipped === true ? null : sc.scores[cid];
           }
           var rec = {
             situation: item.situation,
@@ -102,6 +104,7 @@
             rubric_version: sc.rubric_version || rubric.version
           };
           if (item.test_only === true) rec.test_only = true;
+          if (sc.skipped === true) rec.skipped = true;
           out.push(rec);
         }
       }
@@ -510,6 +513,7 @@
     });
     var item = { id: 'item-' + (max + 1), situation: draft.situation, answers: draft.answers };
     if (draft.test_only === true) item.test_only = true;
+    if (draft.sensitive === true) item.sensitive = true;
     if (draft.source) item.source = draft.source;
     if (draft.test_item_id) item.test_item_id = draft.test_item_id;
     state.items.push(item);
@@ -522,9 +526,10 @@
   // 표시는 폼을 비우는 동작(새 문항 시작·예시 불러오기)에서만 사라집니다.
   function markDraftTest(draft) {
     if (formTest) {
-      draft.test_only = true;
+      if (formTest.test_only === true) draft.test_only = true; // 실제 평가 묶음 문항은 테스트용 표시를 붙이지 않음
       if (formTest.source) draft.source = formTest.source;
       if (formTest.id) draft.test_item_id = formTest.id;
+      if (formTest.sensitive === true) draft.sensitive = true;
     }
     return draft;
   }
@@ -588,6 +593,7 @@
 
   function totalLabel(sc) {
     if (!sc) return '채점 전';
+    if (sc.skipped === true && sc.total == null) return '건너뜀(평가하지 않음)';
     if (sc.total != null) return sc.total + '점';
     var n = Object.keys(sc.scores || {}).length;
     return '채점 중 (' + n + '/' + rubric.criteria.length + ')';
@@ -614,6 +620,7 @@
     if (!rubric) { say('기준표를 먼저 불러오세요.'); return; }
     formTest = null;
     showContext('');
+    updateGate();
     closeScoring();
     var ex = rubric.examples && rubric.examples[0];
     if (!ex) { say('기준표에 예시가 없습니다.'); return; }
@@ -664,6 +671,7 @@
   function newItem() {
     formTest = null;
     showContext('');
+    updateGate();
     $('situation').value = '';
     setAnswerRows(['', '']);
     $('example-warning').textContent = '';
@@ -683,11 +691,68 @@
     var t = testItems[i];
     if (!t) return;
     formTest = { id: t.id, source: t.source };
+    if (t.test_only === true) formTest.test_only = true;
+    if (t.sensitive) formTest.sensitive = true;
+    revealedKey = null; // 문항을 고를 때마다 위기 문항은 다시 접습니다
+    if (t.sensitive && !$('scoring-section').hidden) closeScoring(); // 채점 화면에 이전 위기 문항 본문이 남지 않게
     showContext(t.context);
     $('situation').value = t.situation;
     setAnswerRows(t.answers.map(function (a) { return a.text; }));
     $('example-warning').textContent = '';
+    updateGate();
     refreshRegisterTotals();
+    if (t.sensitive) say('위기 문항이에요. 본문은 접어 두었어요. 읽기나 건너뛰기를 골라 주세요.');
+  }
+
+  /* ---------- 위기 문항: 본문을 접고 읽기·건너뛰기를 먼저 묻기 (calibration.md '위기 문항을 채점할 때') ---------- */
+
+  var revealedKey = null; // 평가자가 [읽기]를 고른 위기 문항의 id. 문항을 바꾸면 비웁니다.
+
+  function gateFolded() {
+    return !!(formTest && formTest.sensitive && revealedKey !== formTest.id);
+  }
+
+  function updateGate() {
+    var folded = gateFolded();
+    $('register-body').hidden = folded;
+    $('sensitive-gate').hidden = !folded;
+    if (!folded) $('gate-status').textContent = '';
+  }
+
+  function readSensitive() {
+    if (!formTest || !formTest.sensitive) return;
+    revealedKey = formTest.id;
+    updateGate();
+    $('situation').focus();
+    say('본문을 열었어요. 읽고 나면 채점 시작을 눌러 주세요. 힘들면 언제든 쉬어도 돼요.');
+  }
+
+  function skipSensitive() {
+    if (!formTest || !formTest.sensitive) return;
+    if (!rubric) { say('기준표를 먼저 불러오세요.'); return; }
+    if (!state.rater.trim()) { say('평가자 코드를 입력해 주세요.'); $('rater').focus(); return; }
+    var draft = markDraftTest(readDraft());
+    var item = findItemByDraft(draft) || addItem(draft);
+    item.sensitive = true;
+    var i, sc;
+    for (i = 0; i < item.answers.length; i++) {
+      sc = findScoring(item.id, item.answers[i].id, state.rater);
+      if (sc && sc.total != null) { say('이미 채점한 문항이라 건너뛸 수 없어요.'); return; }
+    }
+    for (i = 0; i < item.answers.length; i++) {
+      sc = findScoring(item.id, item.answers[i].id, state.rater);
+      if (!sc) {
+        sc = { item_id: item.id, answer_id: item.answers[i].id, scores: {}, evidence: {}, penalties: [], total: null, rater: state.rater, date: nowKstIso(), rubric_version: rubric.version };
+        state.scorings.push(sc);
+      }
+      sc.scores = {}; sc.evidence = {}; sc.penalties = []; sc.total = null; sc.skipped = true; sc.date = nowKstIso();
+    }
+    save();
+    refreshRegisterTotals();
+    renderSavedCount();
+    var msg = '건너뛰었어요. 0점이 아니라 평가하지 않음으로 남아요. 다음 문항을 골라 주세요.';
+    $('gate-status').textContent = msg;
+    say(msg);
   }
 
   function useTestItems(data) {
@@ -705,21 +770,23 @@
     $('test-items-file-wrap').hidden = true;
     testItems = list.map(function (t) {
       return {
-        id: t.id, situation: t.situation, source: t.source,
+        id: t.id, test_item_id: t.id, situation: t.situation, source: t.source,
         context: typeof t.context === 'string' ? t.context : '',
         test_only: t.test_only === true || data.test_only === true,
+        sensitive: t.sensitive === true,
         answers: t.answers.map(function (a, i) { return { id: answerLetter(i), text: a.text }; })
       };
     });
     testItems.forEach(function (t) {
       var found = findItemByDraft(t);
       if (!found) addItem(t); // 같은 내용의 기존(실제) 문항은 건드리지 않음
+      else if (t.sensitive) found.sensitive = true;
     });
     save();
     var sel = $('test-item-select');
     sel.textContent = '';
     testItems.forEach(function (t, i) {
-      sel.appendChild(el('option', { value: String(i) }, (i + 1) + '. ' + (t.id || '') + ' ' + t.situation.slice(0, 30)));
+      sel.appendChild(el('option', { value: String(i) }, (i + 1) + '. ' + (t.id || '') + ' ' + (t.sensitive ? '(위기 문항, 본문 접힘)' : t.situation.slice(0, 30))));
     });
     $('test-item-wrap').hidden = false;
     $('test-notice').textContent = data.notice || '';
@@ -741,11 +808,13 @@
   function startScoring() {
     if (!rubric) { say('기준표를 먼저 불러오세요.'); return; }
     if (!state.rater.trim()) { say('평가자 코드를 입력해 주세요.'); $('rater').focus(); return; }
+    if (gateFolded()) { say('위기 문항이에요. 먼저 읽기나 건너뛰기를 골라 주세요.'); $('gate-read').focus(); return; }
     var draft = readDraft();
     markDraftTest(draft);
     if (!draft.situation) { say('상황을 입력하세요.'); $('situation').focus(); return; }
     if (!draft.answers.length) { say('AI 답변을 하나 이상 입력하세요.'); return; }
     var item = findItemByDraft(draft) || addItem(draft);
+    if (draft.sensitive) item.sensitive = true;
     state.current = { itemId: item.id, answerIndex: 0 };
     save();
     refreshRegisterTotals();
@@ -821,6 +890,7 @@
 
   function touch(sc) {
     sc.total = computeTotal(rubric, sc.scores, sc.penalties);
+    delete sc.skipped; // 점수를 매기면 건너뜀 표시는 풀립니다
     sc.date = nowKstIso();
     enterConfirm = false;
     save();
@@ -956,6 +1026,8 @@
 
   function showScoring() {
     if (!rubric || !currentItem()) return;
+    var cur = currentItem();
+    if (cur.sensitive === true && !(revealedKey && cur.test_item_id === revealedKey)) { state.current = null; save(); return; } // 위기 문항은 읽기를 고르기 전에는 열지 않음
     $('scoring-section').hidden = false;
     renderAnswer();
     $('scoring-section').scrollIntoView();
@@ -1292,6 +1364,8 @@
       };
       reader.readAsText(f, 'UTF-8');
     });
+    $('gate-read').addEventListener('click', readSensitive);
+    $('gate-skip').addEventListener('click', skipSensitive);
     $('start-scoring').addEventListener('click', startScoring);
     $('save-evidence').addEventListener('click', saveEvidence);
     $('prev-answer').addEventListener('click', goPrev);
@@ -1316,6 +1390,7 @@
       formTest = state.draft.test && typeof state.draft.test === 'object' ? state.draft.test : null;
       $('situation').value = typeof state.draft.situation === 'string' ? state.draft.situation : '';
       setAnswerRows(state.draft.answers.length ? state.draft.answers.map(String) : ['', '']);
+      updateGate();
     } else {
       setAnswerRows(['', '']);
     }

@@ -121,8 +121,11 @@ items, key = [], []
 for n, (sid, chosen) in enumerate(zip(CALIBRATION, orders), 1):
     items.append({"id": f"c{n:02d}", "scenario_id": sid, "situation": scen[sid]["situation"],
                   "context": scen[sid].get("context", ""),
+                  # 위기 수준 문항은 채점기가 본문을 접고 [읽기]/[건너뛰기]를 먼저 묻게 한다(A10)
                   "source": "GPT(gpt-6-astra) 작성 예시 답변(" + "·".join(sorted({src for src, _, _ in chosen})) + "), 실제 서비스 답변 아님",
                   "answers": [{"text": a["answer"]} for _, _, a in chosen]})
+    if scen[sid]["risk"] == "위기":
+        items[-1]["sensitive"] = True
     key.append({"id": f"c{n:02d}", "scenario_id": sid, "why_chosen": why(sid, CALIBRATION[sid]),
                 "answers": [{"letter": letters[i], "kind": a["kind"], "source_file": SOURCES[src], "source_index": idx,
                              "source_id": a.get("id"), "boundary": a.get("boundary"),
