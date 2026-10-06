@@ -201,7 +201,7 @@ class CloudVoice(unittest.TestCase):
             self.assertEqual(base64.b64decode(r["audio"]), b"ID3fake")
             self.assertEqual(r["audio_type"], "audio/mpeg")
             path, key, body = FakeEleven.seen[-1]
-            self.assertEqual((path, key), ("/v1/text-to-speech/voice%2F1", "k"))
+            self.assertEqual((path, key), ("/v1/text-to-speech/voice%2F1?output_format=mp3_44100_128", "k"))
             self.assertEqual(body["text"], "오전 아홉 시 삼십 분")
             app.shutdown()
         finally:
@@ -327,7 +327,7 @@ class Guard(unittest.TestCase):
 
     def test_content_length_limits(self):  # R28-4: 음수·과대·숫자 아님은 읽기 전에 거절
         t0 = time.time()
-        for cl, want in (("-1", 400), ("abc", 400), ("0", 400), ("", 400), ("999999999", 413), ("200001", 413)):
+        for cl, want in (("-1", 400), ("abc", 400), ("0", 400), ("", 400), ("999999999", 413), ("200001", 413), ("9" * 5000, 413)):
             code, _ = raw(self.port, "POST", "/api/chat", b"", {**JSON, "Content-Length": cl})
             self.assertEqual(code, want, repr(cl))
         self.assertLess(time.time() - t0, 5)  # 본문을 기다리며 멈추지 않아요
@@ -439,7 +439,7 @@ class VoiceSafety(unittest.TestCase):
         srv = serve(mod.Handler)
         port = srv.server_address[1]
         try:
-            for cl, want in (("-1", 400), ("abc", 400), ("0", 400), ("999999999", 413)):
+            for cl, want in (("-1", 400), ("abc", 400), ("0", 400), ("999999999", 413), ("9" * 5000, 413)):
                 code, _ = raw(port, "POST", "/tts", b"", {**JSON, "Content-Length": cl})
                 self.assertEqual(code, want, repr(cl))
             body = json.dumps({"text": "안녕하세요"}).encode()
@@ -625,6 +625,176 @@ class RecordingLinks(unittest.TestCase):
                     os.rmdir(link)  # 정션은 안의 것을 지우지 않고 링크만 지워요
             self.assertTrue(err)
             self.assertIn("링크", out)
+
+
+def fake_voice_modules(calls, loads):
+    """qwen_tts·torch·soundfile 가짜(진짜 모델 없이 이 컴퓨터 목소리 경로를 시험)."""
+    torch = types.ModuleType("torch")
+    torch.bfloat16, torch.float32 = "bf16", "f32"
+    torch.cuda = types.SimpleNamespace(is_available=lambda: False)
+    qt = types.ModuleType("qwen_tts")
+
+    class Model:
+        def generate_voice_clone(self, text, language, ref_audio, ref_text):
+            calls.append((text, ref_text, pathlib.Path(ref_audio).read_bytes()))
+            return [b"pcm:" + text.encode()], 24000
+
+    class Q:
+        @classmethod
+        def from_pretrained(cls, mid, **kw):
+            loads.append(mid)
+            return Model()
+
+    qt.Qwen3TTSModel = Q
+    sf = types.ModuleType("soundfile")
+    sf.write = lambda buf, data, sr, format="WAV": buf.write(b"RIFF" + data)
+    return {"torch": torch, "qwen_tts": qt, "soundfile": sf}
+
+
+class LocalVoiceCache(unittest.TestCase):
+    """R29-07: 참고 녹음·참고 문장·모델을 바꾸면 이전 음성을 다시 쓰지 않아요."""
+
+    def setUp(self):
+        from unittest import mock
+        self.tmp = tempfile.TemporaryDirectory()
+        self.vd = pathlib.Path(self.tmp.name)
+        (self.vd / "ref.wav").write_bytes(b"RIFFaaaaWAVE")
+        (self.vd / "ref.txt").write_text("참고 문장", encoding="utf-8")
+        self.calls, self.loads = [], []
+        self.mods = mock.patch.dict(sys.modules, fake_voice_modules(self.calls, self.loads))
+        self.mods.start()
+        self.env = mock.patch.dict(os.environ, {}, clear=False)
+        self.env.start()
+        os.environ.pop("DIDO_TTS_MODEL", None)
+        from tts import LocalCloneEngine
+        self.eng = LocalCloneEngine(self.vd)
+
+    def tearDown(self):
+        self.env.stop()
+        self.mods.stop()
+        self.tmp.cleanup()
+
+    def test_same_input_is_cached(self):
+        a = self.eng.synth("안녕")
+        b = self.eng.synth("안녕")
+        self.assertEqual((a, len(self.calls), len(self.loads)), (b, 1, 1))
+
+    def test_changed_reference_audio_makes_new_voice(self):
+        self.eng.synth("안녕")
+        (self.vd / "ref.wav").write_bytes(b"RIFFbbbbWAVE")
+        self.eng.synth("안녕")
+        self.assertEqual([c[2] for c in self.calls], [b"RIFFaaaaWAVE", b"RIFFbbbbWAVE"])
+
+    def test_changed_reference_text_makes_new_voice(self):
+        self.eng.synth("안녕")
+        (self.vd / "ref.txt").write_text("다른 문장", encoding="utf-8")
+        self.eng.synth("안녕")
+        self.assertEqual([c[1] for c in self.calls], ["참고 문장", "다른 문장"])
+
+    def test_changed_model_makes_new_voice_and_reloads(self):
+        self.eng.synth("안녕")
+        os.environ["DIDO_TTS_MODEL"] = "other/model"
+        self.eng.synth("안녕")
+        self.assertEqual((len(self.calls), self.loads[-1], len(self.loads)), (2, "other/model", 2))
+
+
+class EnginePick(unittest.TestCase):
+    """R29-08·N1·N2: 자동 선택 순서와 클라우드 주소 검사."""
+    KEYS = ("DIDO_TTS", "DIDO_TTS_URL", "ELEVENLABS_API_KEY", "DIDO_ELEVEN_VOICE_ID", "DIDO_ELEVEN_API", "DIDO_TTS_TOKEN")
+
+    def setUp(self):
+        self.saved = {k: os.environ.pop(k, None) for k in self.KEYS}
+
+    def tearDown(self):
+        for k, v in self.saved.items():
+            os.environ.pop(k, None)
+            if v is not None:
+                os.environ[k] = v
+
+    def test_auto_order_is_cloud_then_server(self):
+        from tts import make_engine
+        os.environ.update(ELEVENLABS_API_KEY="fake-key", DIDO_ELEVEN_VOICE_ID="v", DIDO_TTS_URL="http://127.0.0.1:9/tts")
+        self.assertEqual(make_engine().name, "eleven")
+        os.environ.pop("ELEVENLABS_API_KEY")
+        self.assertEqual(make_engine().name, "http")
+
+    def test_bad_server_url_does_not_block_other_candidates(self):
+        """R29-08·N2 재현: 잘못된 주소가 있어도 준비된 클라우드·이 컴퓨터 후보를 건너뛰지 않아요."""
+        from unittest import mock
+
+        import tts
+        os.environ.update(DIDO_TTS_URL="http://voice.example.com/tts")
+        os.environ.update(ELEVENLABS_API_KEY="fake-key", DIDO_ELEVEN_VOICE_ID="v")
+        self.assertEqual(tts.make_engine().name, "eleven")
+        os.environ.pop("ELEVENLABS_API_KEY")
+        with tempfile.TemporaryDirectory() as d:
+            (pathlib.Path(d) / "ref.wav").write_bytes(b"x")
+            (pathlib.Path(d) / "ref.txt").write_text("문장", encoding="utf-8")
+            with mock.patch.object(tts, "local_available", return_value=True), mock.patch.object(tts, "VOICE_DIR", pathlib.Path(d)):
+                self.assertEqual(tts.make_engine().name, "local")
+        with mock.patch.object(tts, "local_available", return_value=False):
+            e = tts.make_engine()
+        self.assertEqual(e.name, "browser")
+        self.assertIn("안전하지 않아", e.label)
+
+    def test_explicit_choice_explains_failure(self):
+        from tts import make_engine
+        os.environ["DIDO_TTS"] = "eleven"
+        e = make_engine()
+        self.assertEqual(e.name, "browser")
+        self.assertIn("키", e.label)
+        os.environ["DIDO_TTS"] = "browser"
+        self.assertNotIn("쓰지 않았어요", make_engine().label)
+
+    def test_cloud_key_never_goes_to_unofficial_address(self):
+        """N1 재현: DIDO_ELEVEN_API가 외부 주소여도 요청을 만들지 않고 키도 보내지 않아요."""
+        from unittest import mock
+
+        import tts
+        for bad in ("http://remote.invalid/", "https://remote.invalid/", "http://127.0.0.1.evil.invalid/",
+                    "http://user:pw@127.0.0.1/"):
+            os.environ.update(ELEVENLABS_API_KEY="fake-key", DIDO_ELEVEN_VOICE_ID="v", DIDO_ELEVEN_API=bad)
+            with mock.patch.object(tts._NO_REDIRECT, "open", side_effect=AssertionError("요청을 만들면 안 돼요")):
+                with self.assertRaises(ValueError):
+                    tts.ElevenEngine("fake-key", "v")
+                e = tts.make_engine()
+            self.assertEqual(e.name, "browser", bad)
+            self.assertIn("주소가 올바르지 않아", e.label)
+        os.environ["DIDO_ELEVEN_API"] = "https://api.elevenlabs.io/v1/text-to-speech/"
+        self.assertEqual(tts.ElevenEngine("fake-key", "v").api, tts.ElevenEngine.API)
+
+    def test_warm_for_non_local_is_noop(self):
+        import tts
+        os.environ["DIDO_TTS"] = "browser"
+        self.assertEqual(tts.main(["--warm"]), 0)
+
+
+class SpeakLimit(unittest.TestCase):
+    def test_long_text_never_reaches_engine(self):
+        """R29-05: 합성 글자 수 상한을 넘으면 목소리 엔진(클라우드 비용·서버 부담)을 부르지 않아요."""
+        import server
+        called = []
+        eng = types.SimpleNamespace(synth=lambda t: called.append(t) or b"x")
+        audio, warn = server.synth_limited(eng, "가" * (server.MAX_SPEAK_CHARS + 1))
+        self.assertEqual((audio, called), (None, []))
+        self.assertIn("기본 목소리", warn)
+        self.assertEqual(server.synth_limited(eng, "가" * server.MAX_SPEAK_CHARS)[0], b"x")
+
+
+class SetupCmd(unittest.TestCase):
+    """R29-04: 윈도우 배치가 실패를 놓치고 '끝났어요'라고 하지 않는지(실행 대신 글자 검사)."""
+
+    def test_every_critical_step_checks_errorlevel(self):
+        text = (HERE.parent / "setup-voice.cmd").read_text(encoding="utf-8")
+        lines = [l.strip() for l in text.splitlines()]
+        self.assertFalse([l for l in lines if l.startswith("echo") and "&&" in l])  # 사용자에게 보이는 안내 명령에 && 금지
+        for needle in ("cd /d ", "copy /y ", "%PY% -m pip install", "%PY% tts.py --warm", "%PY% connect.py",
+                       "%PY% -c \"import sys; sys.path"):
+            idx = next(i for i, l in enumerate(lines) if l.startswith(needle))
+            nxt = next(l for l in lines[idx + 1:] if l)
+            self.assertTrue(nxt.startswith("if errorlevel 1"), f"{needle} 다음 줄이 errorlevel 검사가 아니에요: {nxt}")
+        self.assertLess(text.index("%PY% connect.py"), text.rindex("끝났어요"))
+        self.assertIn("exit /b 1", text)
 
 
 if __name__ == "__main__":

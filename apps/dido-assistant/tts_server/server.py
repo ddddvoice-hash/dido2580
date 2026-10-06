@@ -21,8 +21,8 @@ import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 MODEL_ID = os.environ.get("DIDO_TTS_MODEL", "Qwen/Qwen3-TTS-12Hz-1.7B-Base")
-MAX_CHARS = 400
-MAX_BODY = 16_000  # 400자를 JSON으로 감싼 것보다 넉넉히
+MAX_CHARS = 800  # 숫자를 풀어 읽으면 글이 길어져서 넉넉히(비서의 합성 상한은 600~800자)
+MAX_BODY = 32_000  # 800자를 JSON(\u 표기)으로 감싼 것보다 넉넉히
 _model = None
 
 
@@ -67,7 +67,12 @@ class Handler(BaseHTTPRequestHandler):
         if token and self.headers.get("Authorization") != f"Bearer {token}":
             return self._err(401, "접근 토큰이 맞지 않아요")
         raw = (self.headers.get("Content-Length") or "").strip()
-        if not raw.isascii() or not raw.isdigit() or int(raw) == 0:
+        if not raw.isascii() or not raw.isdigit():
+            return self._err(400, "보낸 내용의 길이가 올바르지 않아요")
+        if len(raw.lstrip("0")) > 9:  # 아주 긴 숫자를 정수로 바꾸다 터지지 않게 바꾸기 전에 걸러요
+            self.close_connection = True
+            return self._err(413, "보낸 내용이 너무 커요")
+        if int(raw) == 0:
             return self._err(400, "보낸 내용의 길이가 올바르지 않아요")
         if int(raw) > MAX_BODY:
             self.close_connection = True  # 읽지 않은 본문이 남으니 연결을 닫아요

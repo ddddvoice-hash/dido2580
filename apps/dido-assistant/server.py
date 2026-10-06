@@ -23,6 +23,7 @@ from korean_numbers import normalize  # noqa: E402
 from tts import make_engine, synth_or_none  # noqa: E402
 
 MAX_BODY = 200_000  # 대본도 받을 수 있게 200KB까지
+MAX_SPEAK_CHARS = 800  # 목소리로 만드는 글은 이만큼까지(다듬은 뒤 기준). 더 길면 화면이 기본 목소리로 읽어요
 SERVICE = "seongwoo-kimdido-assistant"  # /api/status에 넣어 시작 파일이 우리 비서인지 알아봐요
 LOCAL_NAMES = ("127.0.0.1", "localhost")
 
@@ -39,6 +40,13 @@ STATE: State | None = None
 
 class Server(ThreadingHTTPServer):
     allow_reuse_address = False  # 윈도우에서는 켜 두면 이미 쓰는 포트에도 겹쳐 열려요
+
+
+def synth_limited(engine, speak: str):
+    """글이 너무 길면 목소리 엔진(클라우드 비용·서버 부담)을 부르지 않고 안내만 돌려줘요."""
+    if len(speak) > MAX_SPEAK_CHARS:
+        return None, f"글이 {MAX_SPEAK_CHARS}자보다 길어 기본 목소리로 읽어요"
+    return synth_or_none(engine, speak)
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -86,9 +94,14 @@ class Handler(SimpleHTTPRequestHandler):
         if ctype != "application/json":
             return None, (415, "JSON으로 보내 주세요")
         raw = (self.headers.get("Content-Length") or "").strip()
-        if not raw.isascii() or not raw.isdigit() or int(raw) == 0:
+        if not raw.isascii() or not raw.isdigit():
             return None, (400, "보낸 내용의 길이가 올바르지 않아요")
+        if len(raw.lstrip("0")) > 9:  # 수천 자리 숫자를 정수로 바꾸다 터지지 않게 바꾸기 전에 걸러요
+            self.close_connection = True
+            return None, (413, "보낸 내용이 너무 커요")
         n = int(raw)
+        if n == 0:
+            return None, (400, "보낸 내용의 길이가 올바르지 않아요")
         if n > MAX_BODY:
             self.close_connection = True  # 읽지 않은 본문이 남으니 연결을 닫아요
             return None, (413, "보낸 내용이 너무 커요")
@@ -144,7 +157,7 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(400, {"error": "말이 비어 있어요"})
             with s.lock:
                 out = s.brain.reply(text)
-            audio, warn = synth_or_none(s.engine, out["speak"])
+            audio, warn = synth_limited(s.engine, out["speak"])
             if audio:
                 out["audio"] = base64.b64encode(audio).decode("ascii")
                 out["audio_type"] = s.engine.mime
@@ -154,7 +167,7 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(200, out)
         if self.path == "/api/speak":
             speak = normalize(text)
-            audio, warn = synth_or_none(s.engine, speak)
+            audio, warn = synth_limited(s.engine, speak)
             out = {"speak": speak, "engine": s.engine.name}
             if audio:
                 out["audio"] = base64.b64encode(audio).decode("ascii")
