@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>성우 김디도 AI 비서</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Crect width='256' height='256' rx='56' fill='%23176b67'/%3E%3Cpath d='M58 92a60 60 0 0 0 0 88' fill='none' stroke='%23f2b632' stroke-width='14' stroke-linecap='round'/%3E%3Cpath d='M198 92a60 60 0 0 1 0 88' fill='none' stroke='%23f2b632' stroke-width='14' stroke-linecap='round'/%3E%3Crect x='98' y='40' width='60' height='112' rx='30' fill='%23ffffff'/%3E%3Cpath d='M78 128a50 50 0 0 0 100 0' fill='none' stroke='%23ffffff' stroke-width='14' stroke-linecap='round'/%3E%3Cpath d='M128 178v30M98 214h60' fill='none' stroke='%23ffffff' stroke-width='14' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+/* 레이아웃: 위에 이름·상태, 가운데 탭 셋(대화·대본 점검·숫자 읽기), 아래 입력. 작업실과 같은 색 토큰. */
+:root {
+  --bg: #f3f6f5; --paper: #ffffff; --ink: #142b30; --muted: #4c6168; --line: #d4dfdd;
+  --accent: #176b67; --accent-soft: #e0f0ed; --sun: #8a5300; --sun-soft: #fbf0dc; --bad: #b42328; --focus: #1f5fbf;
+  --serif: "Batang", "Noto Serif KR", "AppleMyungjo", serif;
+  --sans: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0e191c; --paper: #15252a; --ink: #e7f0f1; --muted: #a7bbc0; --line: #2a4047;
+    --accent: #5cc7b9; --accent-soft: #143633; --sun: #f0c06b; --sun-soft: #3a2c16; --bad: #ff8f94; --focus: #8fb7ff; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 17px/1.65 var(--sans); }
+.wrap { max-width: 860px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 18px; }
+.wrap > * { min-width: 0; }
+header { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+header svg { width: 44px; height: 44px; flex: none; }
+h1 { font-family: var(--serif); font-size: 1.6rem; margin: 0; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.chip { font-size: .85rem; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.chip.warn { background: var(--sun-soft); color: var(--sun); }
+.notice { font-size: .9rem; color: var(--muted); margin: 0; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab { font: inherit; min-height: 48px; padding: 0 18px; border-radius: 10px; border: 2px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; }
+.tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+.panel { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 12px; }
+.log { display: grid; gap: 10px; max-height: 52vh; overflow-y: auto; }
+.msg { padding: 10px 14px; border-radius: 12px; max-width: 85%; }
+.msg.me { justify-self: end; background: var(--accent); color: var(--paper); }
+.msg.ai { justify-self: start; background: var(--accent-soft); }
+.msg .speak { display: block; font-size: .82rem; color: var(--muted); margin-top: 4px; }
+.msg .tools { display: block; font-size: .8rem; color: var(--sun); margin-top: 2px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+input[type=text], textarea { font: inherit; color: var(--ink); background: var(--paper); border: 2px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 48px; flex: 1 1 240px; width: 100%; }
+textarea { min-height: 140px; resize: vertical; }
+.btn { font: inherit; font-weight: 700; min-height: 48px; padding: 0 18px; border-radius: 10px; border: 2px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+.btn.primary { background: var(--accent); color: var(--paper); }
+.btn.listening { background: var(--bad); border-color: var(--bad); color: var(--paper); }
+.result { white-space: pre-wrap; background: var(--bg); border-radius: 10px; padding: 12px; margin: 0; }
+.keys { font-size: .85rem; color: var(--muted); }
+.kbd { font-family: ui-monospace, Consolas, monospace; background: var(--accent-soft); border-radius: 4px; padding: 0 5px; }
+.say { min-height: 1.4em; font-size: .9rem; color: var(--sun); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="56" fill="#176b67"/><path d="M58 92a60 60 0 0 0 0 88" fill="none" stroke="#f2b632" stroke-width="14" stroke-linecap="round"/><path d="M198 92a60 60 0 0 1 0 88" fill="none" stroke="#f2b632" stroke-width="14" stroke-linecap="round"/><rect x="98" y="40" width="60" height="112" rx="30" fill="#ffffff"/><path d="M78 128a50 50 0 0 0 100 0" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/><path d="M128 178v30M98 214h60" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/></svg>
+    <h1>성우 김디도 AI 비서</h1>
+    <div class="chips"><span class="chip" id="mode-chip">생각: 확인 중</span><span class="chip" id="voice-chip">목소리: 확인 중</span></div>
+  </header>
+  <p class="notice">이 비서는 AI예요. 성우 김디도의 목소리로 말하도록 만들었고, 숫자는 성우 김디도의 숫자 읽기 기준으로 다듬어 읽어요.</p>
+
+  <div class="tabs" role="tablist" aria-label="기능">
+    <button class="tab" role="tab" id="t-chat" aria-selected="true" aria-controls="p-chat">대화</button>
+    <button class="tab" role="tab" id="t-script" aria-selected="false" aria-controls="p-script">대본 점검</button>
+    <button class="tab" role="tab" id="t-num" aria-selected="false" aria-controls="p-num">숫자 읽기</button>
+  </div>
+
+  <section class="panel" role="tabpanel" id="p-chat" aria-labelledby="t-chat">
+    <div class="log" id="log" aria-live="polite"></div>
+    <div class="row">
+      <label for="q" class="sr" style="position:absolute;left:-9999px">비서에게 할 말</label>
+      <input type="text" id="q" placeholder="예: 지금 몇 시야? / 총 1,234,500원 어떻게 읽어?" autocomplete="off">
+      <button class="btn" id="mic" type="button" aria-pressed="false">말로 하기</button>
+      <button class="btn primary" id="send" type="button">보내기</button>
+    </div>
+    <div class="row"><button class="btn" id="again" type="button">다시 듣기</button><button class="btn" id="stop" type="button">멈추기</button><button class="btn" id="reset" type="button">새 대화</button><span class="say" id="say" role="status"></span></div>
+    <p class="keys">왼손 단축키: <span class="kbd">Alt+Q</span> 말로 하기 · <span class="kbd">Alt+W</span> 다시 듣기 · <span class="kbd">Esc</span> 멈추기 · <span class="kbd">Enter</span> 보내기</p>
+  </section>
+
+  <section class="panel" role="tabpanel" id="p-script" aria-labelledby="t-script" hidden>
+    <label for="script"><b>녹음할 대본을 붙여 넣으세요.</b> 숫자가 든 문장마다 읽는 법을 보여 주고 들려줘요.</label>
+    <textarea id="script" placeholder="예: 예약 번호는 4719-2386이에요. 오전 9시 30분에 출발해요."></textarea>
+    <div class="row"><button class="btn primary" id="script-go" type="button">점검하기</button></div>
+    <pre class="result" id="script-out" aria-live="polite"></pre>
+  </section>
+
+  <section class="panel" role="tabpanel" id="p-num" aria-labelledby="t-num" hidden>
+    <label for="num"><b>숫자가 든 문장 하나</b></label>
+    <div class="row"><input type="text" id="num" placeholder="예: 3시가 아니라 4시에 만나요." autocomplete="off"><button class="btn primary" id="num-go" type="button">풀고 읽기</button></div>
+    <p class="result" id="num-out" aria-live="polite"></p>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var lastSpeak = '', lastAudio = null, audioEl = null;
+
+  function post(path, body) {
+    return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json(); });
+  }
+
+  // ---- 소리 내기: 서버가 WAV를 주면 그것, 아니면 브라우저 한국어 합성음 ----
+  function koVoice() {
+    var vs = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
+    return vs.filter(function (v) { return /^ko/i.test(v.lang); })[0] || null;
+  }
+  function stop() {
+    if (audioEl) { audioEl.pause(); audioEl = null; }
+    if (window.speechSynthesis) speechSynthesis.cancel();
+  }
+  function speak(text, audioB64) {
+    stop();
+    lastSpeak = text; lastAudio = audioB64 || null;
+    if (audioB64) {
+      audioEl = new Audio('data:audio/wav;base64,' + audioB64);
+      audioEl.play().catch(function () { $('say').textContent = '소리를 틀지 못했어요. 다시 듣기를 눌러 주세요.'; });
+      return;
+    }
+    if (!window.speechSynthesis || !text) return;
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR'; var v = koVoice(); if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  }
+
+  // ---- 대화 ----
+  function add(cls, text, extra) {
+    var d = document.createElement('div'); d.className = 'msg ' + cls; d.textContent = text;
+    if (extra && extra.speak && extra.speak !== text) { var s = document.createElement('span'); s.className = 'speak'; s.textContent = '읽기: ' + extra.speak; d.appendChild(s); }
+    if (extra && extra.events && extra.events.length) { var t = document.createElement('span'); t.className = 'tools'; t.textContent = '쓴 도구: ' + extra.events.map(function (e) { return e.tool; }).join(', '); d.appendChild(t); }
+    $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight;
+  }
+  function send(text) {
+    text = (text || '').trim(); if (!text) return;
+    add('me', text); $('q').value = ''; $('say').textContent = '생각하는 중…';
+    post('/api/chat', { text: text }).then(function (r) {
+      $('say').textContent = r.note || '';
+      if (r.error) { $('say').textContent = r.error; return; }
+      add('ai', r.text, r); speak(r.speak, r.audio);
+      if (r.mode) setMode(r.mode);
+    }).catch(function () { $('say').textContent = '비서 서버에 닿지 못했어요. 비서 창이 켜져 있는지 확인해 주세요.'; });
+  }
+  $('send').addEventListener('click', function () { send($('q').value); });
+  $('q').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); send($('q').value); } });
+  $('again').addEventListener('click', function () { speak(lastSpeak, lastAudio); });
+  $('stop').addEventListener('click', stop);
+  $('reset').addEventListener('click', function () { post('/api/reset', { text: 'x' }); $('log').textContent = ''; greet(); });
+
+  // ---- 말로 하기(브라우저 음성 인식, 엣지·크롬) ----
+  var Rec = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null;
+  if (!Rec) { $('mic').disabled = true; $('mic').title = '이 브라우저는 음성 인식을 지원하지 않아요(엣지·크롬에서 돼요)'; }
+  function listen() {
+    if (!Rec) return;
+    if (rec) { rec.stop(); return; }
+    stop();
+    rec = new Rec(); rec.lang = 'ko-KR'; rec.interimResults = true;
+    $('mic').classList.add('listening'); $('mic').setAttribute('aria-pressed', 'true'); $('mic').textContent = '듣는 중… (다시 누르면 끝)';
+    rec.onresult = function (e) { var t = ''; for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript; $('q').value = t; };
+    rec.onerror = function (e) { $('say').textContent = e.error === 'not-allowed' ? '마이크 사용을 허락해 주세요.' : '잘 듣지 못했어요. 다시 해 주세요.'; };
+    rec.onend = function () { rec = null; $('mic').classList.remove('listening'); $('mic').setAttribute('aria-pressed', 'false'); $('mic').textContent = '말로 하기'; if ($('q').value.trim()) send($('q').value); };
+    rec.start();
+  }
+  $('mic').addEventListener('click', listen);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.altKey && (e.key === 'q' || e.key === 'Q' || e.code === 'KeyQ')) { e.preventDefault(); listen(); }
+    else if (e.altKey && (e.key === 'w' || e.key === 'W' || e.code === 'KeyW')) { e.preventDefault(); speak(lastSpeak, lastAudio); }
+    else if (e.key === 'Escape') stop();
+  });
+
+  // ---- 탭 ----
+  var tabs = ['chat', 'script', 'num'];
+  tabs.forEach(function (name, i) {
+    $('t-' + name).addEventListener('click', function () { show(name); });
+    $('t-' + name).addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n); $('t-' + n).focus(); }
+    });
+  });
+  function show(name) {
+    tabs.forEach(function (n) { $('t-' + n).setAttribute('aria-selected', n === name ? 'true' : 'false'); $('p-' + n).hidden = n !== name; });
+  }
+
+  // ---- 대본 점검·숫자 읽기 ----
+  $('script-go').addEventListener('click', function () {
+    var t = $('script').value.trim(); if (!t) return;
+    post('/api/script', { text: t }).then(function (r) { $('script-out').textContent = r.result || r.error; });
+  });
+  $('num-go').addEventListener('click', function () {
+    var t = $('num').value.trim(); if (!t) return;
+    post('/api/speak', { text: t }).then(function (r) { $('num-out').textContent = r.speak; speak(r.speak, r.audio); if (r.note) $('say').textContent = r.note; });
+  });
+  $('num').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) $('num-go').click(); });
+
+  // ---- 상태·첫인사 ----
+  function setMode(m) {
+    $('mode-chip').textContent = m === 'claude' ? '생각: AI 연결됨' : '생각: 오프라인(정해진 일만)';
+    $('mode-chip').className = 'chip' + (m === 'claude' ? '' : ' warn');
+  }
+  var greeting = '';
+  function greet() { if (greeting) add('ai', greeting); }
+  fetch('/api/status').then(function (r) { return r.json(); }).then(function (s) {
+    setMode(s.mode);
+    $('voice-chip').textContent = '목소리: ' + s.engine_label;
+    $('voice-chip').className = 'chip' + (s.engine === 'browser' ? ' warn' : '');
+    greeting = s.greeting; greet();
+  }).catch(function () { $('say').textContent = '비서 서버에 닿지 못했어요.'; });
+  $('q').focus();
+})();
+</script>
+</body>
+</html>

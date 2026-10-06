@@ -5,3 +5,4 @@ __pycache__/
 build/
 dist/
 .venv/
+apps/dido-assistant/tts_server/ref/
