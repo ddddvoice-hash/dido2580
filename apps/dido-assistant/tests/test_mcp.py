@@ -466,5 +466,126 @@ class R32(unittest.TestCase):
             self.assertNotIn("old", self.m._DONE)
 
 
+class R33(unittest.TestCase):
+    """R33-1~6: 결합·동형 문자, 숫자 기호, 단위 읽기 회귀, 정상 문장 오탐, 파일 경합, 넘긴 결과 정리."""
+
+    def setUp(self):
+        from unittest import mock
+        import mcp_server as m
+        self.m = m
+        self.eng = types.SimpleNamespace(name="test", label="성우 김디도", mime="audio/wav")
+        self.patches = [mock.patch.object(m.pathlib.Path, "read_text", return_value=""),
+                        mock.patch.object(m, "_audit"), mock.patch.object(m, "engine", return_value=self.eng),
+                        mock.patch.object(m, "LIMIT", types.SimpleNamespace(allow=lambda: True))]
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in reversed(self.patches):
+            p.stop()
+
+    def _synth_calls(self, term, text):
+        from unittest import mock
+        with mock.patch.object(self.m, "BUILTIN_BLOCKED", (term,)),                 mock.patch.object(self.m, "_synth_with_budget", return_value=None) as syn:
+            out = self.m.speak_core(text, False)[0]
+            return out, syn.call_count
+
+    def test_U1_combining_and_confusables_blocked(self):
+        for s in ["ábcd", "аbcd", "abсd", "ABCD", "αbcd"]:
+            out, n = self._synth_calls("abcd", s)
+            self.assertFalse(out["ok"], repr(s))
+            self.assertEqual(n, 0, repr(s))
+
+    def test_U2_number_symbols_blocked(self):
+        for s in ["❶번", "➀번", "⓵번", "➊번", "⑩번".replace("⑩", "⓵"), "㊀번"]:
+            out, n = self._synth_calls("일 번", s)
+            self.assertFalse(out["ok"], repr(s))
+            self.assertEqual(n, 0, repr(s))
+        self.assertEqual(self.m._unify_digits("❶➀⓵➊⓪"), "11110")
+        self.assertEqual(self.m._unify_digits("½㎡"), "½㎡")  # 분수·단위는 그대로
+
+    def test_N_area_units_keep_reading(self):
+        from unittest import mock
+        from korean_numbers import normalize
+        with mock.patch.object(self.m, "_synth_with_budget", return_value=None) as syn:
+            for s in ["면적은 3m²예요.", "넓이는 3km²예요.", "방은 20㎡예요."]:
+                out = self.m.speak_core(s, False)[0]
+                self.assertEqual(out["spoken_text"], normalize(s), s)
+        self.assertIn("제곱미터", normalize("면적은 3m²예요."))
+        with mock.patch.object(self.m, "_synth_with_budget", return_value=None):
+            self.assertEqual(self.m.speak_core("면적은 3m²예요.", False)[0]["spoken_text"], "면적은 삼 제곱미터예요.")
+
+    def test_F_normal_sentences_pass_short_terms(self):
+        for term, s in [("시", "날씨는 맑아요."), ("나무", "소나무를 심어요."), ("시험", "도시 험지는 피해 가요.")]:
+            out, n = self._synth_calls(term, s)
+            self.assertEqual(out.get("status"), "preparing", s)  # 검사를 지나 합성까지 갔어요
+            self.assertEqual(n, 1, s)
+        # 낱말 시작에서 맞으면 여전히 막아요
+        for term, s in [("시험", "시험 보러 가요"), ("시험", "내일 시 험"), ("나무", "큰 나무를 봐요")]:
+            out, n = self._synth_calls(term, s)
+            self.assertFalse(out["ok"], s)
+            self.assertEqual(n, 0, s)
+        # 긴 금지어는 낱말 중간에 있어도 막아요
+        out, n = self._synth_calls("송금하지않으면", "지금당장송금하지 않으면 큰일나요")
+        self.assertFalse(out["ok"])
+        self.assertEqual(n, 0)
+
+    def test_S_prune_survives_files_vanishing(self):
+        from unittest import mock
+        gone, keep = mock.Mock(), mock.Mock()
+        out = mock.MagicMock()
+        out.glob.return_value = [gone, keep]
+        for f in (gone, keep):
+            f.is_file.return_value = True
+        gone.stat.side_effect = FileNotFoundError("mock")
+        keep.stat.return_value = types.SimpleNamespace(st_size=50, st_mtime=0)
+        with mock.patch.object(self.m, "OUT_DIR", out), mock.patch.object(self.m, "MAX_OUT_FILES", 2),                 mock.patch.object(self.m, "MAX_OUT_BYTES", 100):
+            self.assertTrue(self.m._prune_out(50))  # 사라진 파일은 개수·용량에서 빠져요
+        # 지우는 단계에서 사라지면 개수와 용량을 같이 줄여요
+        a, b = mock.Mock(), mock.Mock()
+        out.glob.return_value = [a, b]
+        for i, f in enumerate((a, b)):
+            f.is_file.return_value = True
+            f.stat.return_value = types.SimpleNamespace(st_size=50, st_mtime=i)
+        a.unlink.side_effect = FileNotFoundError("mock")
+        with mock.patch.object(self.m, "OUT_DIR", out), mock.patch.object(self.m, "MAX_OUT_FILES", 2),                 mock.patch.object(self.m, "MAX_OUT_BYTES", 100):
+            self.assertTrue(self.m._prune_out(50))
+            self.assertTrue(self.m._prune_out(1))
+
+    def test_J_delivered_result_not_kept(self):
+        import threading
+        from unittest import mock
+        RealThread = threading.Thread
+        release, entered, waiting = threading.Event(), threading.Event(), threading.Event()
+        calls, results = [], []
+
+        class T(RealThread):
+            def join(self, timeout=None):
+                if threading.current_thread().name == "retry":
+                    waiting.set()
+                return super().join(timeout)
+
+        def fake(e, s):
+            calls.append(s)
+            entered.set()
+            release.wait(3)
+            return b"x", None
+
+        with mock.patch.dict(os.environ, {"DIDO_MCP_BUDGET": "0"}),                 mock.patch.object(self.m, "synth_or_none", side_effect=fake),                 mock.patch.object(self.m, "_JOBS", {}), mock.patch.object(self.m, "_DONE", {}),                 mock.patch.object(self.m.threading, "Thread", T):
+            self.assertIsNone(self.m._synth_with_budget(self.eng, "안녕하세요"))
+            self.assertTrue(entered.wait(2))
+            os.environ["DIDO_MCP_BUDGET"] = "5"
+            retry = RealThread(name="retry", target=lambda: results.append(self.m._synth_with_budget(self.eng, "안녕하세요")))
+            retry.start()
+            self.assertTrue(waiting.wait(2))
+            release.set()
+            retry.join(5)
+            self.assertEqual(results, [(b"x", None)])
+            time.sleep(0.2)
+            self.assertEqual(self.m._DONE, {})  # 기다리던 요청에 넘겼으니 보관분에 남지 않아요
+            self.assertEqual(self.m._JOBS, {})
+            self.assertEqual(len(calls), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -136,27 +136,56 @@ _JAMO = _jamo_table()
 _VOWEL_LETTERS = {chr(c) for c in range(0x314F, 0x3164)}
 _FILLERS = {"ᅟ", "ᅠ", "ㅤ", "ﾠ", "឴", "឵", "᠎"}
 
+# 라틴 소문자와 모양이 같은 키릴·그리스 소문자(비교용으로 라틴으로 맞춰요).
+# 출처: 유니코드 UTS #39 confusables.txt에서 라틴 소문자로 대응되는 흔한 글자만 손으로 옮긴 작은 표예요
+# (전체 표가 아니에요. 새 우회가 확인되면 원본과 대조해 한 줄씩 더해요). 글을 소문자로 만든 뒤에 적용해요.
+_CONFUSABLES = {
+    "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "у": "y", "х": "x",  # 키릴
+    "і": "i", "ј": "j", "ѕ": "s", "ԁ": "d", "һ": "h", "ӏ": "l", "ԛ": "q", "ԝ": "w",
+    "ο": "o", "ν": "v", "α": "a", "ρ": "p", "ι": "i", "υ": "u",  # 그리스
+    "ɑ": "a", "ɡ": "g",  # 라틴 확장
+}
+SHORT_TERM = 8  # 자모로 푼 금지어가 이보다 짧으면 낱말 시작에서만 견줘요(아래 check_policy)
 
-def _fold(text: str) -> str:
-    """금지 문구 비교용으로 글을 같은 꼴로 맞춰요. 순서와 상관없이 안정될 때까지 되풀이해요:
-    NFKC(전각·호환 문자·한글 분해형 합치기), 소문자, 공백·보이지 않는 글자·결합 표시·문장부호·기호·채움 글자 제거.
-    마지막에 한글을 자모로 풀어 같은 호환 자모로 맞춰요(분리·합친 글, 호환 자모가 모두 같아져요)."""
-    t = text or ""
-    for _ in range(8):
-        nxt = unicodedata.normalize("NFKC", t).casefold()
-        nxt = "".join(ch for ch in nxt if ch not in _FILLERS and unicodedata.category(ch)[0] not in "ZCMPS")
-        if nxt == t:
-            break
-        t = nxt
-    t = unicodedata.normalize("NFKD", t)
-    t = "".join(_JAMO.get(ch, ch) for ch in t)
-    # 소리 없는 첫소리 ㅇ은 모음 앞에서 빼요(음절 '아'와 낱자 'ㅏ'를 같게)
-    out = []
-    for i, ch in enumerate(t):
-        if ch == "ㅇ" and i + 1 < len(t) and t[i + 1] in _VOWEL_LETTERS:
+
+def _fold_tokens(text: str):
+    """글을 공백 기준 낱말로 나눠 낱말마다 같은 꼴(자모)로 맞춰요. 안정될 때까지 되풀이해요:
+    NFKC(전각·호환 문자·한글 분해형 합치기)→NFKD(악센트 같은 결합 표시를 분리), 소문자, 동형 문자 표,
+    공백·보이지 않는 글자·결합 표시·문장부호·기호·채움 글자 제거. 끝에 한글을 호환 자모로 풀어요."""
+    tokens = []
+    for word in (text or "").split():
+        t = word
+        for _ in range(8):
+            nxt = unicodedata.normalize("NFKD", unicodedata.normalize("NFKC", t)).casefold()
+            nxt = "".join(_CONFUSABLES.get(ch, ch) for ch in nxt)
+            nxt = "".join(ch for ch in nxt if ch not in _FILLERS and unicodedata.category(ch)[0] not in "ZCMPS")
+            if nxt == t:
+                break
+            t = nxt
+        t = "".join(_JAMO.get(ch, ch) for ch in unicodedata.normalize("NFKD", t))
+        if t:
+            tokens.append(t)
+    return tokens
+
+
+def _fold_with_starts(text: str):
+    """(비교용 글, 낱말이 시작하는 자리 집합). 소리 없는 첫소리 ㅇ은 모음 앞에서 빼요(음절 '아'와 낱자 'ㅏ'를 같게)."""
+    raw, begins = "", set()
+    for tok in _fold_tokens(text):
+        begins.add(len(raw))
+        raw += tok
+    out, starts = [], set()
+    for i, ch in enumerate(raw):
+        if i in begins:
+            starts.add(len(out))
+        if ch == "ㅇ" and i + 1 < len(raw) and raw[i + 1] in _VOWEL_LETTERS:
             continue
         out.append(ch)
-    return "".join(out)
+    return "".join(out), starts
+
+
+def _fold(text: str) -> str:
+    return _fold_with_starts(text)[0]
 
 
 _HANJA_DIGITS = {"〇": "0", "零": "0", "一": "1", "二": "2", "三": "3", "四": "4", "五": "5",
@@ -164,7 +193,8 @@ _HANJA_DIGITS = {"〇": "0", "零": "0", "一": "1", "二": "2", "三": "3", "�
 
 
 def _unify_digits(text: str, hanja: bool = False) -> str:
-    """숫자 표기(전각·아랍·①·¹ 등, hanja=True면 한자 낱자 숫자도)를 ASCII 숫자로 통일해요."""
+    """검사 전용: 숫자 표기(전각·아랍·①·❶·➀·⓵·¹ 등 정수 기호, hanja=True면 한자 낱자 숫자도)를 ASCII 숫자로 통일해요.
+    분수(½)·단위(㎡)는 그대로 둬요. 실제로 읽을 글에는 쓰지 않아요(단위 읽기가 달라져요)."""
     out = []
     for ch in text:
         if hanja and ch in _HANJA_DIGITS:
@@ -173,6 +203,8 @@ def _unify_digits(text: str, hanja: bool = False) -> str:
             out.append(ch)
         elif unicodedata.category(ch) == "Nd":
             out.append(str(unicodedata.digit(ch)))
+        elif unicodedata.category(ch) == "No" and 0 <= (unicodedata.numeric(ch, -1)) <= 100                 and unicodedata.numeric(ch) == int(unicodedata.numeric(ch)):
+            out.append(str(int(unicodedata.numeric(ch))))  # ❶ ➀ ➊ ⓵ ⑩ ㉑ ¹ 같은 정수 기호
         else:
             k = unicodedata.normalize("NFKC", ch)
             out.append(k if k.isascii() and k.isdigit() else ch)
@@ -180,16 +212,28 @@ def _unify_digits(text: str, hanja: bool = False) -> str:
 
 
 def check_policy(text: str):
-    """목소리로 만들면 안 되는 문구면 이유를, 아니면 None을 돌려줘요(정규화하고 공백을 빼고 견줘요)."""
-    flat = _fold(text)
-    terms = [_fold(t) for t in BUILTIN_BLOCKED]
+    """목소리로 만들면 안 되는 문구면 이유를, 아니면 None을 돌려줘요(정규화하고 공백을 빼고 견줘요).
+    긴 금지어(자모 8자 이상)는 글 어디에 있든 막아요. 짧은 금지어는 다른 낱말 속(날씨 속 '시', 소나무 속 '나무')을
+    잘못 막지 않도록 낱말 시작에서 맞을 때만 막아요(그 대신 앞에 다른 글자를 붙인 짧은 말은 지나가요)."""
+    flat, starts = _fold_with_starts(text)
+    terms = list(BUILTIN_BLOCKED)
     try:
         extra = (VOICE_DIR / "blocklist.txt").read_text(encoding="utf-8").splitlines()
-        terms += [_fold(t) for t in extra if t.strip() and not t.lstrip().startswith("#")]
+        terms += [t for t in extra if t.strip() and not t.lstrip().startswith("#")]
     except OSError:
         pass
-    for t in terms:
-        if t and t in flat:
+    for raw in terms:
+        t = _fold(raw)
+        if not t:
+            continue
+        if len(t) >= SHORT_TERM:
+            hit = t in flat
+        else:
+            hit, i = False, flat.find(t)
+            while i >= 0 and not hit:
+                hit = i in starts
+                i = flat.find(t, i + 1)
+        if hit:
             return "사기·협박·정치 광고로 쓰일 수 있는 문구라 만들지 않아요."
     return None
 
@@ -226,21 +270,28 @@ def _prune_out(incoming: int = 0) -> bool:
     새 파일 하나가 상한보다 크거나 지워도 못 맞추면 False(저장하지 않아요)."""
     if incoming > MAX_OUT_BYTES:
         return False
+    infos = []
     try:
-        files = sorted((p for p in OUT_DIR.glob("dido-*") if p.is_file()), key=lambda p: p.stat().st_mtime)
+        for p in OUT_DIR.glob("dido-*"):
+            try:
+                if not p.is_file():
+                    continue
+                st = p.stat()
+            except FileNotFoundError:
+                continue  # 검사 중 사라진 파일은 개수·용량에서 빼요
+            infos.append((st.st_mtime, st.st_size, p))
     except OSError:
         return False
-    total = sum(p.stat().st_size for p in files)
-    count = len(files)
-    for old in files:  # 오래된 것부터. 못 지운 파일은 개수·용량에 그대로 남겨 둬요
+    infos.sort(key=lambda x: x[0])
+    total = sum(sz for _, sz, _ in infos)
+    count = len(infos)
+    for _, size, old in infos:  # 오래된 것부터. 못 지운 파일은 개수·용량에 그대로 남겨 둬요
         if count < MAX_OUT_FILES and total + incoming <= MAX_OUT_BYTES:
             break
         try:
-            size = old.stat().st_size
             old.unlink()
         except FileNotFoundError:
-            count -= 1  # 이미 없어졌어요
-            continue
+            pass  # 이미 없어졌어요: 개수·용량 둘 다 줄여요
         except OSError:
             continue
         count -= 1
@@ -311,7 +362,7 @@ def _synth_with_budget(eng, spoken: str):
                     with _JOBS_LOCK:
                         _JOBS.pop(key, None)
                         r = box.get("r")
-                        if box.get("abandoned") and r and r[0]:
+                        if box.get("abandoned") and not box.get("delivered") and r and r[0]:
                             _DONE[key] = (time.time(), r)
                             while len(_DONE) > MAX_DONE:
                                 _DONE.pop(min(_DONE, key=lambda k: _DONE[k][0]), None)
@@ -323,6 +374,10 @@ def _synth_with_budget(eng, spoken: str):
     t.join(budget)
     with _JOBS_LOCK:
         if "r" in box:
+            box["delivered"] = True  # 이 결과는 넘겨요: 보관분에 남기지 않아요
+            d = _DONE.get(key)
+            if d is not None and d[1] is box["r"]:
+                _DONE.pop(key, None)
             return box["r"]
         box["abandoned"] = True  # 끝나면 결과를 보관해 둬요
     return None  # 아직 만드는 중
@@ -339,9 +394,10 @@ def speak_core(text: str, play: bool = True, return_audio=None):
         return {"ok": False, "error": why}, None, None
     if not LIMIT.allow():
         return {"ok": False, "error": "요청이 너무 잦아요. 잠시 뒤에 다시 해 주세요."}, None, None
-    spoken = normalize(_unify_digits(text))
-    # 숫자를 풀어 읽은 뒤 생기는 문구도 막아요(원문·풀어 읽은 글, 숫자 표기를 통일해 풀어 읽은 글 모두 검사)
-    why = check_policy(spoken) or check_policy(normalize(_unify_digits(text, hanja=True)))
+    spoken = normalize(text)  # 실제로 읽는 글: 숫자 통일을 거치지 않아 단위(㎡ 등) 읽기가 그대로예요
+    # 숫자를 풀어 읽은 뒤 생기는 문구도 막아요(풀어 읽은 글, 숫자 표기를 통일해 풀어 읽은 글 모두 검사)
+    why = (check_policy(spoken) or check_policy(normalize(_unify_digits(text)))
+           or check_policy(normalize(_unify_digits(text, hanja=True))))
     if why:
         _audit(spoken, False, "-", "policy")
         return {"ok": False, "error": why}, None, None
