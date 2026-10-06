@@ -213,7 +213,7 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 | A10 | 매니저 | G10 후속 화면 기능: `docs/eval/packs/build_packs.py`가 위기 문항에 `sensitive: true`를 넣고(묶음 다시 만들기, `cue_check.py --strict` 통과 유지), 따뜻함 채점기는 그런 문항을 고르면 **본문을 접은 채** 안내 문구와 [읽기]/[건너뛰기] 버튼만 보여 줌(키보드로 가능). 건너뛰면 점수 없이 결측으로 남고 일치도 계산에서 빠짐. 안내 문구는 `calibration.md` '위기 문항을 채점할 때'의 인용문 그대로 | `build_packs.py`·`packs/*.json`·`apps/warmth-scorer/`·`tests/` | 새 브라우저 테스트(접힘·읽기·건너뛰기·결측), 기존 `agreement`·`pack`·`browser-check` 통과 | 검토 (팀장 확인 통과 · 보고 칸) |
 | B9 | 사원 | G12·Q10·R18 해요체·맞춤법·이름·전화번호·G12 분량 숫자·표 점검(고치지 않고 지적만) | 이 게시판 '보고' 칸 | 지적 목록 | 검토 (팀장 확인 통과 · 보고 칸) |
 | A11 | 매니저 | A10 후속(팀장 코드 확인): 실제 평가용 묶음 문항 채점 기록에 `test_only: true`가 붙던 버그 재현·수정 | `apps/warmth-scorer/app.js`·`tests/testonly.browser.js` | 재현 후 수정, 새 테스트·기존 채점기 검사 통과 | 검토 (팀장 확인 통과 · 보고 칸) |
-| A12 | 매니저 | CI에 새 브라우저 검사 `sensitive.browser.js`·`testonly.browser.js` 추가 | `.github/workflows/tests.yml` | GitHub Actions에서 두 검사 실행·통과 | 대기 (다음 회차) |
+| A12 | 매니저 | CI에 새 브라우저 검사 `sensitive.browser.js`·`testonly.browser.js` 추가 | `.github/workflows/tests.yml` | GitHub Actions에서 두 검사 실행·통과 | 검토 (팀장 확인 · CI 결과는 푸시 뒤 확인) |
 
 ### R17·G10·G11·Q9 요청 (클라우드 팀장 · 2026-10-05 6회차)
 
@@ -551,6 +551,13 @@ A/B 표는 측정값과 설계 참고값을 구분하고 점수·이해도·가�
 검토한 파일 목록: `AGENTS.md`, `TEAM_BOARD.md`, `HANDOFF.md`, 현재 `core.py`·`app.py`, 테스트 2개, `check.js`, `analysis.js`, 지정 커밋 변경. 실행해 본 것: venv에서 파일 쓰기를 차단한 core 39개·AppTest 4개 통과(AppTest 임시 폴더 생성은 메모리에서 대체), 추가 합성 입력·JS 비교·메모리 측정. 파일 생성·수정 없음.
 
 ## 보고
+
+### [A12] 팀장 확인 · 2026-10-06
+- 매니저가 추가로 찾은 것이 더 중요해요: `tests.yml`의 단계 이름 "평가 묶음 겉모양 단서 검사(엄격: …)"에 따옴표 없는 `: `가 있어 **워크플로 파일이 YAML로 읽히지 않았어요.** 팀장이 GitHub에서 확인: 이 줄이 들어간 d3d9d71 이후 이 브랜치의 CI가 **매번 실패**(최근 6번 모두 failure, 실행 이름이 파일 경로로 뜸 = 파일을 못 읽음). 그동안 "CI에서 확인"이라고 적은 것들(예: A8의 `alpha_crosscheck.py`)은 실제로 돌지 않았어요.
+- 고친 파일은 python yaml로 읽힘(작업 4개). 두 새 검사(sensitive 38·testonly 7)는 로컬에서 통과, 작업 이름의 29는 browser-check 29/29와 맞음. **푸시 뒤 GitHub Actions 결과를 확인해 여기에 적어요.**
+
+### [A12] 매니저 · 2026-10-06
+- `tests.yml`에 `sensitive.browser.js`·`testonly.browser.js` 추가, 작업 이름 숫자 갱신, 단계 이름에 따옴표(YAML 오류 수정).
 
 ### [A10] 팀장 확인 · 2026-10-06
 - 통과. 직접 실행: 새 `sensitive.browser.js` **38건**(접힘·안내 문구가 calibration.md와 같음·읽기·건너뛰기→결측·일치도 제외·키보드·48px) 통과, `pack.browser.js` 13·`agreement.browser.js` 10·`agreement.test.js` 73·`scenarios.test.js` 9·`browser-check.mjs` 29/29, `cue_check.py --strict` 통과, `rubric.json` 변경 없음.
