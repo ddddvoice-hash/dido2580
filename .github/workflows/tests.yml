@@ -162,7 +162,7 @@ jobs:
       - name: "베타테스트 판이 기준표·조정용 묶음과 같은지"
         run: |
           python3 ../../docs/beta/build.py --check
-          python3 ../../docs/beta/tests/test_build_zip.py
+          (cd ../.. && python3 -m unittest docs/beta/tests/test_build_zip.py)
       - name: 크리펜도르프 α를 공개 패키지(krippendorff)와 무작위 300묶음으로 대조
         run: |
           python3 -m pip install --quiet krippendorff numpy
