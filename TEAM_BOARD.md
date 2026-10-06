@@ -203,6 +203,14 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 
 > **대표 지시 2026-10-06: "꼭 아스트라로 협의해."** 모든 R·G·Q는 `gpt-6-astra`로만 돌리고, 결과 머리에 실행 기록의 모델 줄을 그대로 옮겨 주세요. 아스트라가 안 되면 다른 모델로 돌리지 말고 그 사실만 게시판에 적어요. 이제 CI(`tools/check_astra.py`)가 `docs/gpt/`의 모든 결과에 아스트라 기록이 있는지 검사해서, 없으면 빨간불이 돼요.
 
+### ★ AI 비서 v0.2: 음성만 넣으면 구동 + Claude·GPT·Gemini 연결 · R29 요청 (클라우드 팀장 · 2026-10-06, 아스트라만)
+
+> **대표 요청 2026-10-06:** "음성만 있으면 바로 구동되게, 클로드·지피티·제미나이에도 연동돼서 각 AI가 내 음성비서를 불러올 수 있게." → `apps/setup-voice.cmd` 한 번, `voice/ref.wav`만 넣으면 됨. MCP 서버 `apps/dido-assistant/mcp_server.py`, 앱 연결 `connect.py`. 인계 `docs/assistant/HANDOFF.md`. **로컬 팀장:** 대표 PC에서 setup-voice.cmd 실행 확인(HANDOFF 1번과 함께).
+
+| 번호 | 담당 | 업무 | 결과 파일 | 완료 조건 | 상태 |
+|---|---|---|---|---|---|
+| R29 | GPT(아스트라) | v0.2 비판: `mcp_server.py`(도구 설명이 AI 앱에서 잘 고르게 쓰였는지, 악용 막기, 400자 제한, 윈도우 재생), `connect.py`(Codex `config.toml`·Gemini `settings.json`·Claude 데스크톱 설정 형식이 **2026년 10월 현재 각 앱 문서와 맞는지 웹으로 확인**, 출처 링크), `tts.py`의 자동 선택과 CPU 실행, `apps/setup-voice.cmd`의 윈도우 배치 문법 오류(괄호·인용), ChatGPT 웹 연결에 필요한 것 | `docs/gpt/R29-review.md` | 지적마다 파일:줄, 앱 문서 출처 | 대기 |
+
 ### ★ AI 비서 v0.1 완성 · 인계 · G16·R28 요청 (클라우드 팀장 · 2026-10-06, 아스트라만)
 
 > **대표 지시 2026-10-06:** "묻지 말고 아스트라랑 계속 진행. 전권. 프로그램 빌드·인터페이스·필요한 모든 생태계." + "세션 한도가 부족하면 GPT로 넘겨 이어서." → v0.1 완성(`apps/dido-assistant/`, 실행 `apps/start-assistant.cmd`). **이어 할 일과 인계는 `docs/assistant/HANDOFF.md`**. 클라우드가 멈춰 있으면 로컬 팀장이 HANDOFF 1·2번(대표 PC 실행 확인)을 먼저 해 주세요.

@@ -148,10 +148,13 @@ jobs:
           git diff --exit-code -- ../../docs/eval/packs
       - name: "평가 묶음 겉모양 단서 검사(엄격: 단서 하나가 80% 넘게 맞히면 실패)"
         run: python3 ../../docs/eval/packs/cue_check.py --strict
-      - name: "AI 비서 숫자 읽기 층(숫자 사례 20문장)"
+      - name: "AI 비서: 숫자 읽기 층·서버·AI 앱 연결(MCP)"
         run: |
           python3 ../../apps/dido-assistant/tests/test_korean_numbers.py
           python3 ../../apps/dido-assistant/tests/test_server.py
+          python3 ../../apps/dido-assistant/tests/test_connect.py
+          python3 -m pip install --quiet mcp
+          python3 ../../apps/dido-assistant/tests/test_mcp.py
       - name: "GPT 협의 결과가 모두 아스트라 모델인지"
         run: python3 ../../tools/check_astra.py
       - name: "평가자 안내문·동의서 템플릿 칸 검사"
