@@ -225,9 +225,9 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 
 | 번호 | 담당 | 업무 | 결과 파일 | 완료 조건 | 상태 |
 |---|---|---|---|---|---|
-| G14 | GPT(아스트라) | **독립 초안**: 한국어 AI 목소리가 "사람에 가깝게 들리는지"를 사람이 듣고 판단하는 기준표. 항목(4~7개)마다 듣는 질문과 0·1·2점 설명, 결함 신호, 측정 도구(`apps/voice-check/profile.js`)로 옆에 놓을 수 있는 값과 없는 값. 출발점은 `apps/warmth-scorer/rubric.json`의 `voice_criteria`(대표가 쓴 듣기 기준)만 읽고, `docs/eval/humanlike-voice-rubric-draft.md`는 **쓰기 전에 읽지 않기**. 사람인 척(AI임을 숨김)에 쓰이지 않게 하는 원칙 포함 | `docs/gpt/G14-humanlike-rubric.md` | 항목·점수 설명 완비, 근거는 '추측'·'확인' 구분 | 검토 (아스트라 작성 `docs/gpt/G14-humanlike-rubric.md` · **독립성 확인**: 클라우드 초안 읽기 명령 0, 초안 문장 12줄을 기록에서 찾아도 0 · 비교는 R22) |
-| R22 | GPT(아스트라) | G14를 쓴 뒤, 클라우드 초안 `docs/eval/humanlike-voice-rubric-draft.md` 비판과 G14와의 차이표(서로 빠진 항목, 겹치는 항목, 점수 설명이 판정을 유도하는 곳, 한국어 말끝·억양에서 놓친 것), 소개 페이지 `docs/showcase/template.html` 머리말·링크 모음 `docs/links/index.html`의 새 소개 문구 과장 여부 | `docs/gpt/R22-review.md` | 지적마다 파일:줄 | 검토 (아스트라 결과 `docs/gpt/R22-review.md` · 16건 · G14를 먼저 쓴 뒤 비교 — 클라우드 초안의 "숨·억양 변화가 많아야 높은 점수" 유도(반대 3건), 소개·링크 문구 과장 3건 → **기준표·소개 담당·대표** 반영 대기) |
-| Q11 | GPT(아스트라) | "사람 녹음과 AI 소리 중 어느 쪽이 사람인가" 맞히기 시험 설계: 원고·평가자 수와 우연(50%)을 구별하는 방법, 확신도 사용법, 순서 효과, 녹음 조건 맞추기(같은 원고·크기), AI임을 알리는 윤리(시험 전 안내·끝난 뒤 공개), 비교할 AI 소리를 고를 때 주의(목소리 복제 동의 포함). 회사·서비스 이름 없이 | `docs/gpt/Q11-answer.md` | 항목마다 이유, 추측 표시 | 답변 (아스트라 `docs/gpt/Q11-answer.md`) |
+| G14 | GPT(아스트라) | **독립 초안**: 한국어 AI 목소리가 "사람에 가깝게 들리는지"를 사람이 듣고 판단하는 기준표. 항목(4~7개)마다 듣는 질문과 0·1·2점 설명, 결함 신호, 측정 도구(`apps/voice-check/profile.js`)로 옆에 놓을 수 있는 값과 없는 값. 출발점은 `apps/warmth-scorer/rubric.json`의 `voice_criteria`(대표가 쓴 듣기 기준)만 읽고, `docs/eval/humanlike-voice-rubric-draft.md`는 **쓰기 전에 읽지 않기**. 사람인 척(AI임을 숨김)에 쓰이지 않게 하는 원칙 포함 | `docs/gpt/G14-humanlike-rubric.md` | 항목·점수 설명 완비, 근거는 '추측'·'확인' 구분 | 완료 (클라우드가 G14를 뼈대로 v0.2에 합침 → `docs/eval/humanlike-voice-rubric-draft.md`) |
+| R22 | GPT(아스트라) | G14를 쓴 뒤, 클라우드 초안 `docs/eval/humanlike-voice-rubric-draft.md` 비판과 G14와의 차이표(서로 빠진 항목, 겹치는 항목, 점수 설명이 판정을 유도하는 곳, 한국어 말끝·억양에서 놓친 것), 소개 페이지 `docs/showcase/template.html` 머리말·링크 모음 `docs/links/index.html`의 새 소개 문구 과장 여부 | `docs/gpt/R22-review.md` | 지적마다 파일:줄 | 완료 (16건 반영: 숨·변화 유도 삭제, 말끝 단순화 삭제, 음질 결함, 소개·링크 문구 낮춤) |
+| Q11 | GPT(아스트라) | "사람 녹음과 AI 소리 중 어느 쪽이 사람인가" 맞히기 시험 설계: 원고·평가자 수와 우연(50%)을 구별하는 방법, 확신도 사용법, 순서 효과, 녹음 조건 맞추기(같은 원고·크기), AI임을 알리는 윤리(시험 전 안내·끝난 뒤 공개), 비교할 AI 소리를 고를 때 주의(목소리 복제 동의 포함). 회사·서비스 이름 없이 | `docs/gpt/Q11-answer.md` | 항목마다 이유, 추측 표시 | 완료 (이항검정 수량을 클라우드가 재계산해 일치 확인 → 맞히기 시험은 포트폴리오 범위에서 뺌) |
 
 ### G13·R21 요청 (클라우드 팀장 · 2026-10-06 8회차)
 
