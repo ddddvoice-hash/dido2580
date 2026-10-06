@@ -18,9 +18,9 @@
   const SYL_MIN_GAP_MS = 80;     // 봉우리 사이 최소 간격
   const SYL_DIP_DB = 2;          // 봉우리 사이 골이 낮은 쪽 봉우리보다 이만큼 깊어야 별개 음절
   const SYL_FLOOR_DB = 25;       // 말소리 구간 최대 크기보다 이만큼 이상 작은 봉우리는 버림
-  
+
   const toDb = (x) => (x > 0 ? 20 * Math.log10(x) : -Infinity);
-  
+
   function pct(values, p) { // 선형 보간 백분위, p는 0~100
     if (!values.length) return null;
     const s = Array.from(values).sort((a, b) => a - b);
@@ -30,9 +30,9 @@
   }
   const mean = (v) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : null);
   const semis = (a, b) => 12 * Math.log2(a / b);
-  
+
   // ---- F0 ------------------------------------------------------------------
-  
+
   // 샘플을 약 12kHz로 줄이고(상자 평균) 10ms마다 40ms 창의 자기상관으로 F0를 잰다.
   // 반환: [{t(초, 창 중심), f0(Hz) 또는 null(무성/판정 불가)}] — mask(t)가 true인 프레임만 잰다.
   function f0Track(samples, rate, mask) {
@@ -85,9 +85,9 @@
     }
     return track;
   }
-  
+
   // ---- 음절(추정) ---------------------------------------------------------
-  
+
   function countSyllables(samples, rate, runsSec) {
     const hop = Math.round(rate * SYL_HOP_MS / 1000);
     const frames = Math.floor(samples.length / hop);
@@ -135,9 +135,9 @@
     }
     return total;
   }
-  
+
   // ---- 프로필 --------------------------------------------------------------
-  
+
   function profile(samples, rate, peak) {
     const FR = analysis.FRAME_MS;
     const duration = samples.length / rate;
@@ -148,7 +148,7 @@
     if (!runs.length || a.failed) throw new Error("말소리를 찾지 못했습니다 (측정 실패)");
     const runsSec = runs.map((r) => [r.start * FR / 1000, r.end * FR / 1000]);
     const spoken = runsSec.reduce((a, [s, e]) => a + (e - s), 0);
-  
+
     // 말소리 덩어리: 0.25초 미만 틈은 같은 덩어리
     const chunks = [];
     for (const [s, e] of runsSec) {
@@ -156,7 +156,7 @@
       if (last && s - last.end < PAUSE_S - 1e-9) last.end = e;
       else chunks.push({ start: s, end: e });
     }
-  
+
     // 1. 음높이
     const starts = runsSec.map((r) => r[0]), ends = runsSec.map((r) => r[1]);
     const mask = (t) => {
@@ -177,7 +177,7 @@
       medianHz: pct(f0s, 50), meanHz: mean(f0s), p10Hz: p10, p90Hz: p90,
       rangeSemitones: p10 && p90 ? semis(p90, p10) : null,
     };
-  
+
     // 2. 음절(추정)
     const syl = countSyllables(samples, rate, runsSec);
     const syllables = {
@@ -186,7 +186,7 @@
       perSecTotal: duration > 0 ? syl / duration : null,
       spokenSec: spoken, totalSec: duration,
     };
-  
+
     // 3. 쉼
     const lens = a.pauses.map((p) => p.length);
     const bins = { "0.25-0.5": 0, "0.5-1": 0, "1-2": 0, "2+": 0 };
@@ -203,7 +203,7 @@
       maxS: lens.length ? Math.max(...lens) : null, bins,
       spanSec: a.duration,
     };
-  
+
     // 4. 문장 끝 음높이
     const endChanges = [];
     let skipped = 0;
@@ -227,7 +227,7 @@
       upRatio: nEnd ? nUp / nEnd : null,
       meanChangeSemitones: mean(endChanges),
     };
-  
+
     // 5. 크기 (dBFS, LUFS 아님)
     let sqAll = 0;
     for (let i = 0; i < samples.length; i++) sqAll += samples[i] * samples[i];
@@ -241,7 +241,7 @@
       speechRmsDb: nSp ? toDb(Math.sqrt(sqSp / nSp)) : null,
       peakDb: toDb(peak),
     };
-  
+
     return { durationSec: duration, rate, speechRuns: runs.length, pitch, syllables, pauses, sentenceEnd, loudness };
   }
 

@@ -9,7 +9,7 @@ const SRC = path.join(__dirname, "../../voice-check/profile.js");
 const OUT = path.join(__dirname, "../profile-browser.js");
 
 function build() {
-  const src = fs.readFileSync(SRC, "utf8");
+  const src = fs.readFileSync(SRC, "utf8").replace(/\r\n?/g, "\n");
   const start = src.indexOf("const F0_MIN");
   const end = src.indexOf("function profileFile");
   if (start < 0 || end < 0 || end < start) throw new Error("profile.js 구조가 바뀌었습니다. build-profile.js의 잘라 낼 위치를 고쳐 주세요.");
@@ -21,7 +21,7 @@ function build() {
     ? require("../reading-coach/analysis.js")
     : root.ReadingAnalysis;
 
-${body.split("\n").map((l) => (l ? "  " + l : l)).join("\n")}
+${body.split("\n").map((l) => (l.trim() ? "  " + l : "")).join("\n")}
 
   const api = { profile, f0Track, countSyllables, pct };
   if (typeof module !== "undefined" && module.exports) module.exports = api;

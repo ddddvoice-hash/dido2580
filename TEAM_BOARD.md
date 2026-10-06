@@ -214,6 +214,7 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 | B9 | 사원 | G12·Q10·R18 해요체·맞춤법·이름·전화번호·G12 분량 숫자·표 점검(고치지 않고 지적만) | 이 게시판 '보고' 칸 | 지적 목록 | 검토 (팀장 확인 통과 · 보고 칸) |
 | A11 | 매니저 | A10 후속(팀장 코드 확인): 실제 평가용 묶음 문항 채점 기록에 `test_only: true`가 붙던 버그 재현·수정 | `apps/warmth-scorer/app.js`·`tests/testonly.browser.js` | 재현 후 수정, 새 테스트·기존 채점기 검사 통과 | 검토 (팀장 확인 통과 · 보고 칸) |
 | A12 | 매니저 | CI에 새 브라우저 검사 `sensitive.browser.js`·`testonly.browser.js` 추가 | `.github/workflows/tests.yml` | GitHub Actions에서 두 검사 실행·통과 | 검토 (팀장 확인 · CI 결과는 푸시 뒤 확인) |
+| A13 | 매니저 | A12 후속(팀장 재현): CI '녹음 부스' 단계 실패 원인 — 윈도우에서 만든 `profile-browser.js`의 빈 줄에 공백 두 칸이 들어가 리눅스(LF)에서 "오래됨"으로 판정. 생성기 줄바꿈 통일·빈 줄 처리, `.gitattributes`로 두 파일 LF 고정 | `apps/voice-studio/tools/build-profile.js`·`profile-browser.js`, `.gitattributes` | LF 체크아웃에서 parity·lines·reference·`--check` 통과, GitHub Actions 전부 통과 | 검토 (팀장 확인 · CI는 푸시 뒤 확인) |
 
 ### R17·G10·G11·Q9 요청 (클라우드 팀장 · 2026-10-05 6회차)
 
@@ -551,6 +552,13 @@ A/B 표는 측정값과 설계 참고값을 구분하고 점수·이해도·가�
 검토한 파일 목록: `AGENTS.md`, `TEAM_BOARD.md`, `HANDOFF.md`, 현재 `core.py`·`app.py`, 테스트 2개, `check.js`, `analysis.js`, 지정 커밋 변경. 실행해 본 것: venv에서 파일 쓰기를 차단한 core 39개·AppTest 4개 통과(AppTest 임시 폴더 생성은 메모리에서 대체), 추가 합성 입력·JS 비교·메모리 측정. 파일 생성·수정 없음.
 
 ## 보고
+
+### [A13] 팀장 확인 · 2026-10-06
+- A12 푸시 뒤 CI는 파일을 읽기 시작했지만 '녹음 부스' 작업 하나가 계속 실패. 로그는 관리자 권한이 필요해 받을 수 없어서, 팀장이 리눅스와 같은 LF 체크아웃(`git -c core.autocrlf=false archive`)으로 **재현**: `reference.test.js`가 "profile-browser.js가 오래됐습니다"로 실패, 차이는 빈 줄의 공백 두 칸뿐. 윈도우 작업 폴더에서는 줄바꿈 자동 변환 때문에 늘 통과로 보였음.
+- 고친 뒤 LF 체크아웃에서 parity·lines·reference·`--check` 모두 exit 0 확인.
+
+### [A13] 매니저 · 2026-10-06
+- 원인: 생성기가 CRLF 파일의 빈 줄(`""`)을 빈 줄로 보지 않고 들여쓰기를 붙임. 생성기가 읽자마자 LF로 통일하고 공백만 있는 줄은 빈 줄로, `profile-browser.js` 다시 생성, `.gitattributes`로 두 파일 LF 고정.
 
 ### [A12] 팀장 확인 · 2026-10-06
 - 매니저가 추가로 찾은 것이 더 중요해요: `tests.yml`의 단계 이름 "평가 묶음 겉모양 단서 검사(엄격: …)"에 따옴표 없는 `: `가 있어 **워크플로 파일이 YAML로 읽히지 않았어요.** 팀장이 GitHub에서 확인: 이 줄이 들어간 d3d9d71 이후 이 브랜치의 CI가 **매번 실패**(최근 6번 모두 failure, 실행 이름이 파일 경로로 뜸 = 파일을 못 읽음). 그동안 "CI에서 확인"이라고 적은 것들(예: A8의 `alpha_crosscheck.py`)은 실제로 돌지 않았어요.
