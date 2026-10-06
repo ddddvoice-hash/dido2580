@@ -249,9 +249,10 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 | 번호 | 담당 | 업무 | 결과 파일 | 완료 조건 | 상태 |
 |---|---|---|---|---|---|
 | R19 | GPT(아스트라) | 클라우드가 G12를 다듬은 템플릿 `docs/eval/rater-kit/`(README·`templates/` 3개·`values.json`·`fill.py`) 비판: G12에서 빠뜨리거나 약해진 보호 장치, 세 번 나눈 일정과 시간 추측이 맞는지, 운영자 확인표에 빠진 단계, `fill.py`가 빈칸·`R-__`를 잘 잡는지(직접 실행), 평가자가 읽기에 어려운 문장. 고칠 문장은 바꿀 문구까지 | `docs/gpt/R19-review.md` | 지적마다 파일:줄 | 검토 (아스트라 결과 `docs/gpt/R19-review.md` · 16건 · 코드(R19-01·02)는 A16, 나머지 14건은 안내문·동의서 문구로 **rater-kit 담당·대표** 반영 대기) |
-| A15 | 매니저 | R20 반영: 베타 페이지·zip(건너뛴 위기 문항 노출, 다시 접기, 평가자 코드, 답 열쇠는 허용 필드 목록으로 막기, 가상환경 제외 등) | `docs/beta/`, `tools/make_beta_zip.py` | 베타 JSONL이 채점기 validateRecord 통과, 새 브라우저 테스트, zip 목록에 열쇠·원본·.venv 없음 | 진행 |
+| A15 | 매니저 | R20 반영: 베타 페이지·zip(건너뛴 위기 문항 노출, 다시 접기, 평가자 코드, 답 열쇠는 허용 필드 목록으로 막기, 가상환경 제외 등) | `docs/beta/`, `tools/make_beta_zip.py` | 베타 JSONL이 채점기 validateRecord 통과, 새 브라우저 테스트, zip 목록에 열쇠·원본·.venv 없음 | 검토 (팀장 확인 통과 · 보고 칸) |
 | A16 | 매니저 | R19-01·02 반영: `fill.py` 평가자 코드 형식 제한·out/ 밖 쓰기 거부·빈 값 더 잡기, 테스트 | `docs/eval/rater-kit/fill.py`·`test_fill.py` | 단위 테스트 통과, R19 재현 거부 | 검토 (팀장 확인 통과 · 보고 칸) |
 | B10 | 사원 | G13·G14 맞춤법·해요체·브랜드·이름 점검(고치지 않고 지적만) | 이 게시판 '보고' 칸 | 지적 목록 | 검토 (팀장 확인 통과 · 보고 칸) |
+| A17 | 매니저 | CI에 베타 검사 추가: `docs/beta/tests/beta.browser.js`(61)·`test_build_zip.py`(10)·`build.py --check` | `.github/workflows/tests.yml` | GitHub Actions에서 실행·통과 | 대기 (다음 회차) |
 
 ### R18·G12·Q10·A10 요청 (클라우드 팀장 · 2026-10-06 7회차)
 
@@ -605,6 +606,15 @@ A/B 표는 측정값과 설계 참고값을 구분하고 점수·이해도·가�
 검토한 파일 목록: `AGENTS.md`, `TEAM_BOARD.md`, `HANDOFF.md`, 현재 `core.py`·`app.py`, 테스트 2개, `check.js`, `analysis.js`, 지정 커밋 변경. 실행해 본 것: venv에서 파일 쓰기를 차단한 core 39개·AppTest 4개 통과(AppTest 임시 폴더 생성은 메모리에서 대체), 추가 합성 입력·JS 비교·메모리 측정. 파일 생성·수정 없음.
 
 ## 보고
+
+### [A15] 팀장 확인 · 2026-10-06
+- 통과. 직접 실행: `build.py --check` 통과, `test_build_zip.py` **10/10**, `beta.browser.js` **61/61**(FAIL 0), 실제 zip(v0.2, 42개 파일)에 열쇠·`.venv`·`docs/gpt`·`GPT_PROMPT`·음성 파일 없음, `apps/warmth-scorer` 변경 없음.
+- 대표 확인: 건너뛴 위기 문항 JSONL 줄은 본문 대신 "본문은 기록하지 않았어요" 자리표시를 넣어요(채점기가 상황·답변 칸을 요구해서). 위기 문항을 **채점한** 기록은 내보내는 JSONL엔 본문이 들어가요(화면 미리보기만 가림). 실제 서버 읽기 권한·스크린리더는 미확인. 베타는 v0.2로 올라감.
+- 다음: 베타 검사를 CI에 넣기(A17).
+
+### [A15] 매니저 · 2026-10-06
+- R20-1~12 모두 반영(반려 0). 위기 문항 다시 접기·닫기·"오늘은 마치기", 평가자 코드별 저장 분리, 로컬 저장·서버 전달 따로 확인·다시 보내기, zip은 검사→임시→다시 열어 확인→확정, 답변은 허용 필드 `{text}`만, 근거는 답변 안 인용 구절(없으면 이유), 의견 기록 따로, 초안 유지, 키보드·48px·aria, `.venv`·점 폴더 제외, `rubric_version` 기록. 덧붙여 `[hidden]` 표시 버그 수정.
+- 바꾼 파일: `docs/beta/{template.html,build.py,index.html,tests/beta.browser.js,tests/test_build_zip.py}`, `tools/make_beta_zip.py`.
 
 ### [B10] 팀장 확인 · 2026-10-06
 - 통과. 팀장 스크립트로 G13·G14 표 칸 수 어긋남 0, G14 합니다체 끝맺음 0. 사원 결과와 같음.
