@@ -96,19 +96,19 @@ footer { color: var(--muted); font-size: .88rem; display: grid; gap: 6px; }
 
 <div class="wrap">
   <header class="hero">
-    <p class="eyebrow"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Crect width='256' height='256' rx='56' fill='%23176b67'/%3E%3Cpath d='M58 92a60 60 0 0 0 0 88' fill='none' stroke='%23f2b632' stroke-width='14' stroke-linecap='round'/%3E%3Cpath d='M198 92a60 60 0 0 1 0 88' fill='none' stroke='%23f2b632' stroke-width='14' stroke-linecap='round'/%3E%3Crect x='98' y='40' width='60' height='112' rx='30' fill='%23ffffff'/%3E%3Cpath d='M78 128a50 50 0 0 0 100 0' fill='none' stroke='%23ffffff' stroke-width='14' stroke-linecap='round'/%3E%3Cpath d='M128 178v30M98 214h60' fill='none' stroke='%23ffffff' stroke-width='14' stroke-linecap='round'/%3E%3C/svg%3E">성우 김디도 · 평가 키트 · 초안 단계</p>
-    <h1>AI 답변을 기준과 근거로 검토하는 평가 키트</h1>
-    <p class="lead">성우 김디도가 만들고 있어요. 17년 동안 "듣는 사람이 오해 없이 이해하는가"를 다뤄 온 낭독 경험으로, AI 답변이 상대의 상황을 알아차리고 정확하고 존중하는 말로 다음 걸음을 건네는지 살필 <b>기준을 정하고, 점수마다 근거를 남깁니다</b>.</p>
+    <p class="eyebrow"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Crect width='256' height='256' rx='56' fill='%23176b67'/%3E%3Cpath d='M58 92a60 60 0 0 0 0 88' fill='none' stroke='%23f2b632' stroke-width='14' stroke-linecap='round'/%3E%3Cpath d='M198 92a60 60 0 0 1 0 88' fill='none' stroke='%23f2b632' stroke-width='14' stroke-linecap='round'/%3E%3Crect x='98' y='40' width='60' height='112' rx='30' fill='%23ffffff'/%3E%3Cpath d='M78 128a50 50 0 0 0 100 0' fill='none' stroke='%23ffffff' stroke-width='14' stroke-linecap='round'/%3E%3Cpath d='M128 178v30M98 214h60' fill='none' stroke='%23ffffff' stroke-width='14' stroke-linecap='round'/%3E%3C/svg%3E">성우 김디도 · 인간에 가까운 AI 목소리 평가 키트 · 초안 단계</p>
+    <h1>AI 목소리가 사람에 얼마나 가까운지, 사람의 귀로 판단하는 평가 키트</h1>
+    <p class="lead">성우 김디도가 만들고 있어요. 17년 동안 사람의 목소리로 글을 읽어 온 경험으로, AI 목소리가 숨·쉼·억양·말끝·음색에서 <b>어디가 사람과 다르게 들리는지</b> 찾는 기준을 정하고, 점수마다 근거를 남겨요. 보조로, AI 답변의 내용이 사람이 건네는 말처럼 상대를 알아차리고 존중하는지도 봐요(아래 예시는 이 내용 기준표예요).</p>
     <div class="actions">
       <a class="btn primary" href="#example">평가 예시 보기</a>
       <a class="btn ghost" href="https://github.com/ddddvoice-hash/dido2580/tree/ccr-dfaecddb-lml56o/docs">코드와 문서 보기</a>
     </div>
-    <p class="status" role="note">아직 없는 것: 두 사람 이상의 독립 채점 결과, 같은 문장을 두 방식으로 읽은 녹음 비교. 아래 내용은 지금 저장소에서 확인할 수 있는 것만 적었어요.</p>
+    <p class="status" role="note">아직 없는 것: 목소리 사람다움 기준표의 확정(지금은 초안), 비교할 AI 소리, 두 사람 이상의 독립 채점 결과. 아래 내용은 지금 저장소에서 확인할 수 있는 것만 적었어요.</p>
   </header>
 
   <section id="example" aria-labelledby="h-ex" tabindex="-1">
     <h2 id="h-ex">평가 예시 하나</h2>
-    <p class="sub">성우 김디도가 쓴 기준표(v1.0)에 실린 예시 채점이에요. 한 사람의 채점이고, 다른 평가자와의 비교는 아직 없어요.</p>
+    <p class="sub">말의 내용을 보는 따뜻함 기준표(v1.0)에 실린 예시 채점이에요. 한 사람의 채점이고, 다른 평가자와의 비교는 아직 없어요.</p>
     <div class="case-q"><p class="lbl">사용자가 한 말</p><p class="say">이직 면접에서 또 떨어졌어요. 벌써 다섯 번째예요. 제가 부족한 걸까요?</p></div>
     <div class="answers" id="answers"></div>
     <p class="lesson">A는 가장 다정해 보이지만 가장 낮은 점수다. 이 기준표가 걸러내려는 것이 바로 이 차이다.</p>
@@ -141,6 +141,8 @@ footer { color: var(--muted); font-size: .88rem; display: grid; gap: 6px; }
       </section>
       <section class="todo" aria-labelledby="h-todo"><h3 id="h-todo">남은 것</h3>
         <ul>
+          <li>목소리 사람다움 기준표 확정(숨·쉼과 흐름·억양과 강세·말끝·음색과 결함·내용과의 일치, <a href="https://github.com/ddddvoice-hash/dido2580/blob/ccr-dfaecddb-lml56o/docs/eval/humanlike-voice-rubric-draft.md">초안</a>, 결정은 성우 김디도)</li>
+          <li>같은 원고의 사람 녹음과 AI 소리를 나란히 듣는 비교와 "어느 쪽이 사람인지" 맞히기</li>
           <li>두 번째 평가자와 독립 채점, 항목별 결과와 갈린 사례 공개</li>
           <li>같은 상담 문장을 두 방식으로 읽은 녹음 비교(사례 비교이며 일반화하지 않음)</li>
           <li>기준표 v1.1 검토(제안서 있음, 결정은 성우 김디도)</li>

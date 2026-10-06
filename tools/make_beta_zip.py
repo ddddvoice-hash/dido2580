@@ -16,7 +16,7 @@ TOP = f"성우김디도-베타-{VERSION}"
 SKIP_DIRS = {"tests", "__pycache__", "node_modules", ".pytest_cache"}
 SKIP_EXT = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm", ".pyc"}
 
-README = f"""성우 김디도 · 따뜻한 AI 목소리 평가 키트 · 베타테스트 {VERSION}
+README = f"""성우 김디도 · 인간에 가까운 AI 목소리 평가 키트 · 베타테스트 {VERSION}
 
 [가장 쉬운 방법] 베타-채점.html 을 두 번 눌러 브라우저로 여세요.
   - 인터넷 없이 돼요. 채점은 이 컴퓨터의 브라우저에만 저장돼요.
