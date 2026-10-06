@@ -22,7 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 MODEL_ID = os.environ.get("DIDO_TTS_MODEL", "Qwen/Qwen3-TTS-12Hz-1.7B-Base")
 MAX_CHARS = 400
-MAX_BODY = 8_000  # 400자 글을 담기에 충분한 바이트
+MAX_BODY = 16_000  # 400자를 JSON으로 감싼 것보다 넉넉히
 _model = None
 
 
@@ -47,6 +47,8 @@ def synth(text: str) -> bytes:
 
 
 class Handler(BaseHTTPRequestHandler):
+    timeout = 30  # 본문을 늦게 보내며 붙잡아 두는 연결을 끊어요
+
     def log_message(self, *a):
         pass
 
@@ -64,19 +66,22 @@ class Handler(BaseHTTPRequestHandler):
         token = os.environ.get("DIDO_TTS_TOKEN")
         if token and self.headers.get("Authorization") != f"Bearer {token}":
             return self._err(401, "접근 토큰이 맞지 않아요")
+        raw = (self.headers.get("Content-Length") or "").strip()
+        if not raw.isascii() or not raw.isdigit() or int(raw) == 0:
+            return self._err(400, "보낸 내용의 길이가 올바르지 않아요")
+        if int(raw) > MAX_BODY:
+            self.close_connection = True  # 읽지 않은 본문이 남으니 연결을 닫아요
+            return self._err(413, "보낸 내용이 너무 커요")
         try:
-            n = int(self.headers.get("Content-Length") or 0)
-        except ValueError:
-            return self._err(400, "길이 정보가 올바르지 않아요")
-        if n <= 0 or n > MAX_BODY:  # 읽기 전에 크기부터 막아요(R28-4)
-            return self._err(413, "보낸 내용이 비었거나 너무 커요")
-        try:
-            text = str(json.loads(self.rfile.read(n).decode("utf-8")).get("text", "")).strip()
-        except (ValueError, UnicodeDecodeError, AttributeError):
+            text = str(json.loads(self.rfile.read(int(raw)).decode("utf-8")).get("text", "")).strip()
+        except (ValueError, UnicodeDecodeError, AttributeError, OSError):
             return self._err(400, "보낸 내용을 읽지 못했어요")
         if not text or len(text) > MAX_CHARS:
             return self._err(400, f"글이 비었거나 {MAX_CHARS}자를 넘어요")
-        audio = synth(text)
+        try:
+            audio = synth(text)
+        except Exception:
+            return self._err(500, "목소리를 만들지 못했어요")
         self.send_response(200)
         self.send_header("Content-Type", "audio/wav")
         self.send_header("Content-Length", str(len(audio)))

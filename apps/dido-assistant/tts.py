@@ -19,6 +19,25 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1")
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """목소리 서버가 다른 곳으로 보내도 따라가지 않아요(접근 토큰이 다른 주소로 새지 않게)."""
+
+    def redirect_request(self, *a, **kw):
+        return None
+
+
+def check_url(url: str) -> str:
+    """목소리 서버 주소 검사: 이 컴퓨터는 http도 되고, 밖은 https만. 맞지 않으면 ValueError."""
+    u = urllib.parse.urlsplit(url)
+    if u.scheme not in ("http", "https") or not u.hostname or u.username or u.password:
+        raise ValueError("목소리 서버 주소가 올바르지 않아요")
+    if u.scheme == "http" and u.hostname not in LOCAL_HOSTS:
+        raise ValueError("이 컴퓨터 밖의 목소리 서버는 https 주소만 쓸 수 있어요")
+    return url
+
 
 class BrowserEngine:
     mime = None
@@ -29,21 +48,7 @@ class BrowserEngine:
         return None  # 화면이 직접 읽어요
 
 
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    """목소리 서버가 다른 곳으로 보내도 따라가지 않아요(접근 토큰이 새지 않게, R28-2)."""
-    def redirect_request(self, *a, **kw):
-        raise RuntimeError("목소리 서버가 다른 주소로 보내려 해서 멈췄어요")
-
-
-_NO_REDIRECT = urllib.request.build_opener(_NoRedirect)
-
-
-def _url_ok(url: str) -> bool:
-    """이 컴퓨터 주소가 아니면 HTTPS만(R28-2)."""
-    p = urllib.parse.urlparse(url)
-    if p.scheme == "https":
-        return True
-    return p.scheme == "http" and p.hostname in ("127.0.0.1", "localhost", "::1")
+_NO_REDIRECT = urllib.request.build_opener(_NoRedirect)  # 클라우드 목소리용
 
 
 class HttpEngine:
@@ -52,7 +57,7 @@ class HttpEngine:
     label = "성우 김디도 목소리(복제 서버)"
 
     def __init__(self, url: str, timeout: float = 60.0):
-        self.url = url
+        self.url = check_url(url)
         self.timeout = timeout
 
     def synth(self, text: str) -> bytes:
@@ -62,7 +67,10 @@ class HttpEngine:
         if token:
             headers["Authorization"] = f"Bearer {token}"
         req = urllib.request.Request(self.url, data=body, headers=headers)
-        with _NO_REDIRECT.open(req, timeout=self.timeout) as r:
+        handlers = [_NoRedirect()]
+        if urllib.parse.urlsplit(self.url).hostname in LOCAL_HOSTS:
+            handlers.append(urllib.request.ProxyHandler({}))  # 이 컴퓨터 안 주소는 프록시를 거치지 않아요
+        with urllib.request.build_opener(*handlers).open(req, timeout=self.timeout) as r:
             if r.headers.get("Content-Type", "").split(";")[0] != "audio/wav":
                 raise RuntimeError("목소리 서버가 WAV가 아닌 것을 보냈어요")
             return r.read()
@@ -165,8 +173,13 @@ def local_available() -> bool:
 def make_engine():
     kind = os.environ.get("DIDO_TTS", "auto")
     url = os.environ.get("DIDO_TTS_URL", "")
-    if kind in ("http", "auto") and url and _url_ok(url):
-        return HttpEngine(url)
+    if kind in ("http", "auto") and url:
+        try:
+            return HttpEngine(url)  # 주소 검사는 HttpEngine 안에서 해요
+        except ValueError:
+            e = BrowserEngine()
+            e.label = "브라우저 기본 목소리(목소리 서버 주소가 안전하지 않아 쓰지 않았어요)"
+            return e
     key, vid = os.environ.get("ELEVENLABS_API_KEY", ""), os.environ.get("DIDO_ELEVEN_VOICE_ID", "")
     if kind in ("eleven", "auto") and key and vid:
         return ElevenEngine(key, vid)
