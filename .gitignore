@@ -6,3 +6,6 @@ build/
 dist/
 .venv/
 apps/dido-assistant/tts_server/ref/
+apps/dido-assistant/voice/*
+!apps/dido-assistant/voice/README.md
+!apps/dido-assistant/voice/ref_sentence.txt

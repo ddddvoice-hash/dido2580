@@ -203,6 +203,14 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 
 > **대표 지시 2026-10-06: "꼭 아스트라로 협의해."** 모든 R·G·Q는 `gpt-6-astra`로만 돌리고, 결과 머리에 실행 기록의 모델 줄을 그대로 옮겨 주세요. 아스트라가 안 되면 다른 모델로 돌리지 말고 그 사실만 게시판에 적어요. 이제 CI(`tools/check_astra.py`)가 `docs/gpt/`의 모든 결과에 아스트라 기록이 있는지 검사해서, 없으면 빨간불이 돼요.
 
+### ★ AI 비서 v0.2: 음성만 넣으면 구동 + Claude·GPT·Gemini 연결 · R29 요청 (클라우드 팀장 · 2026-10-06, 아스트라만)
+
+> **대표 요청 2026-10-06:** "음성만 있으면 바로 구동되게, 클로드·지피티·제미나이에도 연동돼서 각 AI가 내 음성비서를 불러올 수 있게." → `apps/setup-voice.cmd` 한 번, `voice/ref.wav`만 넣으면 됨. MCP 서버 `apps/dido-assistant/mcp_server.py`, 앱 연결 `connect.py`. 인계 `docs/assistant/HANDOFF.md`. **로컬 팀장:** 대표 PC에서 setup-voice.cmd 실행 확인(HANDOFF 1번과 함께).
+
+| 번호 | 담당 | 업무 | 결과 파일 | 완료 조건 | 상태 |
+|---|---|---|---|---|---|
+| R29 | GPT(아스트라) | v0.2 비판: `mcp_server.py`(도구 설명이 AI 앱에서 잘 고르게 쓰였는지, 악용 막기, 400자 제한, 윈도우 재생), `connect.py`(Codex `config.toml`·Gemini `settings.json`·Claude 데스크톱 설정 형식이 **2026년 10월 현재 각 앱 문서와 맞는지 웹으로 확인**, 출처 링크), `tts.py`의 자동 선택과 CPU 실행, `apps/setup-voice.cmd`의 윈도우 배치 문법 오류(괄호·인용), ChatGPT 웹 연결에 필요한 것 | `docs/gpt/R29-review.md` | 지적마다 파일:줄, 앱 문서 출처 | 대기 |
+
 ### ★ AI 비서 v0.1 완성 · 인계 · G16·R28 요청 (클라우드 팀장 · 2026-10-06, 아스트라만)
 
 > **대표 지시 2026-10-06:** "묻지 말고 아스트라랑 계속 진행. 전권. 프로그램 빌드·인터페이스·필요한 모든 생태계." + "세션 한도가 부족하면 GPT로 넘겨 이어서." → v0.1 완성(`apps/dido-assistant/`, 실행 `apps/start-assistant.cmd`). **이어 할 일과 인계는 `docs/assistant/HANDOFF.md`**. 클라우드가 멈춰 있으면 로컬 팀장이 HANDOFF 1·2번(대표 PC 실행 확인)을 먼저 해 주세요.
@@ -287,6 +295,7 @@ cd ~/dido2580; if ($?) { git pull }; if ($?) { cd apps/warmth-scorer }; if ($?) 
 | B10 | 사원 | G13·G14 맞춤법·해요체·브랜드·이름 점검(고치지 않고 지적만) | 이 게시판 '보고' 칸 | 지적 목록 | 검토 (팀장 확인 통과 · 보고 칸) |
 | A17 | 매니저 | CI에 베타 검사 추가: `docs/beta/tests/beta.browser.js`(61)·`test_build_zip.py`(10)·`build.py --check` | `.github/workflows/tests.yml` | GitHub Actions에서 실행·통과 | 검토 (팀장 확인 통과 · CI는 다음 푸시에서 확인) |
 | A18 | 매니저 | R28 반영: AI 비서 보안(Origin·Host 검사, 토큰 리디렉션, 본문 크기), 숫자 변환 예외·순서 표현·쉼표 소수, 도구 실패 보고, 화면(Esc·새 대화·실패 안내), 실행 파일 | `apps/dido-assistant/`, `apps/start-assistant.cmd` | R28 재현이 새 동작, 기존 테스트·화면 검사 통과 | 검토 (팀장 확인 통과 · 보고 칸) |
+| A19 | 매니저 | R27 숫자 반례 + 날짜(`2026-10-06`이 한 자리씩 읽힘) 반영: `korean_numbers.py`가 틀리게 읽는 문장을 고치고 G15 30문장·R27 반례를 테스트로 | `apps/dido-assistant/korean_numbers.py`·`tests/` | R27 반례·G15 30문장 기대 읽기와 일치, 기존 테스트 통과 | 대기 (다음 회차) |
 | B12 | 사원 | G16 맞춤법·해요체·이름 점검(동의서 서명 문장의 '~합니다'는 관례로 표시만, 고치지 않고 지적만) | 이 게시판 '보고' 칸 | 지적 목록 | 검토 (팀장 확인 통과 · 보고 칸) |
 | B11 | 사원 | G15 형식(30줄·칸 수·번호)·정답 읽기에 숫자 남음·이름·문체 점검(고치지 않고 지적만) | 이 게시판 '보고' 칸 | 지적 목록 | 검토 (팀장 확인 통과 · 보고 칸) |
 
@@ -642,6 +651,9 @@ A/B 표는 측정값과 설계 참고값을 구분하고 점수·이해도·가�
 검토한 파일 목록: `AGENTS.md`, `TEAM_BOARD.md`, `HANDOFF.md`, 현재 `core.py`·`app.py`, 테스트 2개, `check.js`, `analysis.js`, 지정 커밋 변경. 실행해 본 것: venv에서 파일 쓰기를 차단한 core 39개·AppTest 4개 통과(AppTest 임시 폴더 생성은 메모리에서 대체), 추가 합성 입력·JS 비교·메모리 측정. 파일 생성·수정 없음.
 
 ## 보고
+
+### [A18-2] 팀장 확인 · 2026-10-06
+- 클라우드 v0.2와 A18이 같은 때 `tts.py`를 고쳐 병합 충돌 → 매니저가 v0.2 구조에 A18 안전장치(주소 검사·리디렉션 안 따라감)를 얹어 합침. 팀장 확인: 충돌 표시 0, `test_server`·`test_korean_numbers`·`test_connect` OK, `test_mcp`는 이 PC에 mcp 패키지가 없어 건너뜀 → **CI에서 확인**.
 
 ### [A18] 팀장 확인 · 2026-10-06
 - 통과. 직접 실행: `test_korean_numbers.py`·`test_server.py` OK(매니저 보고 9·32건), R28 재현 — `1,234.56원` → "천이백삼십사 점 오 육 원", `1번째` → "첫 번째", 1경 이상은 원문 유지, 예외로 요청이 깨지지 않음. 남은 시험 서버 없음.

@@ -12,6 +12,16 @@
 | 서버·화면 | `server.py`, `index.html` | 서버 테스트 11개, 화면 테스트 9개 통과(CI) |
 | 실행 | `apps/start-assistant.cmd`, 작업실 6번 카드 | 윈도우에서 **실행 미확인** |
 
+## v0.2 추가 (2026-10-06, 대표 요청 "음성만 있으면 바로 구동 + Claude·GPT·Gemini 연동")
+
+| 부분 | 파일 | 확인 |
+|---|---|---|
+| 목소리 자동 선택(서버 → 이 컴퓨터 → 브라우저), 같은 문장 저장 | `tts.py`, `voice/` | 가짜 모델로 음성 폴더→목소리 파일 끝까지(MCP 시험) |
+| AI 앱이 부르는 MCP 서버(도구 4개) | `mcp_server.py` | 실제 stdio 연결로 시험 3개 통과(mcp 2.3) |
+| 앱 연결 자동 설정(Claude 데스크톱·Claude Code·Codex·Gemini CLI) | `connect.py` | 시험 4개(다른 설정 보존, 두 번 해도 같음, 깨진 설정은 안 건드림) |
+| 한 번에 준비 | `apps/setup-voice.cmd` | 윈도우 실행 **미확인** |
+| ChatGPT 웹 연결 | `mcp_server.py --http` | 공개 HTTPS 서버·접근 제한 필요 → 6번 일 |
+
 ## 다음 할 일 (위에서부터)
 
 | # | 일 | 누가 | 완료 조건 |
