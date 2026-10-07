@@ -23,6 +23,7 @@ import base64
 import collections
 import datetime as _dt
 import hashlib
+import functools
 import hmac
 import json
 import os
@@ -148,40 +149,59 @@ _CONFUSABLES = {
 SHORT_TERM = 8  # 자모로 푼 금지어가 이보다 짧으면 낱말 시작에서만 견줘요(아래 check_policy)
 
 
-def _fold_tokens(text: str):
-    """글을 공백 기준 낱말로 나눠 낱말마다 같은 꼴(자모)로 맞춰요. 안정될 때까지 되풀이해요:
-    NFKC(전각·호환 문자·한글 분해형 합치기)→NFKD(악센트 같은 결합 표시를 분리), 소문자, 동형 문자 표,
-    공백·보이지 않는 글자·결합 표시·문장부호·기호·채움 글자 제거. 끝에 한글을 호환 자모로 풀어요."""
-    tokens = []
-    for word in (text or "").split():
-        t = word
-        for _ in range(8):
-            nxt = unicodedata.normalize("NFKD", unicodedata.normalize("NFKC", t)).casefold()
-            nxt = "".join(_CONFUSABLES.get(ch, ch) for ch in nxt)
-            nxt = "".join(ch for ch in nxt if ch not in _FILLERS and unicodedata.category(ch)[0] not in "ZCMPS")
-            if nxt == t:
-                break
-            t = nxt
-        t = "".join(_JAMO.get(ch, ch) for ch in unicodedata.normalize("NFKD", t))
-        if t:
-            tokens.append(t)
-    return tokens
+@functools.lru_cache(maxsize=4096)
+def _fold_char(ch: str):
+    """글자 하나를 비교용 꼴로 맞춰요. 구분자(공백·보이지 않는 글자·문장부호·기호)는 None, 결합 표시는 ""을 돌려줘요.
+    결합 표시·채움 글자는 소문자·호환 분해보다 먼저 빼요(U+0345가 ι→i로 둔갑해 우회하는 일을 막아요).
+    ™ 같은 위첨자·아래첨자 기호는 TM으로 풀려 글자가 되지 않게 구분자로 봐요. ⓐ·㈜처럼 글자로 읽히는 기호는 글자로 둬요."""
+    cat = unicodedata.category(ch)
+    if ch in _FILLERS or cat[0] in "ZCP":
+        return None
+    if cat[0] == "M":
+        return ""
+    if cat[0] == "S":
+        if unicodedata.decomposition(ch).startswith(("<super>", "<sub>")) or not any(c.isalnum() for c in unicodedata.normalize("NFKC", ch)):
+            return None
+    t = ch
+    for _ in range(8):
+        nxt = unicodedata.normalize("NFKD", t)
+        nxt = "".join(c for c in nxt if c not in _FILLERS and unicodedata.category(c)[0] not in "ZCMPS")
+        nxt = nxt.casefold()
+        nxt = "".join(_CONFUSABLES.get(c, c) for c in nxt)
+        nxt = "".join(c for c in nxt if c not in _FILLERS and unicodedata.category(c)[0] not in "ZCMPS")
+        if nxt == t:
+            break
+        t = nxt
+    t = "".join(_JAMO.get(c, c) for c in unicodedata.normalize("NFKD", t))
+    return t or None
 
 
-def _fold_with_starts(text: str):
-    """(비교용 글, 낱말이 시작하는 자리 집합). 소리 없는 첫소리 ㅇ은 모음 앞에서 빼요(음절 '아'와 낱자 'ㅏ'를 같게)."""
-    raw, begins = "", set()
-    for tok in _fold_tokens(text):
-        begins.add(len(raw))
-        raw += tok
-    out, starts = [], set()
+def _fold_info(text: str):
+    """(비교용 글, 낱말 시작 자리, 글자 경계 자리). 구분자(공백·기호·보이지 않는 글자)에서 낱말이 갈려요.
+    소리 없는 첫소리 ㅇ은 모음 앞에서 빼요(음절 '아'와 낱자 'ㅏ'를 같게)."""
+    raw, tok, cb, pending = "", set(), set(), True
+    for ch in unicodedata.normalize("NFC", text or ""):
+        f = _fold_char(ch)
+        if f is None:
+            pending = True
+        elif f:
+            if pending:
+                tok.add(len(raw))
+                pending = False
+            cb.add(len(raw))
+            raw += f
+    out, pos = [], {}
     for i, ch in enumerate(raw):
-        if i in begins:
-            starts.add(len(out))
+        pos[i] = len(out)
         if ch == "ㅇ" and i + 1 < len(raw) and raw[i + 1] in _VOWEL_LETTERS:
             continue
         out.append(ch)
-    return "".join(out), starts
+    return ("".join(out), {pos[i] for i in tok}, {pos[i] for i in cb})
+
+
+def _fold_with_starts(text: str):
+    flat, starts, _cb = _fold_info(text)
+    return flat, starts
 
 
 def _fold(text: str) -> str:
@@ -197,7 +217,9 @@ def _unify_digits(text: str, hanja: bool = False) -> str:
     분수(½)·단위(㎡)는 그대로 둬요. 실제로 읽을 글에는 쓰지 않아요(단위 읽기가 달라져요)."""
     out = []
     for ch in text:
-        if hanja and ch in _HANJA_DIGITS:
+        if ch in "²³" and out and out[-1].isascii() and out[-1].isalpha():
+            out.append(ch)  # km²·m³ 같은 단위 지수는 숫자로 바꾸지 않아요(읽지 않을 말이 생겨요)
+        elif hanja and ch in _HANJA_DIGITS:
             out.append(_HANJA_DIGITS[ch])
         elif ch.isascii():
             out.append(ch)
@@ -215,7 +237,7 @@ def check_policy(text: str):
     """목소리로 만들면 안 되는 문구면 이유를, 아니면 None을 돌려줘요(정규화하고 공백을 빼고 견줘요).
     긴 금지어(자모 8자 이상)는 글 어디에 있든 막아요. 짧은 금지어는 다른 낱말 속(날씨 속 '시', 소나무 속 '나무')을
     잘못 막지 않도록 낱말 시작에서 맞을 때만 막아요(그 대신 앞에 다른 글자를 붙인 짧은 말은 지나가요)."""
-    flat, starts = _fold_with_starts(text)
+    flat, starts, cb = _fold_info(text)
     terms = list(BUILTIN_BLOCKED)
     try:
         extra = (VOICE_DIR / "blocklist.txt").read_text(encoding="utf-8").splitlines()
@@ -231,7 +253,10 @@ def check_policy(text: str):
         else:
             hit, i = False, flat.find(t)
             while i >= 0 and not hit:
-                hit = i in starts
+                e = i + len(t)
+                # 낱말 시작·글자(음절) 경계에서 맞아야 해요. 여러 낱말에 걸치면 마지막 낱말이 끝나야 해요(나 무대 ≠ 나무).
+                if i in starts and i in cb and (e == len(flat) or e in cb):
+                    hit = not any(i < s < e for s in starts) or e == len(flat) or e in starts
                 i = flat.find(t, i + 1)
         if hit:
             return "사기·협박·정치 광고로 쓰일 수 있는 문구라 만들지 않아요."

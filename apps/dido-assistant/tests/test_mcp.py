@@ -530,6 +530,43 @@ class R33(unittest.TestCase):
         self.assertFalse(out["ok"])
         self.assertEqual(n, 0)
 
+    # ---- R34 ----
+    def test_R34_bypass_blocked(self):
+        cases = [("시험", "ͅ시험"), ("시험", "시ͅ험"), ("abcdefgh", "abcͅdefgh"),
+                 ("시험", "안내:시험"), ("시험", "안내: 시험"), ("abcd", "x.аbcd"),
+                 ("시험", "x​시험"), ("시험", "x⠀시험"), ("시험", "x 시험"),
+                 ("시험", "™시험"), ("시험", "※시험")]
+        for term, s in cases:
+            out, n = self._synth_calls(term, s)
+            self.assertFalse(out["ok"], ascii(s))
+            self.assertEqual(n, 0, ascii(s))
+
+    def test_R34_false_positives_pass(self):
+        for term, s in [("나무", "나 무대에 올라요."), ("시", "식사를 해요."), ("시", "날씨는 맑아요."),
+                        ("삼 킬로미터", "3km²"), ("삼 킬로미터", "3㎢")]:
+            out, n = self._synth_calls(term, s)
+            self.assertEqual(out.get("status"), "preparing", s)
+            self.assertEqual(n, 1, s)
+        # 짝: 같은 금지어가 정말 읽히면 막아요, 글자 접두사 정책(x시험)은 그대로
+        for term, s in [("나무", "나 무"), ("시", "시험을 봐요"), ("삼 킬로미터", "3km")]:
+            out, n = self._synth_calls(term, s)
+            self.assertFalse(out["ok"], s)
+            self.assertEqual(n, 0, s)
+        out, n = self._synth_calls("시험", "x시험")
+        self.assertEqual(n, 1)
+
+    def test_R34_volume_and_area_units(self):
+        from korean_numbers import normalize
+        want = {"㎡": "삼 제곱미터", "㎠": "삼 제곱센티미터", "cm²": "삼 제곱센티미터",
+                "㎥": "삼 세제곱미터", "m³": "삼 세제곱미터", "km³": "삼 세제곱킬로미터",
+                "㎢": "삼 제곱킬로미터", "km²": "삼 제곱킬로미터"}
+        from unittest import mock
+        with mock.patch.object(self.m, "_synth_with_budget", return_value=None):
+            for u, w in want.items():
+                self.assertEqual(normalize("3" + u), w, u)
+                self.assertEqual(self.m.speak_core("3" + u, False)[0]["spoken_text"], w, u)
+        self.assertEqual(normalize("3km⁴"), "3km⁴")  # 지원하지 않는 지수는 길이 단위로 쪼개지 않아요
+
     def test_S_prune_survives_files_vanishing(self):
         from unittest import mock
         gone, keep = mock.Mock(), mock.Mock()

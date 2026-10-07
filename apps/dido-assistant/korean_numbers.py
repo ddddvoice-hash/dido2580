@@ -94,7 +94,8 @@ NUM = r"(?<!\d)(?:\d{1,3}(?:,\d{3})+|\d+)"
 DEC = NUM + r"\.\d+"
 
 # 단위 기호(호환 문자)는 먼저 풀어 써요: ㎞ → km, ㎏ → kg, ㎡ → m², ℃ → °C
-_UNIT_CHARS = {"㎞": "km", "㎏": "kg", "㎡": "m²", "㎢": "km²", "℃": "°C"}
+_UNIT_CHARS = {"㎞": "km", "㎏": "kg", "㎡": "m²", "㎢": "km²", "℃": "°C",
+               "㎠": "cm²", "㎟": "mm²", "㎥": "m³", "㎤": "cm³", "㎣": "mm³", "㎦": "km³"}
 
 
 def _clock(h: int, mi: int, s=None) -> str:
@@ -206,19 +207,20 @@ _RULES = [
     # 섭씨(음수 포함) -3°C → 섭씨 영하 삼 도
     (re.compile(r"(?<![\d\w])(-?)(" + DEC + "|" + NUM + r")\s*°C"),
      lambda m: "섭씨 " + ("영하 " if m.group(1) else "") + (decimal(m.group(2)) if "." in m.group(2) else sino(_int(m.group(2)))) + " 도"),
-    # 넓이 단위
-    (re.compile("(" + DEC + "|" + NUM + r")\s*km²"), lambda m: (decimal(m.group(1)) if "." in m.group(1) else sino(_int(m.group(1)))) + " 제곱킬로미터"),
-    (re.compile("(" + DEC + "|" + NUM + r")\s*m²"), lambda m: (decimal(m.group(1)) if "." in m.group(1) else sino(_int(m.group(1)))) + " 제곱미터"),
+    # 넓이·부피 단위(km·cm·mm·m의 제곱·세제곱)
+    (re.compile("(" + DEC + "|" + NUM + r")\s*(km|cm|mm|m)([²³])"),
+     lambda m: (decimal(m.group(1)) if "." in m.group(1) else sino(_int(m.group(1)))) + " "
+     + ("제곱" if m.group(3) == "²" else "세제곱") + {"km": "킬로미터", "cm": "센티미터", "mm": "밀리미터", "m": "미터"}[m.group(2)]),
     # 소수 + 단위/기호
     (re.compile("(" + DEC + r")\s*%"), lambda m: decimal(m.group(1)) + " 퍼센트"),
     (re.compile("(" + DEC + r")\s*kg"), lambda m: decimal(m.group(1)) + " 킬로그램"),
-    (re.compile("(" + DEC + r")\s*km"), lambda m: decimal(m.group(1)) + " 킬로미터"),
+    (re.compile("(" + DEC + r")\s*km(?![¹²³⁰-⁹])"), lambda m: decimal(m.group(1)) + " 킬로미터"),
     (re.compile("(" + DEC + r")\s*(도|초|점|배|원|분|일|년|번|층|호|동|항)"), lambda m: decimal(m.group(1)) + " " + m.group(2)),
     (re.compile("(" + DEC + ")"), lambda m: decimal(m.group(1))),
     # 기호 단위
     (re.compile("(" + NUM + r")\s*%"), lambda m: sino(_int(m.group(1))) + " 퍼센트"),
     (re.compile("(" + NUM + r")\s*kg"), lambda m: sino(_int(m.group(1))) + " 킬로그램"),
-    (re.compile("(" + NUM + r")\s*km"), lambda m: sino(_int(m.group(1))) + " 킬로미터"),
+    (re.compile("(" + NUM + r")\s*km(?![¹²³⁰-⁹])"), lambda m: sino(_int(m.group(1))) + " 킬로미터"),
     # 날짜: 달은 유월·시월 특수 읽기 (6 월처럼 띄어도)
     (re.compile(r"(?<!\d)(\d{1,2})\s*월"), lambda m: MONTHS.get(int(m.group(1)), sino(int(m.group(1))) + "월")),
     # 개월은 한자어
