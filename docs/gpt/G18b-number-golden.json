@@ -1,0 +1,4348 @@
+{
+  "task": "G18b",
+  "run": "model: gpt-6-astra · reasoning effort: high · sandbox: workspace-write [workdir, /tmp, $TMPDIR] · session id: 01a11425-45d8-7223-81f8-f36dee364813",
+  "date": "2026-10-07",
+  "brand": "성우 김디도",
+  "notice": "성우 김디도 숫자 읽기 골든 시험표 수정 초안이에요. 문장과 id는 G18 그대로예요. needs_owner가 true인 문항은 대표 확인 전이므로 확정 정답으로 쓰지 않아요. 일부 용례만 확인한 정책과 출처를 확인하지 못한 기대 읽기는 추측으로 남겨요. current_output은 이번 실행에서 normalize를 호출한 관측값이며 기대 읽기의 정당성을 증명하지 않아요. 전화 형식과 주소는 기존 가상 시험 자료예요.",
+  "categories": [
+    "시각",
+    "점수",
+    "번호",
+    "금액",
+    "날짜",
+    "전화",
+    "버전",
+    "서수",
+    "수량",
+    "분수",
+    "소수",
+    "백분율",
+    "단위",
+    "연도",
+    "나이",
+    "원문 보존",
+    "기간",
+    "연산",
+    "비율"
+  ],
+  "items": [
+    {
+      "id": "G18-G15-01",
+      "sentence": "시작 시각은 오후 2시 30분 5초예요.",
+      "spans": [
+        {
+          "text": "2시",
+          "start": 10,
+          "end": 12,
+          "category": "시각",
+          "expected": "두 시",
+          "allowed": [],
+          "basis": "확인(상담 사례의 두 시·삼십 분·오 초와 띄어쓰기 본문을 2026-10-07에 확인했어요: https://www.korean.go.kr/front/mcfaq/mcfaqView.do?mcfaq_seq=5672)"
+        },
+        {
+          "text": "30분",
+          "start": 13,
+          "end": 16,
+          "category": "시각",
+          "expected": "삼십 분",
+          "allowed": [],
+          "basis": "확인(상담 사례의 두 시·삼십 분·오 초와 띄어쓰기 본문을 2026-10-07에 확인했어요: https://www.korean.go.kr/front/mcfaq/mcfaqView.do?mcfaq_seq=5672)"
+        },
+        {
+          "text": "5초",
+          "start": 17,
+          "end": 19,
+          "category": "시각",
+          "expected": "오 초",
+          "allowed": [],
+          "basis": "확인(상담 사례의 두 시·삼십 분·오 초와 띄어쓰기 본문을 2026-10-07에 확인했어요: https://www.korean.go.kr/front/mcfaq/mcfaqView.do?mcfaq_seq=5672)"
+        }
+      ],
+      "expected_sentence": "시작 시각은 오후 두 시 삼십 분 오 초예요.",
+      "source": "G15-01",
+      "current_output": "시작 시각은 오후 두 시 삼십 분 오 초예요.",
+      "matches_current": true,
+      "note": "모든 구간의 start는 영부터 세는 원문 유니코드 문자 위치이며 end는 포함하지 않아요. 숫자와 의미를 정하는 단위·기호·접두사를 함께 묶어요. expected는 발음 전사가 아닌 낭독용 표기예요. allowed에는 expected 이외에 추가로 허용할 잠정 읽기만 넣어요. 빈 배열은 다른 읽기가 전부 틀렸다는 뜻이 아니에요. matches_current는 허용안이나 띄어쓰기를 보정하지 않고 expected_sentence와 엄밀하게 문자열 비교해요."
+    },
+    {
+      "id": "G18-G15-02",
+      "sentence": "가상 시간표의 출발 시각은 00:05예요.",
+      "spans": [
+        {
+          "text": "00:05",
+          "start": 15,
+          "end": 20,
+          "category": "시각",
+          "expected": "영 시 오 분",
+          "allowed": [
+            "자정 오 분"
+          ],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 시간표의 출발 시각은 영 시 오 분이에요.",
+      "source": "G15-02",
+      "current_output": "가상 시간표의 출발 시각은 영 시 오 분이에요.",
+      "matches_current": true,
+      "note": "숫자 구간을 읽은 뒤 문장 끝의 예요를 이에요로 조정해요. 허용 읽기를 택할 때도 이에요로 조정해요.",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘00:05 → 영 시 오 분’라는 읽기·보존안을 채택해도 될까요? 허용 대안 자정 오 분도 함께 확인해 주세요."
+    },
+    {
+      "id": "G18-G15-03",
+      "sentence": "연습에 3시간 20분이 걸려요.",
+      "spans": [
+        {
+          "text": "3시간",
+          "start": 4,
+          "end": 7,
+          "category": "기간",
+          "expected": "세 시간",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "20분",
+          "start": 8,
+          "end": 11,
+          "category": "기간",
+          "expected": "이십 분",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습에 세 시간 이십 분이 걸려요.",
+      "source": "G15-03",
+      "current_output": "연습에 세 시간 이십 분이 걸려요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3시간 → 세 시간 / 20분 → 이십 분’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-04",
+      "sentence": "준비 기간은 6개월이에요.",
+      "spans": [
+        {
+          "text": "6개월",
+          "start": 7,
+          "end": 10,
+          "category": "기간",
+          "expected": "육 개월",
+          "allowed": [
+            "여섯 달"
+          ],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "준비 기간은 육 개월이에요.",
+      "source": "G15-04",
+      "current_output": "준비 기간은 육 개월이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘6개월 → 육 개월’라는 읽기·보존안을 채택해도 될까요? 허용 대안 여섯 달도 함께 확인해 주세요."
+    },
+    {
+      "id": "G18-G15-05",
+      "sentence": "보관 기간은 10개월이에요.",
+      "spans": [
+        {
+          "text": "10개월",
+          "start": 7,
+          "end": 11,
+          "category": "기간",
+          "expected": "십 개월",
+          "allowed": [
+            "열 달"
+          ],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "보관 기간은 십 개월이에요.",
+      "source": "G15-05",
+      "current_output": "보관 기간은 십 개월이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘10개월 → 십 개월’라는 읽기·보존안을 채택해도 될까요? 허용 대안 열 달도 함께 확인해 주세요."
+    },
+    {
+      "id": "G18-G15-06",
+      "sentence": "가상 행사는 6월 6일에 열려요.",
+      "spans": [
+        {
+          "text": "6월",
+          "start": 7,
+          "end": 9,
+          "category": "날짜",
+          "expected": "유월",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "6일",
+          "start": 10,
+          "end": 12,
+          "category": "날짜",
+          "expected": "육 일",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 행사는 유월 육 일에 열려요.",
+      "source": "G15-06",
+      "current_output": "가상 행사는 유월 육 일에 열려요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘6월 → 유월 / 6일 → 육 일’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-07",
+      "sentence": "가상 전시는 10월 10일에 끝나요.",
+      "spans": [
+        {
+          "text": "10월",
+          "start": 7,
+          "end": 10,
+          "category": "날짜",
+          "expected": "시월",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "10일",
+          "start": 11,
+          "end": 14,
+          "category": "날짜",
+          "expected": "십 일",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 전시는 시월 십 일에 끝나요.",
+      "source": "G15-07",
+      "current_output": "가상 전시는 시월 십 일에 끝나요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘10월 → 시월 / 10일 → 십 일’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-08",
+      "sentence": "연습용 가격표에는 12,500원이라고 적혀 있어요.",
+      "spans": [
+        {
+          "text": "12,500원",
+          "start": 10,
+          "end": 17,
+          "category": "금액",
+          "expected": "만 이천오백 원",
+          "allowed": [
+            "일만 이천오백 원"
+          ],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 가격표에는 만 이천오백 원이라고 적혀 있어요.",
+      "source": "G15-08",
+      "current_output": "연습용 가격표에는 만 이천오백 원이라고 적혀 있어요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘12,500원 → 만 이천오백 원’라는 읽기·보존안을 채택해도 될까요? 허용 대안 일만 이천오백 원도 함께 확인해 주세요."
+    },
+    {
+      "id": "G18-G15-09",
+      "sentence": "가상 예산은 1억 2500만 원이에요.",
+      "spans": [
+        {
+          "text": "1억 2500만 원",
+          "start": 7,
+          "end": 17,
+          "category": "금액",
+          "expected": "일억 이천오백만 원",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 예산은 일억 이천오백만 원이에요.",
+      "source": "G15-09",
+      "current_output": "가상 예산은 일억 이천오백만 원이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘1억 2500만 원 → 일억 이천오백만 원’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-10",
+      "sentence": "연습용 측정값은 0.05예요.",
+      "spans": [
+        {
+          "text": "0.05",
+          "start": 9,
+          "end": 13,
+          "category": "소수",
+          "expected": "영 점 영 오",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 측정값은 영 점 영 오예요.",
+      "source": "G15-10",
+      "current_output": "연습용 측정값은 영 점 영 오예요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘0.05 → 영 점 영 오’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-11",
+      "sentence": "연습용 계수는 3.14예요.",
+      "spans": [
+        {
+          "text": "3.14",
+          "start": 8,
+          "end": 12,
+          "category": "소수",
+          "expected": "삼 점 일 사",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 계수는 삼 점 일 사예요.",
+      "source": "G15-11",
+      "current_output": "연습용 계수는 삼 점 일 사예요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3.14 → 삼 점 일 사’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-12",
+      "sentence": "도형의 3/4을 색칠해요.",
+      "spans": [
+        {
+          "text": "3/4",
+          "start": 4,
+          "end": 7,
+          "category": "분수",
+          "expected": "사분의 삼",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "도형의 사분의 삼을 색칠해요.",
+      "source": "G15-12",
+      "current_output": "도형의 사분의 삼을 색칠해요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3/4 → 사분의 삼’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-13",
+      "sentence": "대분수 1 1/2을 소수로 바꿔요.",
+      "spans": [
+        {
+          "text": "1 1/2",
+          "start": 4,
+          "end": 9,
+          "category": "분수",
+          "expected": "일과 이분의 일",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "대분수 일과 이분의 일을 소수로 바꿔요.",
+      "source": "G15-13",
+      "current_output": "대분수 일과 이분의 일을 소수로 바꿔요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘1 1/2 → 일과 이분의 일’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-14",
+      "sentence": "첫째로 제1장을 읽어요.",
+      "spans": [
+        {
+          "text": "제1장",
+          "start": 4,
+          "end": 7,
+          "category": "서수",
+          "expected": "제일 장",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "첫째로 제일 장을 읽어요.",
+      "source": "G15-14",
+      "current_output": "첫째로 제일 장을 읽어요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘제1장 → 제일 장’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-15",
+      "sentence": "2번째 상자를 열어요.",
+      "spans": [
+        {
+          "text": "2번째",
+          "start": 0,
+          "end": 3,
+          "category": "서수",
+          "expected": "두 번째",
+          "allowed": [
+            "둘째"
+          ],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "두 번째 상자를 열어요.",
+      "source": "G15-15",
+      "current_output": "두 번째 상자를 열어요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2번째 → 두 번째’라는 읽기·보존안을 채택해도 될까요? 허용 대안 둘째도 함께 확인해 주세요."
+    },
+    {
+      "id": "G18-G15-16",
+      "sentence": "사과 1개와 배 2개를 담아요.",
+      "spans": [
+        {
+          "text": "1개",
+          "start": 3,
+          "end": 5,
+          "category": "수량",
+          "expected": "한 개",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "2개",
+          "start": 9,
+          "end": 11,
+          "category": "수량",
+          "expected": "두 개",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "사과 한 개와 배 두 개를 담아요.",
+      "source": "G15-16",
+      "current_output": "사과 한 개와 배 두 개를 담아요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘1개 → 한 개 / 2개 → 두 개’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-17",
+      "sentence": "연필 3자루와 종이 4장을 준비해요.",
+      "spans": [
+        {
+          "text": "3자루",
+          "start": 3,
+          "end": 6,
+          "category": "수량",
+          "expected": "세 자루",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "4장",
+          "start": 11,
+          "end": 13,
+          "category": "수량",
+          "expected": "네 장",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연필 세 자루와 종이 네 장을 준비해요.",
+      "source": "G15-17",
+      "current_output": "연필 세 자루와 종이 네 장을 준비해요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3자루 → 세 자루 / 4장 → 네 장’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-18",
+      "sentence": "상자 20개와 봉투 21개를 준비해요.",
+      "spans": [
+        {
+          "text": "20개",
+          "start": 3,
+          "end": 6,
+          "category": "수량",
+          "expected": "스무 개",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "21개",
+          "start": 11,
+          "end": 14,
+          "category": "수량",
+          "expected": "스물한 개",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "상자 스무 개와 봉투 스물한 개를 준비해요.",
+      "source": "G15-18",
+      "current_output": "상자 스무 개와 봉투 스물한 개를 준비해요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘20개 → 스무 개 / 21개 → 스물한 개’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-19",
+      "sentence": "가상 인물 두 명은 각각 20살과 22살이에요.",
+      "spans": [
+        {
+          "text": "20살",
+          "start": 14,
+          "end": 17,
+          "category": "나이",
+          "expected": "스무 살",
+          "allowed": [],
+          "basis": "확인(국립국어원 상담 사례 ‘스물두 살’, ‘스무두 살’의 표현: https://www.korean.go.kr/front/mcfaq/mcfaqView.do?mcfaq_seq=9160)"
+        },
+        {
+          "text": "22살",
+          "start": 19,
+          "end": 22,
+          "category": "나이",
+          "expected": "스물두 살",
+          "allowed": [],
+          "basis": "확인(국립국어원 상담 사례 ‘스물두 살’, ‘스무두 살’의 표현: https://www.korean.go.kr/front/mcfaq/mcfaqView.do?mcfaq_seq=9160)"
+        }
+      ],
+      "expected_sentence": "가상 인물 두 명은 각각 스무 살과 스물두 살이에요.",
+      "source": "G15-19",
+      "current_output": "가상 인물 두 명은 각각 스무 살과 스물두 살이에요.",
+      "matches_current": true
+    },
+    {
+      "id": "G18-G15-20",
+      "sentence": "가상 인물의 나이는 만 65세예요.",
+      "spans": [
+        {
+          "text": "65세",
+          "start": 13,
+          "end": 16,
+          "category": "나이",
+          "expected": "육십오 세",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 인물의 나이는 만 육십오 세예요.",
+      "source": "G15-20",
+      "current_output": "가상 인물의 나이는 만 육십오 세예요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘65세 → 육십오 세’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-21",
+      "sentence": "가짜 전화번호 형식은 0X0-XXXX-XXXX예요.",
+      "spans": [
+        {
+          "text": "0X0-XXXX-XXXX",
+          "start": 12,
+          "end": 25,
+          "category": "전화",
+          "expected": "공 엑스 공, 엑스 엑스 엑스 엑스, 엑스 엑스 엑스 엑스",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가짜 전화번호 형식은 공 엑스 공, 엑스 엑스 엑스 엑스, 엑스 엑스 엑스 엑스예요.",
+      "source": "G15-21",
+      "current_output": "가짜 전화번호 형식은 0X0-XXXX-XXXX예요.",
+      "matches_current": false,
+      "note": "추측: 가짜 전화번호 형식의 X는 엑스로, 묶음 경계는 쉼표로 읽는 제안이에요. 마지막 엑스에는 받침이 없으므로 예요를 그대로 붙여요.",
+      "needs_owner": true,
+      "owner_question": "공 용례는 확인했지만 X 처리와 묶음·자리 띄어쓰기를 포함한 전체 낭독 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘0X0-XXXX-XXXX → 공 엑스 공, 엑스 엑스 엑스 엑스, 엑스 엑스 엑스 엑스’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-22",
+      "sentence": "가상 설문의 응답 비율은 12.5%예요.",
+      "spans": [
+        {
+          "text": "12.5%",
+          "start": 14,
+          "end": 19,
+          "category": "백분율",
+          "expected": "십이 점 오 퍼센트",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 설문의 응답 비율은 십이 점 오 퍼센트예요.",
+      "source": "G15-22",
+      "current_output": "가상 설문의 응답 비율은 십이 점 오 퍼센트예요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘12.5% → 십이 점 오 퍼센트’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-23",
+      "sentence": "가상 산책로의 길이는 3.2㎞예요.",
+      "spans": [
+        {
+          "text": "3.2㎞",
+          "start": 12,
+          "end": 16,
+          "category": "단위",
+          "expected": "삼 점 이 킬로미터",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 산책로의 길이는 삼 점 이 킬로미터예요.",
+      "source": "G15-23",
+      "current_output": "가상 산책로의 길이는 삼 점 이 킬로미터예요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3.2㎞ → 삼 점 이 킬로미터’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-24",
+      "sentence": "연습용 상자의 질량은 0.75㎏이에요.",
+      "spans": [
+        {
+          "text": "0.75㎏",
+          "start": 12,
+          "end": 17,
+          "category": "단위",
+          "expected": "영 점 칠 오 킬로그램",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 상자의 질량은 영 점 칠 오 킬로그램이에요.",
+      "source": "G15-24",
+      "current_output": "연습용 상자의 질량은 영 점 칠 오 킬로그램이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘0.75㎏ → 영 점 칠 오 킬로그램’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-25",
+      "sentence": "연습용 온도계는 -3℃를 가리켜요.",
+      "spans": [
+        {
+          "text": "-3℃",
+          "start": 9,
+          "end": 12,
+          "category": "단위",
+          "expected": "섭씨 영하 삼 도",
+          "allowed": [
+            "섭씨 마이너스 삼 도"
+          ],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 온도계는 섭씨 영하 삼 도를 가리켜요.",
+      "source": "G15-25",
+      "current_output": "연습용 온도계는 섭씨 영하 삼 도를 가리켜요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘-3℃ → 섭씨 영하 삼 도’라는 읽기·보존안을 채택해도 될까요? 허용 대안 섭씨 마이너스 삼 도도 함께 확인해 주세요."
+    },
+    {
+      "id": "G18-G15-26",
+      "sentence": "가상 규칙의 제3조 2항을 확인해요.",
+      "spans": [
+        {
+          "text": "제3조",
+          "start": 7,
+          "end": 10,
+          "category": "서수",
+          "expected": "제삼 조",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "2항",
+          "start": 11,
+          "end": 13,
+          "category": "서수",
+          "expected": "이 항",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 규칙의 제삼 조 이 항을 확인해요.",
+      "source": "G15-26",
+      "current_output": "가상 규칙의 제삼 조 이 항을 확인해요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘제3조 → 제삼 조 / 2항 → 이 항’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-27",
+      "sentence": "연습용 가상 주소는 가상주소시 가상주소로 12-3, 4동 502호예요.",
+      "spans": [
+        {
+          "text": "12-3",
+          "start": 23,
+          "end": 27,
+          "category": "번호",
+          "expected": "십이 다시 삼",
+          "allowed": [
+            "십이 하이픈 삼"
+          ],
+          "basis": "추측"
+        },
+        {
+          "text": "4동",
+          "start": 29,
+          "end": 31,
+          "category": "번호",
+          "expected": "사 동",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "502호",
+          "start": 32,
+          "end": 36,
+          "category": "번호",
+          "expected": "오백이 호",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 가상 주소는 가상주소시 가상주소로 십이 다시 삼, 사 동 오백이 호예요.",
+      "source": "G15-27",
+      "current_output": "연습용 가상 주소는 가상주소시 가상주소로 십이 다시 삼, 사 동 오백이 호예요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘12-3 → 십이 다시 삼 / 4동 → 사 동 / 502호 → 오백이 호’라는 읽기·보존안을 채택해도 될까요? 허용 대안 십이 하이픈 삼도 함께 확인해 주세요."
+    },
+    {
+      "id": "G18-G15-28",
+      "sentence": "가상 기록의 작성 연도는 2026년이에요.",
+      "spans": [
+        {
+          "text": "2026년",
+          "start": 14,
+          "end": 19,
+          "category": "연도",
+          "expected": "이천이십육 년",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 기록의 작성 연도는 이천이십육 년이에요.",
+      "source": "G15-28",
+      "current_output": "가상 기록의 작성 연도는 이천이십육 년이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2026년 → 이천이십육 년’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-29",
+      "sentence": "가상 축구 경기의 점수는 0:2예요.",
+      "spans": [
+        {
+          "text": "0:2",
+          "start": 14,
+          "end": 17,
+          "category": "점수",
+          "expected": "영 대 이",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 축구 경기의 점수는 영 대 이예요.",
+      "source": "G15-29",
+      "current_output": "가상 축구 경기의 점수는 영 대 이예요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘0:2 → 영 대 이’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-G15-30",
+      "sentence": "연습용 도구의 버전은 2.10.3이에요.",
+      "spans": [
+        {
+          "text": "2.10.3",
+          "start": 12,
+          "end": 18,
+          "category": "버전",
+          "expected": "이 점 십 점 삼",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 도구의 버전은 이 점 십 점 삼이에요.",
+      "source": "G15-30",
+      "current_output": "연습용 도구의 버전은 이 점 십 점 삼이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "버전 성분을 정수로 읽고 자리별 대안을 제외하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘2.10.3 → 이 점 십 점 삼’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R27-extra-01",
+      "sentence": "가상 날짜는 2026-10-06이에요.",
+      "spans": [
+        {
+          "text": "2026-10-06",
+          "start": 7,
+          "end": 17,
+          "category": "날짜",
+          "expected": "이천이십육 년 시월 육 일",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 날짜는 이천이십육 년 시월 육 일이에요.",
+      "source": "R27-extra-01",
+      "current_output": "가상 날짜는 이천이십육 년 시월 육 일이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2026-10-06 → 이천이십육 년 시월 육 일’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R27-extra-02",
+      "sentence": "가상 날짜는 2026/10/06이에요.",
+      "spans": [
+        {
+          "text": "2026/10/06",
+          "start": 7,
+          "end": 17,
+          "category": "날짜",
+          "expected": "이천이십육 년 시월 육 일",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 날짜는 이천이십육 년 시월 육 일이에요.",
+      "source": "R27-extra-02",
+      "current_output": "가상 날짜는 이천이십육 년 시월 육 일이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2026/10/06 → 이천이십육 년 시월 육 일’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R27-extra-03",
+      "sentence": "연습용 뺄셈은 20-10이에요.",
+      "spans": [
+        {
+          "text": "20-10",
+          "start": 8,
+          "end": 13,
+          "category": "연산",
+          "expected": "이십 빼기 십",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 뺄셈은 이십 빼기 십이에요.",
+      "source": "R27-extra-03",
+      "current_output": "연습용 뺄셈은 20-10이에요.",
+      "matches_current": false,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘20-10 → 이십 빼기 십’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R27-extra-04",
+      "sentence": "제3장과 제4권을 읽어요.",
+      "spans": [
+        {
+          "text": "제3장",
+          "start": 0,
+          "end": 3,
+          "category": "서수",
+          "expected": "제삼 장",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "제4권",
+          "start": 5,
+          "end": 8,
+          "category": "서수",
+          "expected": "제사 권",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "제삼 장과 제사 권을 읽어요.",
+      "source": "R27-extra-04",
+      "current_output": "제삼 장과 제사 권을 읽어요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘제3장 → 제삼 장 / 제4권 → 제사 권’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R27-extra-05",
+      "sentence": "가상 일정은 6 월 6 일이에요.",
+      "spans": [
+        {
+          "text": "6 월",
+          "start": 7,
+          "end": 10,
+          "category": "날짜",
+          "expected": "유월",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "6 일",
+          "start": 11,
+          "end": 14,
+          "category": "날짜",
+          "expected": "육 일",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 일정은 유월 육 일이에요.",
+      "source": "R27-extra-05",
+      "current_output": "가상 일정은 유월 육 일이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘6 월 → 유월 / 6 일 → 육 일’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R27-extra-06",
+      "sentence": "연습용 넓이는 3km²예요.",
+      "spans": [
+        {
+          "text": "3km²",
+          "start": 8,
+          "end": 12,
+          "category": "단위",
+          "expected": "삼 제곱킬로미터",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 넓이는 삼 제곱킬로미터예요.",
+      "source": "R27-extra-06",
+      "current_output": "연습용 넓이는 삼 제곱킬로미터예요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3km² → 삼 제곱킬로미터’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R27-extra-07",
+      "sentence": "연습용 금액은 1,234.56원이에요.",
+      "spans": [
+        {
+          "text": "1,234.56원",
+          "start": 8,
+          "end": 17,
+          "category": "금액",
+          "expected": "천이백삼십사 점 오 육 원",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 금액은 천이백삼십사 점 오 육 원이에요.",
+      "source": "R27-extra-07",
+      "current_output": "연습용 금액은 천이백삼십사 점 오 육 원이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘1,234.56원 → 천이백삼십사 점 오 육 원’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R27-extra-08",
+      "sentence": "연습 숫자는 1,2,3이에요.",
+      "spans": [
+        {
+          "text": "1",
+          "start": 7,
+          "end": 8,
+          "category": "수량",
+          "expected": "일",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "2",
+          "start": 9,
+          "end": 10,
+          "category": "수량",
+          "expected": "이",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "3",
+          "start": 11,
+          "end": 12,
+          "category": "수량",
+          "expected": "삼",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습 숫자는 일,이,삼이에요.",
+      "source": "R27-extra-08",
+      "current_output": "연습 숫자는 일,이,삼이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘1 → 일 / 2 → 이 / 3 → 삼’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R27-extra-09",
+      "sentence": "잠깐, 시간을 확인해요.",
+      "spans": [],
+      "expected_sentence": "잠깐, 시간을 확인해요.",
+      "source": "R27-extra-09",
+      "current_output": "잠깐, 시간을 확인해요.",
+      "matches_current": true
+    },
+    {
+      "id": "G18-R27-extra-10",
+      "sentence": "연습용 큰 수는 10000000000000000이에요.",
+      "spans": [
+        {
+          "text": "10000000000000000",
+          "start": 9,
+          "end": 26,
+          "category": "원문 보존",
+          "expected": "10000000000000000",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 큰 수는 10000000000000000이에요.",
+      "source": "R27-extra-10",
+      "current_output": "연습용 큰 수는 10000000000000000이에요.",
+      "matches_current": true,
+      "note": "추측: 이 기대값은 낭독 정답이 아니라 원문 보존 정책 초안이에요. 모호하거나 지원하지 않는 덩어리는 일부만 바꾸지 않고 확인 전까지 보존해요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘10000000000000000 → 10000000000000000’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R27-11-counter",
+      "sentence": "1장",
+      "spans": [
+        {
+          "text": "1장",
+          "start": 0,
+          "end": 2,
+          "category": "수량",
+          "expected": "한 장",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "한 장",
+      "source": "R27-11-counter",
+      "current_output": "한 장",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘1장 → 한 장’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-B-01",
+      "sentence": "시험 번호는 12-12예요.",
+      "spans": [
+        {
+          "text": "12-12",
+          "start": 7,
+          "end": 12,
+          "category": "번호",
+          "expected": "일 이, 일 이",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "시험 번호는 일 이, 일 이예요.",
+      "source": "R30-B-01",
+      "current_output": "시험 번호는 일이, 일이예요.",
+      "matches_current": false,
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘12-12 → 일 이, 일 이’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-B-02",
+      "sentence": "날짜는 2026-10-06이에요.",
+      "spans": [
+        {
+          "text": "2026-10-06",
+          "start": 4,
+          "end": 14,
+          "category": "날짜",
+          "expected": "이천이십육 년 시월 육 일",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "날짜는 이천이십육 년 시월 육 일이에요.",
+      "source": "R30-B-02",
+      "current_output": "날짜는 이천이십육 년 시월 육 일이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2026-10-06 → 이천이십육 년 시월 육 일’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-B-03",
+      "sentence": "10000000000000000원이에요.",
+      "spans": [
+        {
+          "text": "10000000000000000원",
+          "start": 0,
+          "end": 18,
+          "category": "원문 보존",
+          "expected": "10000000000000000원",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "10000000000000000원이에요.",
+      "source": "R30-B-03",
+      "current_output": "10000000000000000원이에요.",
+      "matches_current": true,
+      "note": "추측: 이 기대값은 낭독 정답이 아니라 원문 보존 정책 초안이에요. 모호하거나 지원하지 않는 덩어리는 일부만 바꾸지 않고 확인 전까지 보존해요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘10000000000000000원 → 10000000000000000원’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-B-04",
+      "sentence": "1,234.56원이에요.",
+      "spans": [
+        {
+          "text": "1,234.56원",
+          "start": 0,
+          "end": 9,
+          "category": "금액",
+          "expected": "천이백삼십사 점 오 육 원",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "천이백삼십사 점 오 육 원이에요.",
+      "source": "R30-B-04",
+      "current_output": "천이백삼십사 점 오 육 원이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘1,234.56원 → 천이백삼십사 점 오 육 원’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-B-05",
+      "sentence": "1번째예요.",
+      "spans": [
+        {
+          "text": "1번째",
+          "start": 0,
+          "end": 3,
+          "category": "서수",
+          "expected": "첫 번째",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "첫 번째예요.",
+      "source": "R30-B-05",
+      "current_output": "첫 번째예요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘1번째 → 첫 번째’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-B-06",
+      "sentence": "2026-99-99",
+      "spans": [
+        {
+          "text": "2026-99-99",
+          "start": 0,
+          "end": 10,
+          "category": "원문 보존",
+          "expected": "2026-99-99",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "2026-99-99",
+      "source": "R30-B-06",
+      "current_output": "이천이십육 년 구십구월 구십구 일",
+      "matches_current": false,
+      "note": "추측: 이 기대값은 낭독 정답이 아니라 원문 보존 정책 초안이에요. 모호하거나 지원하지 않는 덩어리는 일부만 바꾸지 않고 확인 전까지 보존해요. 달력 날짜로는 유효하지 않아요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘2026-99-99 → 2026-99-99’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-B-07",
+      "sentence": "2026-02-31",
+      "spans": [
+        {
+          "text": "2026-02-31",
+          "start": 0,
+          "end": 10,
+          "category": "원문 보존",
+          "expected": "2026-02-31",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "2026-02-31",
+      "source": "R30-B-07",
+      "current_output": "이천이십육 년 이월 삼십일 일",
+      "matches_current": false,
+      "note": "추측: 이 기대값은 낭독 정답이 아니라 원문 보존 정책 초안이에요. 모호하거나 지원하지 않는 덩어리는 일부만 바꾸지 않고 확인 전까지 보존해요. 달력 날짜로는 유효하지 않아요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘2026-02-31 → 2026-02-31’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-B-08",
+      "sentence": "10000000000000000.5원",
+      "spans": [
+        {
+          "text": "10000000000000000.5원",
+          "start": 0,
+          "end": 20,
+          "category": "원문 보존",
+          "expected": "10000000000000000.5원",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "10000000000000000.5원",
+      "source": "R30-B-08",
+      "current_output": "10000000000000000.오 원",
+      "matches_current": false,
+      "note": "추측: 이 기대값은 낭독 정답이 아니라 원문 보존 정책 초안이에요. 모호하거나 지원하지 않는 덩어리는 일부만 바꾸지 않고 확인 전까지 보존해요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘10000000000000000.5원 → 10000000000000000.5원’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-B-09",
+      "sentence": "10000000000000000/2",
+      "spans": [
+        {
+          "text": "10000000000000000/2",
+          "start": 0,
+          "end": 19,
+          "category": "원문 보존",
+          "expected": "10000000000000000/2",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "10000000000000000/2",
+      "source": "R30-B-09",
+      "current_output": "10000000000000000/2",
+      "matches_current": true,
+      "note": "추측: 이 기대값은 낭독 정답이 아니라 원문 보존 정책 초안이에요. 모호하거나 지원하지 않는 덩어리는 일부만 바꾸지 않고 확인 전까지 보존해요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘10000000000000000/2 → 10000000000000000/2’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-01",
+      "sentence": "00:05",
+      "spans": [
+        {
+          "text": "00:05",
+          "start": 0,
+          "end": 5,
+          "category": "시각",
+          "expected": "영 시 오 분",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "영 시 오 분",
+      "source": "R30-fragment-01",
+      "current_output": "영 시 오 분",
+      "matches_current": true,
+      "note": "원문 리뷰의 숫자 구간 예시를 단독 입력으로도 남겨요. 문장 문맥이 없는 단독 기대 읽기는 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘00:05 → 영 시 오 분’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-02",
+      "sentence": "1 1/2",
+      "spans": [
+        {
+          "text": "1 1/2",
+          "start": 0,
+          "end": 5,
+          "category": "분수",
+          "expected": "일과 이분의 일",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "일과 이분의 일",
+      "source": "R30-fragment-02",
+      "current_output": "일과 이분의 일",
+      "matches_current": true,
+      "note": "원문 리뷰의 숫자 구간 예시를 단독 입력으로도 남겨요. 문장 문맥이 없는 단독 기대 읽기는 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘1 1/2 → 일과 이분의 일’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-03",
+      "sentence": "제1장",
+      "spans": [
+        {
+          "text": "제1장",
+          "start": 0,
+          "end": 3,
+          "category": "서수",
+          "expected": "제일 장",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "제일 장",
+      "source": "R30-fragment-03",
+      "current_output": "제일 장",
+      "matches_current": true,
+      "note": "원문 리뷰의 숫자 구간 예시를 단독 입력으로도 남겨요. 문장 문맥이 없는 단독 기대 읽기는 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘제1장 → 제일 장’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-04",
+      "sentence": "3자루",
+      "spans": [
+        {
+          "text": "3자루",
+          "start": 0,
+          "end": 3,
+          "category": "수량",
+          "expected": "세 자루",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "세 자루",
+      "source": "R30-fragment-04",
+      "current_output": "세 자루",
+      "matches_current": true,
+      "note": "원문 리뷰의 숫자 구간 예시를 단독 입력으로도 남겨요. 문장 문맥이 없는 단독 기대 읽기는 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3자루 → 세 자루’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-05",
+      "sentence": "3.2㎞",
+      "spans": [
+        {
+          "text": "3.2㎞",
+          "start": 0,
+          "end": 4,
+          "category": "단위",
+          "expected": "삼 점 이 킬로미터",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "삼 점 이 킬로미터",
+      "source": "R30-fragment-05",
+      "current_output": "삼 점 이 킬로미터",
+      "matches_current": true,
+      "note": "원문 리뷰의 숫자 구간 예시를 단독 입력으로도 남겨요. 문장 문맥이 없는 단독 기대 읽기는 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3.2㎞ → 삼 점 이 킬로미터’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-06",
+      "sentence": "0.75㎏",
+      "spans": [
+        {
+          "text": "0.75㎏",
+          "start": 0,
+          "end": 5,
+          "category": "단위",
+          "expected": "영 점 칠 오 킬로그램",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "영 점 칠 오 킬로그램",
+      "source": "R30-fragment-06",
+      "current_output": "영 점 칠 오 킬로그램",
+      "matches_current": true,
+      "note": "원문 리뷰의 숫자 구간 예시를 단독 입력으로도 남겨요. 문장 문맥이 없는 단독 기대 읽기는 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘0.75㎏ → 영 점 칠 오 킬로그램’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-07",
+      "sentence": "-3℃",
+      "spans": [
+        {
+          "text": "-3℃",
+          "start": 0,
+          "end": 3,
+          "category": "단위",
+          "expected": "섭씨 영하 삼 도",
+          "allowed": [
+            "섭씨 마이너스 삼 도"
+          ],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "섭씨 영하 삼 도",
+      "source": "R30-fragment-07",
+      "current_output": "섭씨 영하 삼 도",
+      "matches_current": true,
+      "note": "원문 리뷰의 숫자 구간 예시를 단독 입력으로도 남겨요. 문장 문맥이 없는 단독 기대 읽기는 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘-3℃ → 섭씨 영하 삼 도’라는 읽기·보존안을 채택해도 될까요? 허용 대안 섭씨 마이너스 삼 도도 함께 확인해 주세요."
+    },
+    {
+      "id": "G18-R30-fragment-08",
+      "sentence": "0:2",
+      "spans": [
+        {
+          "text": "0:2",
+          "start": 0,
+          "end": 3,
+          "category": "원문 보존",
+          "expected": "0:2",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "0:2",
+      "source": "R30-fragment-08",
+      "current_output": "0:2",
+      "matches_current": true,
+      "note": "추측: 단독 0:2에는 점수·시각·비율을 정할 단서가 없어요. 두 자리 시:두 자리 분 형식도 아니어서 보존해요. 점수 단서가 있는 문장은 영 대 이로 읽어요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘0:2 → 0:2’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-09",
+      "sentence": "2.10.3",
+      "spans": [
+        {
+          "text": "2.10.3",
+          "start": 0,
+          "end": 6,
+          "category": "버전",
+          "expected": "이 점 십 점 삼",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "이 점 십 점 삼",
+      "source": "R30-fragment-09",
+      "current_output": "이 점 십 점 삼",
+      "matches_current": true,
+      "note": "원문 리뷰의 숫자 구간 예시를 단독 입력으로도 남겨요. 문장 문맥이 없는 단독 기대 읽기는 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "버전 성분을 정수로 읽고 자리별 대안을 제외하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘2.10.3 → 이 점 십 점 삼’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-10",
+      "sentence": "2026/10/06",
+      "spans": [
+        {
+          "text": "2026/10/06",
+          "start": 0,
+          "end": 10,
+          "category": "날짜",
+          "expected": "이천이십육 년 시월 육 일",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "이천이십육 년 시월 육 일",
+      "source": "R30-fragment-10",
+      "current_output": "이천이십육 년 시월 육 일",
+      "matches_current": true,
+      "note": "원문 리뷰의 숫자 구간 예시를 단독 입력으로도 남겨요. 문장 문맥이 없는 단독 기대 읽기는 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2026/10/06 → 이천이십육 년 시월 육 일’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-11",
+      "sentence": "20-10",
+      "spans": [
+        {
+          "text": "20-10",
+          "start": 0,
+          "end": 5,
+          "category": "원문 보존",
+          "expected": "20-10",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "20-10",
+      "source": "R30-fragment-11",
+      "current_output": "20-10",
+      "matches_current": true,
+      "note": "추측: 이 기대값은 낭독 정답이 아니라 원문 보존 정책 초안이에요. 모호하거나 지원하지 않는 덩어리는 일부만 바꾸지 않고 확인 전까지 보존해요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘20-10 → 20-10’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-12",
+      "sentence": "6 월",
+      "spans": [
+        {
+          "text": "6 월",
+          "start": 0,
+          "end": 3,
+          "category": "날짜",
+          "expected": "유월",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "유월",
+      "source": "R30-fragment-12",
+      "current_output": "유월",
+      "matches_current": true,
+      "note": "원문 리뷰의 숫자 구간 예시를 단독 입력으로도 남겨요. 문장 문맥이 없는 단독 기대 읽기는 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘6 월 → 유월’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-13",
+      "sentence": "3km²",
+      "spans": [
+        {
+          "text": "3km²",
+          "start": 0,
+          "end": 4,
+          "category": "단위",
+          "expected": "삼 제곱킬로미터",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "삼 제곱킬로미터",
+      "source": "R30-fragment-13",
+      "current_output": "삼 제곱킬로미터",
+      "matches_current": true,
+      "note": "원문 리뷰의 숫자 구간 예시를 단독 입력으로도 남겨요. 문장 문맥이 없는 단독 기대 읽기는 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3km² → 삼 제곱킬로미터’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-14",
+      "sentence": "10000000000000000",
+      "spans": [
+        {
+          "text": "10000000000000000",
+          "start": 0,
+          "end": 17,
+          "category": "원문 보존",
+          "expected": "10000000000000000",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "10000000000000000",
+      "source": "R30-fragment-14",
+      "current_output": "10000000000000000",
+      "matches_current": true,
+      "note": "추측: 이 기대값은 낭독 정답이 아니라 원문 보존 정책 초안이에요. 모호하거나 지원하지 않는 덩어리는 일부만 바꾸지 않고 확인 전까지 보존해요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘10000000000000000 → 10000000000000000’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R30-fragment-15",
+      "sentence": "제3장과 제4권",
+      "spans": [
+        {
+          "text": "제3장",
+          "start": 0,
+          "end": 3,
+          "category": "서수",
+          "expected": "제삼 장",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "제4권",
+          "start": 5,
+          "end": 8,
+          "category": "서수",
+          "expected": "제사 권",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "제삼 장과 제사 권",
+      "source": "R30-fragment-15",
+      "current_output": "제삼 장과 제사 권",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘제3장 → 제삼 장 / 제4권 → 제사 권’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-01",
+      "sentence": "2026/10/06",
+      "spans": [
+        {
+          "text": "2026/10/06",
+          "start": 0,
+          "end": 10,
+          "category": "날짜",
+          "expected": "이천이십육 년 시월 육 일",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "이천이십육 년 시월 육 일",
+      "source": "R31-N-01",
+      "current_output": "이천이십육 년 시월 육 일",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2026/10/06 → 이천이십육 년 시월 육 일’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-02",
+      "sentence": "2026.10.06",
+      "spans": [
+        {
+          "text": "2026.10.06",
+          "start": 0,
+          "end": 10,
+          "category": "날짜",
+          "expected": "이천이십육 년 시월 육 일",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "이천이십육 년 시월 육 일",
+      "source": "R31-N-02",
+      "current_output": "이천이십육 년 시월 육 일",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2026.10.06 → 이천이십육 년 시월 육 일’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-03",
+      "sentence": "20-10",
+      "spans": [
+        {
+          "text": "20-10",
+          "start": 0,
+          "end": 5,
+          "category": "원문 보존",
+          "expected": "20-10",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "20-10",
+      "source": "R31-N-03",
+      "current_output": "20-10",
+      "matches_current": true,
+      "note": "추측: 이 기대값은 낭독 정답이 아니라 원문 보존 정책 초안이에요. 모호하거나 지원하지 않는 덩어리는 일부만 바꾸지 않고 확인 전까지 보존해요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘20-10 → 20-10’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-04",
+      "sentence": "제3장과 제4권",
+      "spans": [
+        {
+          "text": "제3장",
+          "start": 0,
+          "end": 3,
+          "category": "서수",
+          "expected": "제삼 장",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "제4권",
+          "start": 5,
+          "end": 8,
+          "category": "서수",
+          "expected": "제사 권",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "제삼 장과 제사 권",
+      "source": "R31-N-04",
+      "current_output": "제삼 장과 제사 권",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘제3장 → 제삼 장 / 제4권 → 제사 권’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-05",
+      "sentence": "00:05",
+      "spans": [
+        {
+          "text": "00:05",
+          "start": 0,
+          "end": 5,
+          "category": "시각",
+          "expected": "영 시 오 분",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "영 시 오 분",
+      "source": "R31-N-05",
+      "current_output": "영 시 오 분",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘00:05 → 영 시 오 분’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-06",
+      "sentence": "0:2",
+      "spans": [
+        {
+          "text": "0:2",
+          "start": 0,
+          "end": 3,
+          "category": "원문 보존",
+          "expected": "0:2",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "0:2",
+      "source": "R31-N-06",
+      "current_output": "0:2",
+      "matches_current": true,
+      "note": "추측: 단독 0:2에는 점수·시각·비율을 정할 단서가 없어요. 두 자리 시:두 자리 분 형식도 아니어서 보존해요. 점수 단서가 있는 문장은 영 대 이로 읽어요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘0:2 → 0:2’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-07",
+      "sentence": "IP 192.0.2.10",
+      "spans": [
+        {
+          "text": "192.0.2.10",
+          "start": 3,
+          "end": 13,
+          "category": "번호",
+          "expected": "백구십이 점 공 점 이 점 십",
+          "allowed": [
+            "일 구 이 점 공 점 이 점 일 공"
+          ],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "IP 백구십이 점 공 점 이 점 십",
+      "source": "R31-N-07",
+      "current_output": "IP 백구십이 점 영 점 이 점 십",
+      "matches_current": false,
+      "note": "추측: 문서용 시험 주소의 표기예요. 블록별 정수 읽기를 기본으로 제안하고 자리별 대안도 공과 자리 사이 공백 규칙에 맞춰요. 어느 읽기를 쓸지는 대표 확인이 필요해요.",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘192.0.2.10 → 백구십이 점 공 점 이 점 십’라는 읽기·보존안을 채택해도 될까요? 허용 대안 일 구 이 점 공 점 이 점 일 공도 함께 확인해 주세요."
+    },
+    {
+      "id": "G18-R31-N-08",
+      "sentence": "버전 2.10.3",
+      "spans": [
+        {
+          "text": "2.10.3",
+          "start": 3,
+          "end": 9,
+          "category": "버전",
+          "expected": "이 점 십 점 삼",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "버전 이 점 십 점 삼",
+      "source": "R31-N-08",
+      "current_output": "버전 이 점 십 점 삼",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "버전 성분을 정수로 읽고 자리별 대안을 제외하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘2.10.3 → 이 점 십 점 삼’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-09",
+      "sentence": "경기 점수는 3:10이에요.",
+      "spans": [
+        {
+          "text": "3:10",
+          "start": 7,
+          "end": 11,
+          "category": "점수",
+          "expected": "삼 대 십",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "경기 점수는 삼 대 십이에요.",
+      "source": "R31-N-09",
+      "current_output": "경기 점수는 삼 대 십이에요.",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3:10 → 삼 대 십’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-10",
+      "sentence": "시각은 9:5예요.",
+      "spans": [
+        {
+          "text": "9:5",
+          "start": 4,
+          "end": 7,
+          "category": "시각",
+          "expected": "아홉 시 오 분",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "시각은 아홉 시 오 분이에요.",
+      "source": "R31-N-10",
+      "current_output": "시각은 아홉 시 오 분이에요.",
+      "matches_current": true,
+      "note": "숫자 구간을 읽은 뒤 예요를 이에요로 조정해요.",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘9:5 → 아홉 시 오 분’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-11",
+      "sentence": "버전 2026.10.06",
+      "spans": [
+        {
+          "text": "2026.10.06",
+          "start": 3,
+          "end": 13,
+          "category": "버전",
+          "expected": "이천이십육 점 십 점 육",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "버전 이천이십육 점 십 점 육",
+      "source": "R31-N-11",
+      "current_output": "버전 이천이십육 점 십 점 육",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "버전 성분을 정수로 읽고 자리별 대안을 제외하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘2026.10.06 → 이천이십육 점 십 점 육’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-12",
+      "sentence": "버전 2.10",
+      "spans": [
+        {
+          "text": "2.10",
+          "start": 3,
+          "end": 7,
+          "category": "버전",
+          "expected": "이 점 십",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "버전 이 점 십",
+      "source": "R31-N-12",
+      "current_output": "버전 이 점 십",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "버전 성분을 정수로 읽고 자리별 대안을 제외하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘2.10 → 이 점 십’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-13",
+      "sentence": "범위는 20-10개예요.",
+      "spans": [
+        {
+          "text": "20-10개",
+          "start": 4,
+          "end": 10,
+          "category": "원문 보존",
+          "expected": "20-10개",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "범위는 20-10개예요.",
+      "source": "R31-N-13",
+      "current_output": "범위는 20-10개예요.",
+      "matches_current": true,
+      "note": "추측: 이 기대값은 낭독 정답이 아니라 원문 보존 정책 초안이에요. 모호하거나 지원하지 않는 덩어리는 일부만 바꾸지 않고 확인 전까지 보존해요. R31의 ‘스무 개에서 열 개’는 범위 방향을 확정한 조건부 제안이어서 이번 보존 항목의 allowed에는 넣지 않아요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘20-10개 → 20-10개’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-14",
+      "sentence": "제  3장과 제  4권",
+      "spans": [
+        {
+          "text": "제  3장",
+          "start": 0,
+          "end": 5,
+          "category": "서수",
+          "expected": "제삼 장",
+          "allowed": [],
+          "basis": "추측"
+        },
+        {
+          "text": "제  4권",
+          "start": 7,
+          "end": 12,
+          "category": "서수",
+          "expected": "제사 권",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "제삼 장과 제사 권",
+      "source": "R31-N-14",
+      "current_output": "제삼 장과 제사 권",
+      "matches_current": true,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘제  3장 → 제삼 장 / 제  4권 → 제사 권’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-N-15",
+      "sentence": "가상 전화번호는 000 0000 0000이에요.",
+      "spans": [
+        {
+          "text": "000 0000 0000",
+          "start": 9,
+          "end": 22,
+          "category": "전화",
+          "expected": "공 공 공, 공 공 공 공, 공 공 공 공",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 전화번호는 공 공 공, 공 공 공 공, 공 공 공 공이에요.",
+      "source": "R31-N-15",
+      "current_output": "가상 전화번호는 영영영, 영영영영, 영영영영이에요.",
+      "matches_current": false,
+      "needs_owner": true,
+      "owner_question": "공 용례는 확인했지만 X 처리와 묶음·자리 띄어쓰기를 포함한 전체 낭독 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘000 0000 0000 → 공 공 공, 공 공 공 공, 공 공 공 공’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R31-2",
+      "sentence": "1번",
+      "spans": [
+        {
+          "text": "1번",
+          "start": 0,
+          "end": 2,
+          "category": "번호",
+          "expected": "일 번",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "일 번",
+      "source": "R31-2",
+      "current_output": "일 번",
+      "matches_current": true,
+      "note": "무해한 숫자 변환 예시만 옮겼어요.",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘1번 → 일 번’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-N1",
+      "sentence": "경기는 3:10에 시작해요.",
+      "spans": [
+        {
+          "text": "3:10",
+          "start": 4,
+          "end": 8,
+          "category": "시각",
+          "expected": "세 시 십 분",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "경기는 세 시 십 분에 시작해요.",
+      "source": "R32-N1",
+      "current_output": "경기는 삼 대 십에 시작해요.",
+      "matches_current": false,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3:10 → 세 시 십 분’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-N2",
+      "sentence": "3:10으로 이겼어요.",
+      "spans": [
+        {
+          "text": "3:10",
+          "start": 0,
+          "end": 4,
+          "category": "점수",
+          "expected": "삼 대 십",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "삼 대 십으로 이겼어요.",
+      "source": "R32-N2",
+      "current_output": "세 시 십 분으로 이겼어요.",
+      "matches_current": false,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3:10 → 삼 대 십’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-N3",
+      "sentence": "경기 시작 시각은 3:10이에요.",
+      "spans": [
+        {
+          "text": "3:10",
+          "start": 10,
+          "end": 14,
+          "category": "시각",
+          "expected": "세 시 십 분",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "경기 시작 시각은 세 시 십 분이에요.",
+      "source": "R32-N3",
+      "current_output": "경기 시작 시각은 3:10이에요.",
+      "matches_current": false,
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3:10 → 세 시 십 분’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-N4",
+      "sentence": "버전은 2026.10.06이에요.",
+      "spans": [
+        {
+          "text": "2026.10.06",
+          "start": 4,
+          "end": 14,
+          "category": "버전",
+          "expected": "이천이십육 점 십 점 육",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "버전은 이천이십육 점 십 점 육이에요.",
+      "source": "R32-N4",
+      "current_output": "버전은 이천이십육 년 시월 육 일이에요.",
+      "matches_current": false,
+      "needs_owner": true,
+      "owner_question": "버전 성분을 정수로 읽고 자리별 대안을 제외하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘2026.10.06 → 이천이십육 점 십 점 육’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-N5",
+      "sentence": "버전은 2.10이에요.",
+      "spans": [
+        {
+          "text": "2.10",
+          "start": 4,
+          "end": 8,
+          "category": "버전",
+          "expected": "이 점 십",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "버전은 이 점 십이에요.",
+      "source": "R32-N5",
+      "current_output": "버전은 이 점 일 영이에요.",
+      "matches_current": false,
+      "needs_owner": true,
+      "owner_question": "버전 성분을 정수로 읽고 자리별 대안을 제외하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘2.10 → 이 점 십’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-N6",
+      "sentence": "버전: 2.10",
+      "spans": [
+        {
+          "text": "2.10",
+          "start": 4,
+          "end": 8,
+          "category": "버전",
+          "expected": "이 점 십",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "버전: 이 점 십",
+      "source": "R32-N6",
+      "current_output": "버전: 이 점 일 영",
+      "matches_current": false,
+      "needs_owner": true,
+      "owner_question": "버전 성분을 정수로 읽고 자리별 대안을 제외하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘2.10 → 이 점 십’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-N7",
+      "sentence": "범위는 ２０-１０개예요.",
+      "spans": [
+        {
+          "text": "２０-１０개",
+          "start": 4,
+          "end": 10,
+          "category": "원문 보존",
+          "expected": "２０-１０개",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "범위는 ２０-１０개예요.",
+      "source": "R32-N7",
+      "current_output": "범위는 이십-열 개예요.",
+      "matches_current": false,
+      "note": "추측: 이 기대값은 낭독 정답이 아니라 원문 보존 정책 초안이에요. 모호하거나 지원하지 않는 덩어리는 일부만 바꾸지 않고 확인 전까지 보존해요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘２０-１０개 → ２０-１０개’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-N8",
+      "sentence": "혼합 비율은 ３:５예요.",
+      "spans": [
+        {
+          "text": "３:５",
+          "start": 7,
+          "end": 10,
+          "category": "비율",
+          "expected": "삼 대 오",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "혼합 비율은 삼 대 오예요.",
+      "source": "R32-N8",
+      "current_output": "혼합 비율은 삼:오예요.",
+      "matches_current": false,
+      "note": "추측: 혼합 비율이라는 명시적 문맥이 있어 삼 대 오로 읽어요. 전각 여부와 낭독 추가 지시의 유무로 보존 여부를 가르지 않아요. 표기를 바꾸지 말라는 지시가 있으면 보존해요.",
+      "needs_owner": true,
+      "owner_question": "명시적 비율 문맥을 모두 낭독하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘３:５ → 삼 대 오’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-N9",
+      "sentence": "문자 ",
+      "spans": [
+        {
+          "text": "",
+          "start": 3,
+          "end": 6,
+          "category": "원문 보존",
+          "expected": "",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "문자 ",
+      "source": "R32-N9",
+      "current_output": "문자 123",
+      "matches_current": false,
+      "note": "숫자가 없는 보호 문자 충돌 대조군이에요. U+E031·U+E032·U+E033을 원래 문자 그대로 보존해요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘ → ’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-N10",
+      "sentence": "가상 전화번호는 000  0000  0000이에요.",
+      "spans": [
+        {
+          "text": "000  0000  0000",
+          "start": 9,
+          "end": 24,
+          "category": "전화",
+          "expected": "공 공 공, 공 공 공 공, 공 공 공 공",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 전화번호는 공 공 공, 공 공 공 공, 공 공 공 공이에요.",
+      "source": "R32-N10",
+      "current_output": "가상 전화번호는 영 영 영이에요.",
+      "matches_current": false,
+      "needs_owner": true,
+      "owner_question": "공 용례는 확인했지만 X 처리와 묶음·자리 띄어쓰기를 포함한 전체 낭독 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘000  0000  0000 → 공 공 공, 공 공 공 공, 공 공 공 공’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-N11",
+      "sentence": "가상 전화번호는 000\t0000\t0000이에요.",
+      "spans": [
+        {
+          "text": "000\t0000\t0000",
+          "start": 9,
+          "end": 22,
+          "category": "전화",
+          "expected": "공 공 공, 공 공 공 공, 공 공 공 공",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 전화번호는 공 공 공, 공 공 공 공, 공 공 공 공이에요.",
+      "source": "R32-N11",
+      "current_output": "가상 전화번호는 영\t영\t영이에요.",
+      "matches_current": false,
+      "needs_owner": true,
+      "owner_question": "공 용례는 확인했지만 X 처리와 묶음·자리 띄어쓰기를 포함한 전체 낭독 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘000\t0000\t0000 → 공 공 공, 공 공 공 공, 공 공 공 공’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-N12",
+      "sentence": "가상 전화번호는 000 0000-0000이에요.",
+      "spans": [
+        {
+          "text": "000 0000-0000",
+          "start": 9,
+          "end": 22,
+          "category": "전화",
+          "expected": "공 공 공, 공 공 공 공, 공 공 공 공",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 전화번호는 공 공 공, 공 공 공 공, 공 공 공 공이에요.",
+      "source": "R32-N12",
+      "current_output": "가상 전화번호는 영 영영영영, 영영영영이에요.",
+      "matches_current": false,
+      "needs_owner": true,
+      "owner_question": "공 용례는 확인했지만 X 처리와 묶음·자리 띄어쓰기를 포함한 전체 낭독 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘000 0000-0000 → 공 공 공, 공 공 공 공, 공 공 공 공’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-N8-ascii",
+      "sentence": "혼합 비율은 3:5예요.",
+      "spans": [
+        {
+          "text": "3:5",
+          "start": 7,
+          "end": 10,
+          "category": "비율",
+          "expected": "삼 대 오",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "혼합 비율은 삼 대 오예요.",
+      "source": "R32-N8-ascii",
+      "current_output": "혼합 비율은 3:5예요.",
+      "matches_current": false,
+      "note": "추측: 혼합 비율이라는 명시적 문맥이 있어 삼 대 오로 읽어요. 전각 여부와 낭독 추가 지시의 유무로 보존 여부를 가르지 않아요. 표기를 바꾸지 말라는 지시가 있으면 보존해요.",
+      "needs_owner": true,
+      "owner_question": "명시적 비율 문맥을 모두 낭독하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘3:5 → 삼 대 오’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-D1",
+      "sentence": "1번",
+      "spans": [
+        {
+          "text": "1번",
+          "start": 0,
+          "end": 2,
+          "category": "번호",
+          "expected": "일 번",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "일 번",
+      "source": "R32-D1",
+      "current_output": "일 번",
+      "matches_current": true,
+      "note": "무해한 시험 문구의 숫자 표기 변형이에요. 단독 번호라는 문맥으로 읽는 제안이며 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘1번 → 일 번’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-D2",
+      "sentence": "１번",
+      "spans": [
+        {
+          "text": "１번",
+          "start": 0,
+          "end": 2,
+          "category": "번호",
+          "expected": "일 번",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "일 번",
+      "source": "R32-D2",
+      "current_output": "일 번",
+      "matches_current": true,
+      "note": "무해한 시험 문구의 숫자 표기 변형이에요. 단독 번호라는 문맥으로 읽는 제안이며 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘１번 → 일 번’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-D3",
+      "sentence": "١번",
+      "spans": [
+        {
+          "text": "١번",
+          "start": 0,
+          "end": 2,
+          "category": "번호",
+          "expected": "일 번",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "일 번",
+      "source": "R32-D3",
+      "current_output": "일 번",
+      "matches_current": true,
+      "note": "무해한 시험 문구의 숫자 표기 변형이에요. 단독 번호라는 문맥으로 읽는 제안이며 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘١번 → 일 번’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-D4",
+      "sentence": "①번",
+      "spans": [
+        {
+          "text": "①번",
+          "start": 0,
+          "end": 2,
+          "category": "번호",
+          "expected": "일 번",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "일 번",
+      "source": "R32-D4",
+      "current_output": "①번",
+      "matches_current": false,
+      "note": "무해한 시험 문구의 숫자 표기 변형이에요. 단독 번호라는 문맥으로 읽는 제안이며 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘①번 → 일 번’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-D5",
+      "sentence": "¹번",
+      "spans": [
+        {
+          "text": "¹번",
+          "start": 0,
+          "end": 2,
+          "category": "번호",
+          "expected": "일 번",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "일 번",
+      "source": "R32-D5",
+      "current_output": "¹번",
+      "matches_current": false,
+      "note": "무해한 시험 문구의 숫자 표기 변형이에요. 단독 번호라는 문맥으로 읽는 제안이며 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘¹번 → 일 번’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-D6",
+      "sentence": "一번",
+      "spans": [
+        {
+          "text": "一번",
+          "start": 0,
+          "end": 2,
+          "category": "번호",
+          "expected": "일 번",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "일 번",
+      "source": "R32-D6",
+      "current_output": "一번",
+      "matches_current": false,
+      "note": "무해한 시험 문구의 숫자 표기 변형이에요. 단독 번호라는 문맥으로 읽는 제안이며 추측이에요.",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘一번 → 일 번’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-R32-D7",
+      "sentence": "1.0번",
+      "spans": [
+        {
+          "text": "1.0번",
+          "start": 0,
+          "end": 4,
+          "category": "원문 보존",
+          "expected": "1.0번",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "1.0번",
+      "source": "R32-D7",
+      "current_output": "일 점 영 번",
+      "matches_current": false,
+      "note": "추측: 이 기대값은 낭독 정답이 아니라 원문 보존 정책 초안이에요. 모호하거나 지원하지 않는 덩어리는 일부만 바꾸지 않고 확인 전까지 보존해요. 소수인지 식별자인지 단독 문구로 확정하지 않아요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘1.0번 → 1.0번’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P01-A",
+      "sentence": "연습 시작 시각을 3:10으로 정해요.",
+      "spans": [
+        {
+          "text": "3:10",
+          "start": 10,
+          "end": 14,
+          "category": "시각",
+          "expected": "세 시 십 분",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습 시작 시각을 세 시 십 분으로 정해요.",
+      "source": "new-pair-01-A",
+      "current_output": "연습 시작 시각을 세 시 십 분으로 정해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-01",
+      "pair_numeric_text": "3:10",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3:10 → 세 시 십 분’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P01-B",
+      "sentence": "연습 경기의 최종 점수를 3:10으로 적어요.",
+      "spans": [
+        {
+          "text": "3:10",
+          "start": 14,
+          "end": 18,
+          "category": "점수",
+          "expected": "삼 대 십",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습 경기의 최종 점수를 삼 대 십으로 적어요.",
+      "source": "new-pair-01-B",
+      "current_output": "연습 경기의 최종 점수를 삼 대 십으로 적어요.",
+      "matches_current": true,
+      "pair_id": "new-pair-01",
+      "pair_numeric_text": "3:10",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3:10 → 삼 대 십’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P02-A",
+      "sentence": "새 도구의 버전 표기는 2.10으로 해요.",
+      "spans": [
+        {
+          "text": "2.10",
+          "start": 13,
+          "end": 17,
+          "category": "버전",
+          "expected": "이 점 십",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "새 도구의 버전 표기는 이 점 십으로 해요.",
+      "source": "new-pair-02-A",
+      "current_output": "새 도구의 버전 표기는 이 점 일 영으로 해요.",
+      "matches_current": false,
+      "pair_id": "new-pair-02",
+      "pair_numeric_text": "2.10",
+      "needs_owner": true,
+      "owner_question": "버전 성분을 정수로 읽고 자리별 대안을 제외하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘2.10 → 이 점 십’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P02-B",
+      "sentence": "소수 2.10의 끝자리도 읽어요.",
+      "spans": [
+        {
+          "text": "2.10",
+          "start": 3,
+          "end": 7,
+          "category": "소수",
+          "expected": "이 점 일 영",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "소수 이 점 일 영의 끝자리도 읽어요.",
+      "source": "new-pair-02-B",
+      "current_output": "소수 이 점 일 영의 끝자리도 읽어요.",
+      "matches_current": true,
+      "pair_id": "new-pair-02",
+      "pair_numeric_text": "2.10",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2.10 → 이 점 일 영’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P03-A",
+      "sentence": "가상 공연은 6월에 열려요.",
+      "spans": [
+        {
+          "text": "6월",
+          "start": 7,
+          "end": 9,
+          "category": "날짜",
+          "expected": "유월",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 공연은 유월에 열려요.",
+      "source": "new-pair-03-A",
+      "current_output": "가상 공연은 유월에 열려요.",
+      "matches_current": true,
+      "pair_id": "new-pair-03",
+      "pair_numeric_text": "6",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘6월 → 유월’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P03-B",
+      "sentence": "가상 공연 준비에 6개월이 걸려요.",
+      "spans": [
+        {
+          "text": "6개월",
+          "start": 10,
+          "end": 13,
+          "category": "기간",
+          "expected": "육 개월",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 공연 준비에 육 개월이 걸려요.",
+      "source": "new-pair-03-B",
+      "current_output": "가상 공연 준비에 육 개월이 걸려요.",
+      "matches_current": true,
+      "pair_id": "new-pair-03",
+      "pair_numeric_text": "6",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘6개월 → 육 개월’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P04-A",
+      "sentence": "가상 발표는 10월에 해요.",
+      "spans": [
+        {
+          "text": "10월",
+          "start": 7,
+          "end": 10,
+          "category": "날짜",
+          "expected": "시월",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 발표는 시월에 해요.",
+      "source": "new-pair-04-A",
+      "current_output": "가상 발표는 시월에 해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-04",
+      "pair_numeric_text": "10",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘10월 → 시월’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P04-B",
+      "sentence": "가상 발표 준비에 10개월이 걸려요.",
+      "spans": [
+        {
+          "text": "10개월",
+          "start": 10,
+          "end": 14,
+          "category": "기간",
+          "expected": "십 개월",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 발표 준비에 십 개월이 걸려요.",
+      "source": "new-pair-04-B",
+      "current_output": "가상 발표 준비에 십 개월이 걸려요.",
+      "matches_current": true,
+      "pair_id": "new-pair-04",
+      "pair_numeric_text": "10",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘10개월 → 십 개월’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P05-A",
+      "sentence": "연습용 종이 1장을 펼쳐요.",
+      "spans": [
+        {
+          "text": "1장",
+          "start": 7,
+          "end": 9,
+          "category": "수량",
+          "expected": "한 장",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 종이 한 장을 펼쳐요.",
+      "source": "new-pair-05-A",
+      "current_output": "연습용 종이 한 장을 펼쳐요.",
+      "matches_current": true,
+      "pair_id": "new-pair-05",
+      "pair_numeric_text": "1",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘1장 → 한 장’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P05-B",
+      "sentence": "연습용 책의 제1장을 펼쳐요.",
+      "spans": [
+        {
+          "text": "제1장",
+          "start": 7,
+          "end": 10,
+          "category": "서수",
+          "expected": "제일 장",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 책의 제일 장을 펼쳐요.",
+      "source": "new-pair-05-B",
+      "current_output": "연습용 책의 제일 장을 펼쳐요.",
+      "matches_current": true,
+      "pair_id": "new-pair-05",
+      "pair_numeric_text": "1",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘제1장 → 제일 장’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P06-A",
+      "sentence": "연습용 책 4권을 골라요.",
+      "spans": [
+        {
+          "text": "4권",
+          "start": 6,
+          "end": 8,
+          "category": "수량",
+          "expected": "네 권",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 책 네 권을 골라요.",
+      "source": "new-pair-06-A",
+      "current_output": "연습용 책 네 권을 골라요.",
+      "matches_current": true,
+      "pair_id": "new-pair-06",
+      "pair_numeric_text": "4",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘4권 → 네 권’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P06-B",
+      "sentence": "연습용 전집의 제4권을 골라요.",
+      "spans": [
+        {
+          "text": "제4권",
+          "start": 8,
+          "end": 11,
+          "category": "서수",
+          "expected": "제사 권",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 전집의 제사 권을 골라요.",
+      "source": "new-pair-06-B",
+      "current_output": "연습용 전집의 제사 권을 골라요.",
+      "matches_current": true,
+      "pair_id": "new-pair-06",
+      "pair_numeric_text": "4",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘제4권 → 제사 권’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P07-A",
+      "sentence": "가상 인물은 20살이라고 설정해요.",
+      "spans": [
+        {
+          "text": "20살",
+          "start": 7,
+          "end": 10,
+          "category": "나이",
+          "expected": "스무 살",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 인물은 스무 살이라고 설정해요.",
+      "source": "new-pair-07-A",
+      "current_output": "가상 인물은 스무 살이라고 설정해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-07",
+      "pair_numeric_text": "20",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘20살 → 스무 살’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P07-B",
+      "sentence": "가상 인물의 표식은 20번으로 정해요.",
+      "spans": [
+        {
+          "text": "20번",
+          "start": 11,
+          "end": 14,
+          "category": "번호",
+          "expected": "이십 번",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 인물의 표식은 이십 번으로 정해요.",
+      "source": "new-pair-07-B",
+      "current_output": "가상 인물의 표식은 이십 번으로 정해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-07",
+      "pair_numeric_text": "20",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘20번 → 이십 번’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P08-A",
+      "sentence": "연습할 문장을 22개 골라요.",
+      "spans": [
+        {
+          "text": "22개",
+          "start": 8,
+          "end": 11,
+          "category": "수량",
+          "expected": "스물두 개",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습할 문장을 스물두 개 골라요.",
+      "source": "new-pair-08-A",
+      "current_output": "연습할 문장을 스물두 개 골라요.",
+      "matches_current": true,
+      "pair_id": "new-pair-08",
+      "pair_numeric_text": "22",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘22개 → 스물두 개’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P08-B",
+      "sentence": "연습할 문장의 번호는 22번으로 정해요.",
+      "spans": [
+        {
+          "text": "22번",
+          "start": 12,
+          "end": 15,
+          "category": "번호",
+          "expected": "이십이 번",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습할 문장의 번호는 이십이 번으로 정해요.",
+      "source": "new-pair-08-B",
+      "current_output": "연습할 문장의 번호는 이십이 번으로 정해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-08",
+      "pair_numeric_text": "22",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘22번 → 이십이 번’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P09-A",
+      "sentence": "연습 목록의 2번째 문장을 골라요.",
+      "spans": [
+        {
+          "text": "2번째",
+          "start": 7,
+          "end": 10,
+          "category": "서수",
+          "expected": "두 번째",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습 목록의 두 번째 문장을 골라요.",
+      "source": "new-pair-09-A",
+      "current_output": "연습 목록의 두 번째 문장을 골라요.",
+      "matches_current": true,
+      "pair_id": "new-pair-09",
+      "pair_numeric_text": "2",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2번째 → 두 번째’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P09-B",
+      "sentence": "연습 목록에서 2번 문장을 골라요.",
+      "spans": [
+        {
+          "text": "2번",
+          "start": 8,
+          "end": 10,
+          "category": "번호",
+          "expected": "이 번",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습 목록에서 이 번 문장을 골라요.",
+      "source": "new-pair-09-B",
+      "current_output": "연습 목록에서 이 번 문장을 골라요.",
+      "matches_current": true,
+      "pair_id": "new-pair-09",
+      "pair_numeric_text": "2",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘2번 → 이 번’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P10-A",
+      "sentence": "이 문장을 모두 3번 반복해요.",
+      "spans": [
+        {
+          "text": "3번",
+          "start": 9,
+          "end": 11,
+          "category": "수량",
+          "expected": "세 번",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "이 문장을 모두 세 번 반복해요.",
+      "source": "new-pair-10-A",
+      "current_output": "이 문장을 모두 삼 번 반복해요.",
+      "matches_current": false,
+      "pair_id": "new-pair-10",
+      "pair_numeric_text": "3",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3번 → 세 번’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P10-B",
+      "sentence": "이 문장의 번호는 3번이에요.",
+      "spans": [
+        {
+          "text": "3번",
+          "start": 10,
+          "end": 12,
+          "category": "번호",
+          "expected": "삼 번",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "이 문장의 번호는 삼 번이에요.",
+      "source": "new-pair-10-B",
+      "current_output": "이 문장의 번호는 삼 번이에요.",
+      "matches_current": true,
+      "pair_id": "new-pair-10",
+      "pair_numeric_text": "3",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘3번 → 삼 번’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P11-A",
+      "sentence": "모임 시각은 낮 12시로 정해요.",
+      "spans": [
+        {
+          "text": "12시",
+          "start": 9,
+          "end": 12,
+          "category": "시각",
+          "expected": "열두 시",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "모임 시각은 낮 열두 시로 정해요.",
+      "source": "new-pair-11-A",
+      "current_output": "모임 시각은 낮 열두 시로 정해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-11",
+      "pair_numeric_text": "12",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘12시 → 열두 시’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P11-B",
+      "sentence": "연습 기간은 12개월로 정해요.",
+      "spans": [
+        {
+          "text": "12개월",
+          "start": 7,
+          "end": 11,
+          "category": "기간",
+          "expected": "십이 개월",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습 기간은 십이 개월로 정해요.",
+      "source": "new-pair-11-B",
+      "current_output": "연습 기간은 십이 개월로 정해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-11",
+      "pair_numeric_text": "12",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘12개월 → 십이 개월’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P12-A",
+      "sentence": "연습 시작은 3시로 정해요.",
+      "spans": [
+        {
+          "text": "3시",
+          "start": 7,
+          "end": 9,
+          "category": "시각",
+          "expected": "세 시",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습 시작은 세 시로 정해요.",
+      "source": "new-pair-12-A",
+      "current_output": "연습 시작은 세 시로 정해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-12",
+      "pair_numeric_text": "3",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3시 → 세 시’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P12-B",
+      "sentence": "가상 달력에서 3월을 찾아요.",
+      "spans": [
+        {
+          "text": "3월",
+          "start": 8,
+          "end": 10,
+          "category": "날짜",
+          "expected": "삼월",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 달력에서 삼월을 찾아요.",
+      "source": "new-pair-12-B",
+      "current_output": "가상 달력에서 삼월을 찾아요.",
+      "matches_current": true,
+      "pair_id": "new-pair-12",
+      "pair_numeric_text": "3",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3월 → 삼월’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P13-A",
+      "sentence": "가상 시간표에 시각 0:02를 적어요.",
+      "spans": [
+        {
+          "text": "0:02",
+          "start": 11,
+          "end": 15,
+          "category": "시각",
+          "expected": "영 시 이 분",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 시간표에 시각 영 시 이 분을 적어요.",
+      "source": "new-pair-13-A",
+      "current_output": "가상 시간표에 시각 영 시 이 분를 적어요.",
+      "matches_current": false,
+      "pair_id": "new-pair-13",
+      "pair_numeric_text": "0:02",
+      "note": "추측: sentence와 구간 위치는 그대로 두고 expected_sentence의 조사만 분을로 맞춰요.",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘0:02 → 영 시 이 분’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P13-B",
+      "sentence": "가상 경기의 점수 0:02를 읽어요.",
+      "spans": [
+        {
+          "text": "0:02",
+          "start": 10,
+          "end": 14,
+          "category": "점수",
+          "expected": "영 대 이",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 경기의 점수 영 대 이를 읽어요.",
+      "source": "new-pair-13-B",
+      "current_output": "가상 경기의 점수 영 대 이를 읽어요.",
+      "matches_current": true,
+      "pair_id": "new-pair-13",
+      "pair_numeric_text": "0:02",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘0:02 → 영 대 이’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P14-A",
+      "sentence": "가상 달력의 월과 일 표기 10/6을 읽어요.",
+      "spans": [
+        {
+          "text": "10/6",
+          "start": 15,
+          "end": 19,
+          "category": "날짜",
+          "expected": "시월 육 일",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 달력의 월과 일 표기 시월 육 일을 읽어요.",
+      "source": "new-pair-14-A",
+      "current_output": "가상 달력의 월과 일 표기 육분의 십을 읽어요.",
+      "matches_current": false,
+      "pair_id": "new-pair-14",
+      "pair_numeric_text": "10/6",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘10/6 → 시월 육 일’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P14-B",
+      "sentence": "분수 10/6을 약분해요.",
+      "spans": [
+        {
+          "text": "10/6",
+          "start": 3,
+          "end": 7,
+          "category": "분수",
+          "expected": "육분의 십",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "분수 육분의 십을 약분해요.",
+      "source": "new-pair-14-B",
+      "current_output": "분수 육분의 십을 약분해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-14",
+      "pair_numeric_text": "10/6",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘10/6 → 육분의 십’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P15-A",
+      "sentence": "가상 기록의 날짜 2026.10.06을 읽어요.",
+      "spans": [
+        {
+          "text": "2026.10.06",
+          "start": 10,
+          "end": 20,
+          "category": "날짜",
+          "expected": "이천이십육 년 시월 육 일",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 기록의 날짜 이천이십육 년 시월 육 일을 읽어요.",
+      "source": "new-pair-15-A",
+      "current_output": "가상 기록의 날짜 이천이십육 년 시월 육 일을 읽어요.",
+      "matches_current": true,
+      "pair_id": "new-pair-15",
+      "pair_numeric_text": "2026.10.06",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2026.10.06 → 이천이십육 년 시월 육 일’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P15-B",
+      "sentence": "도구의 버전 표기 2026.10.06을 읽어요.",
+      "spans": [
+        {
+          "text": "2026.10.06",
+          "start": 10,
+          "end": 20,
+          "category": "버전",
+          "expected": "이천이십육 점 십 점 육",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "도구의 버전 표기 이천이십육 점 십 점 육을 읽어요.",
+      "source": "new-pair-15-B",
+      "current_output": "도구의 버전 표기 이천이십육 년 시월 육 일을 읽어요.",
+      "matches_current": false,
+      "pair_id": "new-pair-15",
+      "pair_numeric_text": "2026.10.06",
+      "needs_owner": true,
+      "owner_question": "버전 성분을 정수로 읽고 자리별 대안을 제외하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘2026.10.06 → 이천이십육 점 십 점 육’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P16-A",
+      "sentence": "가상 식별 번호 0012를 한 자리씩 읽어요.",
+      "spans": [
+        {
+          "text": "0012",
+          "start": 9,
+          "end": 13,
+          "category": "번호",
+          "expected": "공 공 일 이",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 식별 번호 공 공 일 이를 한 자리씩 읽어요.",
+      "source": "new-pair-16-A",
+      "current_output": "가상 식별 번호 십이를 한 자리씩 읽어요.",
+      "matches_current": false,
+      "pair_id": "new-pair-16",
+      "pair_numeric_text": "0012",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘0012 → 공 공 일 이’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P16-B",
+      "sentence": "연습용 수량 표기 0012개를 수로 읽어요.",
+      "spans": [
+        {
+          "text": "0012개",
+          "start": 10,
+          "end": 15,
+          "category": "수량",
+          "expected": "열두 개",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습용 수량 표기 열두 개를 수로 읽어요.",
+      "source": "new-pair-16-B",
+      "current_output": "연습용 수량 표기 열두 개를 수로 읽어요.",
+      "matches_current": true,
+      "pair_id": "new-pair-16",
+      "pair_numeric_text": "0012",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘0012개 → 열두 개’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P17-A",
+      "sentence": "뺄셈 식 20-10을 소리 내어 읽어요.",
+      "spans": [
+        {
+          "text": "20-10",
+          "start": 5,
+          "end": 10,
+          "category": "연산",
+          "expected": "이십 빼기 십",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "뺄셈 식 이십 빼기 십을 소리 내어 읽어요.",
+      "source": "new-pair-17-A",
+      "current_output": "뺄셈 식 20-10을 소리 내어 읽어요.",
+      "matches_current": false,
+      "pair_id": "new-pair-17",
+      "pair_numeric_text": "20-10",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘20-10 → 이십 빼기 십’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P17-B",
+      "sentence": "가상 식별자 20-10은 표기를 바꾸지 않아요.",
+      "spans": [
+        {
+          "text": "20-10",
+          "start": 7,
+          "end": 12,
+          "category": "원문 보존",
+          "expected": "20-10",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 식별자 20-10은 표기를 바꾸지 않아요.",
+      "source": "new-pair-17-B",
+      "current_output": "가상 식별자 20-10은 표기를 바꾸지 않아요.",
+      "matches_current": true,
+      "pair_id": "new-pair-17",
+      "pair_numeric_text": "20-10",
+      "note": "명시적으로 원문 보존을 요청한 문맥이에요. expected는 음성 낭독값이 아니라 보존값이에요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘20-10 → 20-10’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P18-A",
+      "sentence": "두 수의 비 3:5를 소리 내어 읽어요.",
+      "spans": [
+        {
+          "text": "3:5",
+          "start": 7,
+          "end": 10,
+          "category": "비율",
+          "expected": "삼 대 오",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "두 수의 비 삼 대 오를 소리 내어 읽어요.",
+      "source": "new-pair-18-A",
+      "current_output": "두 수의 비 3:5를 소리 내어 읽어요.",
+      "matches_current": false,
+      "pair_id": "new-pair-18",
+      "pair_numeric_text": "3:5",
+      "needs_owner": true,
+      "owner_question": "명시적 비율 문맥을 모두 낭독하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘3:5 → 삼 대 오’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P18-B",
+      "sentence": "가상 식별자 3:5는 표기를 바꾸지 않아요.",
+      "spans": [
+        {
+          "text": "3:5",
+          "start": 7,
+          "end": 10,
+          "category": "원문 보존",
+          "expected": "3:5",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 식별자 3:5는 표기를 바꾸지 않아요.",
+      "source": "new-pair-18-B",
+      "current_output": "가상 식별자 3:5는 표기를 바꾸지 않아요.",
+      "matches_current": true,
+      "pair_id": "new-pair-18",
+      "pair_numeric_text": "3:5",
+      "note": "명시적으로 원문 보존을 요청한 문맥이에요. expected는 음성 낭독값이 아니라 보존값이에요.",
+      "needs_owner": true,
+      "owner_question": "낭독 대신 덩어리 전체를 보존하는 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘3:5 → 3:5’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P19-A",
+      "sentence": "가상 건물 6동을 모형으로 만들어요.",
+      "spans": [
+        {
+          "text": "6동",
+          "start": 6,
+          "end": 8,
+          "category": "수량",
+          "expected": "여섯 동",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 건물 여섯 동을 모형으로 만들어요.",
+      "source": "new-pair-19-A",
+      "current_output": "가상 건물 육 동을 모형으로 만들어요.",
+      "matches_current": false,
+      "pair_id": "new-pair-19",
+      "pair_numeric_text": "6",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘6동 → 여섯 동’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P19-B",
+      "sentence": "가상 단지의 6동에 표식을 붙여요.",
+      "spans": [
+        {
+          "text": "6동",
+          "start": 7,
+          "end": 9,
+          "category": "번호",
+          "expected": "육 동",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 단지의 육 동에 표식을 붙여요.",
+      "source": "new-pair-19-B",
+      "current_output": "가상 단지의 육 동에 표식을 붙여요.",
+      "matches_current": true,
+      "pair_id": "new-pair-19",
+      "pair_numeric_text": "6",
+      "needs_owner": true,
+      "owner_question": "번호의 정수 읽기와 자리별 읽기를 가르는 문맥 정책은 추측이에요. 성우 김디도 낭독 기준으로 ‘6동 → 육 동’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P20-A",
+      "sentence": "가상 집 1채를 그려요.",
+      "spans": [
+        {
+          "text": "1채",
+          "start": 5,
+          "end": 7,
+          "category": "수량",
+          "expected": "한 채",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 집 한 채를 그려요.",
+      "source": "new-pair-20-A",
+      "current_output": "가상 집 한 채를 그려요.",
+      "matches_current": true,
+      "pair_id": "new-pair-20",
+      "pair_numeric_text": "1",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘1채 → 한 채’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P20-B",
+      "sentence": "가상 집의 가격을 1원으로 설정해요.",
+      "spans": [
+        {
+          "text": "1원",
+          "start": 10,
+          "end": 12,
+          "category": "금액",
+          "expected": "일 원",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 집의 가격을 일 원으로 설정해요.",
+      "source": "new-pair-20-B",
+      "current_output": "가상 집의 가격을 일 원으로 설정해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-20",
+      "pair_numeric_text": "1",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘1원 → 일 원’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P21-A",
+      "sentence": "연습 시작 시각은 2시로 해요.",
+      "spans": [
+        {
+          "text": "2시",
+          "start": 10,
+          "end": 12,
+          "category": "시각",
+          "expected": "두 시",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습 시작 시각은 두 시로 해요.",
+      "source": "new-pair-21-A",
+      "current_output": "연습 시작 시각은 두 시로 해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-21",
+      "pair_numeric_text": "2",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2시 → 두 시’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P21-B",
+      "sentence": "연습 평가 점수는 2점으로 해요.",
+      "spans": [
+        {
+          "text": "2점",
+          "start": 10,
+          "end": 12,
+          "category": "점수",
+          "expected": "이 점",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "연습 평가 점수는 이 점으로 해요.",
+      "source": "new-pair-21-B",
+      "current_output": "연습 평가 점수는 이 점으로 해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-21",
+      "pair_numeric_text": "2",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2점 → 이 점’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P22-A",
+      "sentence": "가상 상자의 개수는 3개로 해요.",
+      "spans": [
+        {
+          "text": "3개",
+          "start": 11,
+          "end": 13,
+          "category": "수량",
+          "expected": "세 개",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 상자의 개수는 세 개로 해요.",
+      "source": "new-pair-22-A",
+      "current_output": "가상 상자의 개수는 세 개로 해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-22",
+      "pair_numeric_text": "3",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3개 → 세 개’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P22-B",
+      "sentence": "가상 상자의 질량은 3kg으로 해요.",
+      "spans": [
+        {
+          "text": "3kg",
+          "start": 11,
+          "end": 14,
+          "category": "단위",
+          "expected": "삼 킬로그램",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 상자의 질량은 삼 킬로그램으로 해요.",
+      "source": "new-pair-22-B",
+      "current_output": "가상 상자의 질량은 삼 킬로그램으로 해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-22",
+      "pair_numeric_text": "3",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘3kg → 삼 킬로그램’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P23-A",
+      "sentence": "가상 인물의 나이는 20살로 정해요.",
+      "spans": [
+        {
+          "text": "20살",
+          "start": 11,
+          "end": 14,
+          "category": "나이",
+          "expected": "스무 살",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 인물의 나이는 스무 살로 정해요.",
+      "source": "new-pair-23-A",
+      "current_output": "가상 인물의 나이는 스무 살로 정해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-23",
+      "pair_numeric_text": "20",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘20살 → 스무 살’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P23-B",
+      "sentence": "가상 기록의 연도 표기는 서기 20년으로 해요.",
+      "spans": [
+        {
+          "text": "20년",
+          "start": 17,
+          "end": 20,
+          "category": "연도",
+          "expected": "이십 년",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 기록의 연도 표기는 서기 이십 년으로 해요.",
+      "source": "new-pair-23-B",
+      "current_output": "가상 기록의 연도 표기는 서기 이십 년으로 해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-23",
+      "pair_numeric_text": "20",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘20년 → 이십 년’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P24-A",
+      "sentence": "가상 모형의 개수는 2개로 해요.",
+      "spans": [
+        {
+          "text": "2개",
+          "start": 11,
+          "end": 13,
+          "category": "수량",
+          "expected": "두 개",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 모형의 개수는 두 개로 해요.",
+      "source": "new-pair-24-A",
+      "current_output": "가상 모형의 개수는 두 개로 해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-24",
+      "pair_numeric_text": "2",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2개 → 두 개’라는 읽기·보존안을 채택해도 될까요?"
+    },
+    {
+      "id": "G18-P24-B",
+      "sentence": "가상 설문의 응답 비율은 2%로 해요.",
+      "spans": [
+        {
+          "text": "2%",
+          "start": 14,
+          "end": 16,
+          "category": "백분율",
+          "expected": "이 퍼센트",
+          "allowed": [],
+          "basis": "추측"
+        }
+      ],
+      "expected_sentence": "가상 설문의 응답 비율은 이 퍼센트로 해요.",
+      "source": "new-pair-24-B",
+      "current_output": "가상 설문의 응답 비율은 이 퍼센트로 해요.",
+      "matches_current": true,
+      "pair_id": "new-pair-24",
+      "pair_numeric_text": "2",
+      "needs_owner": true,
+      "owner_question": "기대 읽기 전체를 뒷받침하는 출처를 이번에 확인하지 못했어요. 성우 김디도 낭독 기준으로 ‘2% → 이 퍼센트’라는 읽기·보존안을 채택해도 될까요?"
+    }
+  ],
+  "changes": [
+    {
+      "id": "G18-G15-01",
+      "what": "spans를 갱신했어요.",
+      "why": "시각 읽기 출처의 본문과 실제 열린 주소를 확인했어요."
+    },
+    {
+      "id": "G18-G15-02",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-03",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-04",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-05",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-06",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-07",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-08",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-09",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-10",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-11",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-12",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-13",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-14",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-15",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-16",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-17",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-18",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-20",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-21",
+      "what": "spans, expected_sentence, note, needs_owner, owner_question를 갱신했어요.",
+      "why": "전화의 0은 공, 자리 사이는 공백 하나, 묶음 사이는 쉼표와 공백 하나로 통일하고 영 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-22",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-23",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-24",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-25",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-26",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-27",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-28",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-29",
+      "what": "spans, needs_owner, owner_question를 갱신했어요.",
+      "why": "점수의 수치 0은 영으로 통일해 공 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-G15-30",
+      "what": "spans, needs_owner, owner_question를 갱신했어요.",
+      "why": "버전 성분을 정수로 읽도록 통일해 자리별 읽기와 영·공이 섞인 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R27-extra-01",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R27-extra-02",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R27-extra-03",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R27-extra-04",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R27-extra-05",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R27-extra-06",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R27-extra-07",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R27-extra-08",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R27-extra-10",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R27-11-counter",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-B-01",
+      "what": "spans, expected_sentence, matches_current, needs_owner, owner_question를 갱신했어요.",
+      "why": "번호를 한 자리씩 읽을 때도 각 자리 사이를 띄우는 공통 규칙에 맞췄어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-B-02",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-B-03",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-B-04",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-B-05",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-B-06",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-B-07",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-B-08",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-B-09",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-01",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-02",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-03",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-04",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-05",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-06",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-07",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-08",
+      "what": "spans, expected_sentence, matches_current, note, needs_owner, owner_question를 갱신했어요.",
+      "why": "점수의 수치 0은 영으로 통일해 공 대안을 제외했어요. 문맥 없는 콜론 표기를 점수라고 단정하지 않고 보존해요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-09",
+      "what": "spans, needs_owner, owner_question를 갱신했어요.",
+      "why": "버전 성분을 정수로 읽도록 통일해 자리별 읽기와 영·공이 섞인 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-10",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-11",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-12",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-13",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-14",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R30-fragment-15",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-01",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-02",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-03",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-04",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-05",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-06",
+      "what": "spans, expected_sentence, matches_current, note, needs_owner, owner_question를 갱신했어요.",
+      "why": "점수의 수치 0은 영으로 통일해 공 대안을 제외했어요. 문맥 없는 콜론 표기를 점수라고 단정하지 않고 보존해요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-07",
+      "what": "spans, expected_sentence, matches_current, note, needs_owner, owner_question를 갱신했어요.",
+      "why": "IP도 번호 문맥이므로 소리 내는 0은 공으로 맞췄어요. 기본값과 자리별 대안 모두 적용했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-08",
+      "what": "spans, needs_owner, owner_question를 갱신했어요.",
+      "why": "버전 성분을 정수로 읽도록 통일해 자리별 읽기와 영·공이 섞인 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-09",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-10",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-11",
+      "what": "spans, needs_owner, owner_question를 갱신했어요.",
+      "why": "버전 성분을 정수로 읽도록 통일해 자리별 읽기와 영·공이 섞인 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-12",
+      "what": "spans, needs_owner, owner_question를 갱신했어요.",
+      "why": "버전 성분을 정수로 읽도록 통일해 자리별 읽기와 영·공이 섞인 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-13",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-14",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-N-15",
+      "what": "spans, expected_sentence, matches_current, needs_owner, owner_question를 갱신했어요.",
+      "why": "전화의 0은 공, 자리 사이는 공백 하나, 묶음 사이는 쉼표와 공백 하나로 통일하고 영 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R31-2",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-N1",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-N2",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-N3",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-N4",
+      "what": "spans, needs_owner, owner_question를 갱신했어요.",
+      "why": "버전 성분을 정수로 읽도록 통일해 자리별 읽기와 영·공이 섞인 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-N5",
+      "what": "spans, needs_owner, owner_question를 갱신했어요.",
+      "why": "버전 성분을 정수로 읽도록 통일해 자리별 읽기와 영·공이 섞인 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-N6",
+      "what": "spans, needs_owner, owner_question를 갱신했어요.",
+      "why": "버전 성분을 정수로 읽도록 통일해 자리별 읽기와 영·공이 섞인 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-N7",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-N8",
+      "what": "spans, expected_sentence, note, needs_owner, owner_question를 갱신했어요.",
+      "why": "혼합 비율은 비율 문맥이 분명하므로 3:5 짝 문항과 전각 대조군의 기준을 맞췄어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-N9",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-N10",
+      "what": "spans, expected_sentence, needs_owner, owner_question를 갱신했어요.",
+      "why": "전화의 0은 공, 자리 사이는 공백 하나, 묶음 사이는 쉼표와 공백 하나로 통일하고 영 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-N11",
+      "what": "spans, expected_sentence, needs_owner, owner_question를 갱신했어요.",
+      "why": "전화의 0은 공, 자리 사이는 공백 하나, 묶음 사이는 쉼표와 공백 하나로 통일하고 영 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-N12",
+      "what": "spans, expected_sentence, needs_owner, owner_question를 갱신했어요.",
+      "why": "전화의 0은 공, 자리 사이는 공백 하나, 묶음 사이는 쉼표와 공백 하나로 통일하고 영 대안을 제외했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-N8-ascii",
+      "what": "spans, expected_sentence, matches_current, note, needs_owner, owner_question를 갱신했어요.",
+      "why": "혼합 비율은 비율 문맥이 분명하므로 3:5 짝 문항과 전각 대조군의 기준을 맞췄어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-D1",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-D2",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-D3",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-D4",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-D5",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-D6",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-R32-D7",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P01-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P01-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P02-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P02-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P03-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P03-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P04-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P04-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P05-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P05-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P06-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P06-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P07-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P07-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P08-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P08-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P09-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P09-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P10-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P10-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P11-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P11-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P12-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P12-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P13-A",
+      "what": "expected_sentence, matches_current, note, needs_owner, owner_question를 갱신했어요.",
+      "why": "기존 기대 문장의 분를을 분을로 바로잡고 원문은 유지했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P13-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P14-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P14-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P15-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P15-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P16-A",
+      "what": "spans, expected_sentence, needs_owner, owner_question를 갱신했어요.",
+      "why": "앞자리 0이 있는 식별 번호에도 공 기본값을 적용했어요. 출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P16-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P17-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P17-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P18-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P18-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P19-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P19-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P20-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P20-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P21-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P21-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P22-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P22-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P23-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P23-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P24-A",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    },
+    {
+      "id": "G18-P24-B",
+      "what": "needs_owner, owner_question를 갱신했어요.",
+      "why": "출처로 확인하지 못한 기대값과 정책을 확정 정답으로 쓰지 않도록 대표 확인 질문을 붙였어요."
+    }
+  ],
+  "rules": {
+    "영_공": {
+      "전화_식별번호": "0을 소리 내는 경우 기본은 공이에요. 한 자리씩 읽는 번호·전화 형식과 IP의 0 블록에 같게 적용해요. 자리값으로 읽는 주소·순번 안의 0은 별도로 소리 내지 않아요.",
+      "수치": "시각·점수·소수·금액·측정값·비율·버전의 수치 0은 영으로 읽어요. 정수 안의 자리값 0은 따로 읽지 않아요.",
+      "allowed": "같은 문맥에서 영과 공을 서로 바꾼 대안을 넣지 않아요. 기본값을 하나로 정한 정책이며 다른 읽기가 언어적으로 틀렸다는 뜻은 아니에요.",
+      "basis": "추측: 전화번호의 공 용례는 확인했지만 모든 식별 번호에 적용하고 기본값을 하나로 고르는 것은 성우 김디도 낭독 정책 제안이에요.",
+      "확인한_용례": {
+        "basis": "확인(한국어기초사전 공 항목의 한국어 정의와 전화번호 용례: https://krdict.korean.go.kr/vie/dicSearch/SearchView?ParaWordNo=18686&nation=vie)",
+        "scope": "공의 숫자 영 의미와 전화번호 읽기 용례를 본문에서 확인했어요. 공만이 유일한 표준이라는 근거로 쓰지 않아요."
+      }
+    },
+    "한_자리씩_읽기_띄어쓰기": {
+      "rule": "한 자리씩 읽는 모든 expected와 allowed에서 각 자리의 말 사이에 공백 하나를 넣어요. 번호의 하이픈·연속 공백·탭으로 나뉜 묶음 사이는 쉼표와 공백 하나로 써요. 임의로 새 묶음을 만들지 않아요.",
+      "semantic_separator": "소수점·버전·IP의 점은 점으로 읽고 앞뒤에 공백 하나를 둬요. 전화 형식의 X도 한 자리 토큰인 엑스로 읽어요. 정수 자리값 읽기의 십·백·천은 한 자리씩 읽기에 해당하지 않아요.",
+      "example": "0012는 공 공 일 이, 000-0000-0000은 공 공 공, 공 공 공 공, 공 공 공 공, 0.05는 영 점 영 오로 써요.",
+      "basis": "추측: 낭독 입력 표기를 일관되게 만드는 정책이에요. 유일한 맞춤법 표준이거나 특정 쉼 길이를 보장한다는 출처는 확인하지 못했어요."
+    },
+    "분류별_원문_보존_낭독_조건": {
+      "시각": {
+        "낭독": "시각·오전·오후·시 또는 시작·출발 문맥이면 시각으로 읽어요. 다른 단서가 없는 두 자리 시:두 자리 분 형식도 잠정 시각으로 읽어요. 시는 고유어, 영 시의 0과 분·초는 한자어로 읽어요.",
+        "보존": "시각과 점수 단서가 충돌하거나 시·분·초 범위를 벗어나면 전체를 보존해요. 단서 없는 0:2처럼 분이 한 자리인 콜론 표기는 보존해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "점수": {
+        "낭독": "점수·득점·승패 문맥이면 콜론 양쪽을 한자어 수와 대로 읽어요. 점 단위 평가는 한자어 수와 점으로 읽어요. 0은 영이에요.",
+        "보존": "시각과 구별할 문맥이 없거나 충돌하면 콜론 덩어리를 보존해요. 경기라는 말만으로 점수라고 확정하지 않아요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "번호": {
+        "낭독": "한 자리씩 읽으라는 지시가 있는 식별 번호나 번호 문맥의 하이픈 묶음은 각 자리로 읽어요. 번·동·호가 붙은 순번과 주소는 한자어 정수로 읽고 주소의 하이픈은 다시로 읽어요. IP는 블록별 정수 읽기가 기본이고 단독 0 블록은 공으로 읽어요.",
+        "보존": "원문 보존 지시나 해석 충돌이 있으면 전체를 보존해요. 번호 문맥의 숫자 문자 변형은 이 시험표의 일대일 대응만 잠정 읽고 임의의 기호까지 확장하지 않아요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "금액": {
+        "낭독": "금액·가격·예산 문맥이나 원 단위가 분명하면 한자어 수로 읽어요. 소수부는 끝자리 0까지 한 자리씩 읽어요.",
+        "보존": "지원 범위 밖의 큰 수, 잘못된 자릿수 쉼표 등 해석할 수 없는 금액은 단위까지 전체를 보존해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "날짜": {
+        "낭독": "달력·날짜 문맥이 있거나 유효한 연-월-일 형식이면 년·월·일로 읽어요. 유월·시월을 적용해요. 10/6은 월일 단서가 있을 때 월일로 읽어요.",
+        "보존": "없는 날짜나 날짜·버전·분수 해석이 충돌하는 덩어리는 보존해요. 버전이라는 명시적 단서는 날짜 모양보다 우선해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "전화": {
+        "낭독": "전화번호 단서와 가상 숫자 묶음이나 번호 형식이 있으면 한 자리씩 읽어요. 0은 공, X는 엑스로 읽어요. 하이픈·공백·탭은 묶음 경계예요.",
+        "보존": "번호 형식 자체를 보존하라는 지시가 있거나 전화인지 모르는 영문 혼합 식별자는 보존해요. X 읽기는 명시적인 가짜 전화번호 형식에만 적용해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "버전": {
+        "낭독": "버전 또는 v 단서가 있으면 점으로 나눈 성분을 한자어 정수로 읽어요. 날짜처럼 보여도 버전 단서를 우선해요. 단독 2.10.3은 날짜·주소가 아닌 세 성분 버전 형식으로 잠정 읽어요. 0 성분은 영이에요.",
+        "보존": "버전인지 소수인지 판단할 수 없는 두 성분 수와 주소·날짜 해석이 충돌하는 덩어리는 보존해요. 자리별 읽기 대안은 이 분류의 allowed에서 제외해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "서수": {
+        "낭독": "제N장·권·조·항은 한자어 수로, N번째는 첫 번째·두 번째 같은 순서 표현으로 읽어요.",
+        "보존": "순서와 수량이 충돌하거나 제 뒤의 수를 해석하지 못하면 전체를 보존해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "수량": {
+        "낭독": "개·장·권·자루 등 수량 단위는 고유어 관형형으로 읽어요. 반복 횟수의 번과 건물 수량의 동도 고유어로 읽어요. 100 이상은 잠정 한자어로 읽고 단위 없는 숫자 나열은 각 수를 한자어로 읽어요.",
+        "보존": "번호·순서와 수량의 구별이 불분명하거나 지원 범위를 벗어나면 보존해요. 천 단위 쉼표와 나열 쉼표는 문맥과 자릿수로 구별해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "분수": {
+        "낭독": "분수 문맥 또는 다른 해석과 충돌하지 않는 분수 형식이면 분모부터 읽어요. 대분수는 정수부와 분수를 과로 연결해요.",
+        "보존": "분모가 0이거나 지원 범위 밖이면 전체를 보존해요. 월일 단서가 있으면 날짜 해석을 우선하고 단서가 충돌하면 보존해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "소수": {
+        "낭독": "소수·측정값 문맥 또는 버전 단서 없는 일반 소수 형식이면 정수부와 점, 소수부를 읽어요. 소수부는 자리 사이 공백 하나를 두고 0을 영으로 읽어요.",
+        "보존": "식별자·버전 가능성을 문맥으로 해소하지 못하거나 지원 범위를 벗어나면 전체를 보존해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "백분율": {
+        "낭독": "퍼센트 기호나 백분율 단서가 있으면 수와 퍼센트로 읽어요. 소수부는 소수 규칙을 적용해요.",
+        "보존": "식별자 보존 지시, 잘못된 수 표기 또는 지원 범위 밖이면 전체를 보존해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "단위": {
+        "낭독": "수와 길이·질량·넓이·온도 단위가 분명하면 수와 단위 이름으로 읽어요. 호환 단위 기호도 같은 의미로 읽고 소수부는 소수 규칙을 적용해요.",
+        "보존": "단위가 불명확하거나 수와 단위의 결합을 해석할 수 없으면 전체를 보존해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "연도": {
+        "낭독": "서기 또는 기록 연도 문맥에서는 한자어 수와 년으로 읽어요.",
+        "보존": "버전·기간 등과 구별할 문맥이 부족하면 전체를 보존해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "나이": {
+        "낭독": "살은 고유어 관형형으로, 세는 한자어 수로 읽어요.",
+        "보존": "나이인지 식별자인지 모호하거나 범위를 해석할 수 없으면 전체를 보존해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "원문 보존": {
+        "낭독": "명시적 낭독 조건이 새로 확인되면 해당 의미 분류로 옮겨 읽기를 정해요. 보존 상태의 expected는 음성 발음 지시가 아니에요.",
+        "보존": "표기를 바꾸지 말라는 지시, 모호한 식별자·범위, 불가능한 날짜, 지원 범위 밖의 수, 사용자 영역 문자는 text 그대로 보존해요. 일부만 변환하지 않아요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "기간": {
+        "낭독": "시간·분·초·개월 등 기간 단위가 분명하면 단위에 맞춰 읽어요. 시간은 고유어, 분·초·개월은 한자어를 기본으로 해요.",
+        "보존": "범위의 방향·단위·의미를 확정하지 못하면 덩어리 전체를 보존해요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "연산": {
+        "낭독": "뺄셈·계산식 단서가 분명하면 하이픈을 빼기로 읽어요.",
+        "보존": "단서 없는 20-10이나 식별자 보존 지시는 그대로 보존해요. 범위라고만 적힌 20-10개는 방향을 임의로 정하지 않아요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      },
+      "비율": {
+        "낭독": "비·비율·혼합 비율 문맥이 분명하면 콜론 양쪽을 한자어 수와 대로 읽어요. 소리 내어 읽으라는 추가 지시가 없어도 같아요. 전각 숫자도 같은 수로 읽어요.",
+        "보존": "식별자 표기를 보존하라는 지시가 우선이에요. 비율·점수·시각 중 무엇인지 불분명하면 전체를 보존해요. 퍼센트 기호가 있으면 백분율 분류로 읽어요.",
+        "basis": "추측: 문맥 판정과 보존 범위에 대한 정책 제안이에요. 개별 읽기의 확인 여부는 spans의 basis를 봐 주세요."
+      }
+    },
+    "우선순위": "원문 보존 지시를 먼저 적용하고 구간에 직접 연결된 명시적 의미 단서를 형식보다 우선해요. 단서의 충돌을 해소하지 못하면 보존해요. 현재 코드가 지원하는지는 기대 읽기의 결정 조건으로 삼지 않아요.",
+    "지원범위": "추측: 정수부가 0 이상 1경 미만인 수를 기본 지원 범위로 정해요. 범위 밖인 수의 단위·분수·소수도 덩어리 전체를 보존해요. 범위를 넓힐지는 대표 확인이 필요해요.",
+    "조사_어미": "추측: sentence와 구간 위치는 그대로 두고 expected_sentence에서만 읽은 말의 받침에 맞춰 조사·이에요/예요를 조정해요. 이번 표에서는 기존 분예요를 분이에요로 조정한 두 문항을 유지하고, 분 뒤 목적격 조사 를을 을로 바로잡아요. 전화 형식의 마지막 엑스에는 받침이 없어 예요를 유지해요.",
+    "근거_확인": {
+      "policy": "실제로 본문을 열어 해당 읽기를 확인한 구간만 확인(출처)으로 표시해요. 검색 결과나 부분 용례만으로 전체 정책을 확인이라고 올리지 않아요. 용례를 넘어서는 띄어쓰기·문맥 분류·보존 선택은 추측이에요.",
+      "sources": [
+        {
+          "url": "https://www.korean.go.kr/front/mcfaq/mcfaqView.do?mcfaq_seq=5672",
+          "checked": "2026-10-07",
+          "supports": "두 시·삼십 분·오 초의 읽기와 띄어쓰기 본문을 확인했어요. 붙여 쓰기도 허용되므로 현재 표기는 유일한 표준이 아니에요."
+        },
+        {
+          "url": "https://www.korean.go.kr/front/mcfaq/mcfaqView.do?mcfaq_seq=9160",
+          "checked": "2026-10-07",
+          "supports": "스무 살과 스물두 살의 표현을 본문에서 확인했어요."
+        },
+        {
+          "url": "https://krdict.korean.go.kr/vie/dicSearch/SearchView?ParaWordNo=18686&nation=vie",
+          "checked": "2026-10-07",
+          "supports": "한국어 본문에서 공의 숫자 의미와 전화번호 용례를 확인했어요. 특정 묶음 띄어쓰기 정책까지 입증하지는 않아요."
+        }
+      ]
+    },
+    "대표_확인": "출처로 기대값 전체를 확인하지 못한 구간이 하나라도 있는 문항에 needs_owner: true와 구체적인 owner_question을 넣어요. 보존 정책과 허용 대안도 확인 전 초안이에요. 숫자 구간이 없는 대조 문장은 제외해요.",
+    "검증": "start는 원문 유니코드 문자 기준 0부터 시작하고 end는 포함하지 않아요. current_output은 원문 전체를 normalize에 전달한 실제 결과예요. matches_current는 allowed나 공백을 보정하지 않고 expected_sentence와 문자열 전체를 비교해요. changes는 G18과 달라진 문항을 한 번씩 적어요."
+  }
+}
