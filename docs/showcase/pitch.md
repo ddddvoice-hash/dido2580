@@ -1,32 +1,36 @@
 # 성우 김디도 · 이력서 한 단락 · 영문 요약 · 3분 시연 대본 (대표작 F)
 
-2026-10-07 · 클라우드 팀장(Claude) 초안 · GPT 아스트라 비판(R37) 전 · **대표 확인 전에는 밖에 쓰지 않아요.**
+2026-10-08 · 클라우드 팀장(Claude) 초안 v2(GPT 아스트라 R37 24건 반영) · **대표 확인 전에는 외부에 쓰지 않아요.**
 
-쓰는 사실은 저장소에 근거가 있는 것만이에요(`docs/positioning/strengths-claude.md` 1·6장, `docs/FLAGSHIP.md`, 게시판). 회사 이름은 쓰지 않아요. 재지 않은 숫자는 쓰지 않아요.
+경력과 수치는 저장소의 기록을 인용해요(`docs/positioning/strengths-claude.md`, `docs/FLAGSHIP.md`, 게시판). 원자료 확인이나 실제 청취가 필요한 내용은 따로 표시해요. 회사 이름과 개인정보는 쓰지 않아요.
 
 ## 1. 이력서 한 단락
 
-16년 차 성우로, 국내 대형 플랫폼 AI 음성 비서의 남자 목소리(오리지널 버전)를 만든 음성 합성 학습용 녹음을 수만 문장 규모로 했고, 합성된 결과 소리까지 들어 봤어요. AI 데이터 품질관리 실무에서는 정정 기록을 검수 코드 21종과 애매 케이스 10유형으로 정리했고, 개인 검수량 67,630건에 오류율 0.13%를 기록했어요. 지금은 AI 팀(Claude·GPT)을 지휘해 녹음 검사기, 답변 채점기와 평가자 일치도 계산, AI 목소리의 숫자 읽기 기준과 성우 김디도 목소리 AI 비서(개발 중)를 만들고, 자동 시험과 외부 AI의 교차 검토로 지켜요.
+2010년에 데뷔한 성우 김디도예요. AI 음성 비서의 남성 음성(오리지널 버전)을 위한 합성 학습용 녹음을 수만 문장 규모로 했고, 합성 결과도 직접 들어 봤어요. AI 데이터 품질관리 실무에서 정정 기록을 바탕으로 검수 코드 21종을 설계하고, 수정 사유를 애매한 사례 10유형으로 정리했어요. 개인 검수량은 67,630건이며, 경력표에 기록된 오류율은 0.13%예요. AI 도구(Claude·GPT)에 작업을 지시하고 결과를 검토하며 녹음 검사·답변 채점·평가자 일치도 도구를 만들었어요. 숫자 읽기 기준과 성우 김디도 목소리 AI 비서는 개발 중이며, 코드의 자동 시험과 서로 다른 AI의 교차 검토를 진행해요.
 
-> 고를 것(대표): "수만 문장"을 포트폴리오처럼 정확한 수로 쓸지, 회사 이름을 이력서에는 쓸지(공개 저장소에는 쓰지 않음).
+> 확인할 것(대표): ① 오류율 0.13%의 산정 기준(분모·오류 정의)을 덧붙일지, 빼고 검수량만 쓸지 ② 공개 저장소 밖 이력서에서의 녹음 분량·회사 표기는 대표가 정해요(이 파일에는 쓰지 않아요).
 
 ## 2. 영문 요약 (English summary)
 
-성우 김디도 is a Korean voice actor with 16 years of experience who recorded tens of thousands of sentences as the original male voice of a major Korean platform's AI voice assistant, and listened to the synthesized results. In AI data quality work, 성우 김디도 turned correction logs into 21 review codes and 10 types of ambiguous cases, with a personal review volume of 67,630 items at a 0.13% error rate. Current work: directing AI agents (Claude and GPT) to build tools that check recordings, score AI answers, measure agreement between raters, and define how an AI voice should read Korean numbers — work still in progress, verified by automated tests and cross-review between the two AIs.
+성우 김디도 is a Korean voice actor who debuted in 2010, recorded tens of thousands of sentences as training data for the original male voice of an AI voice assistant, and listened to the resulting synthesized speech. In AI data quality assurance, 성우 김디도 developed 21 quality-control codes from correction logs and organized ambiguous cases into 10 categories. Recorded individual results include 67,630 items reviewed and a reported error rate of 0.13%. Current projects include tools for checking recordings, scoring AI responses, and calculating agreement between raters, alongside ongoing work on Korean number-reading rules and a voice assistant. Development includes automated software tests and reviews by separate AI systems.
 
-> 대명사 확인(대표): 영어 요약은 대명사 없이 썼어요. 쓰고 싶은 대명사가 있으면 알려 주세요.
+> 영문은 대명사 없이 썼어요.
 
 ## 3. 3분 시연 대본
 
-듣는 사람: AI 음성 합성·음성 데이터 팀의 채용 담당자. 목표: "이 사람 귀가 좋고, 우리 일을 바로 할 수 있다"를 3분 안에.
+대상은 AI 음성 합성·음성 데이터 팀의 채용 담당자예요. 목표는 3분 동안 숫자 읽기 **한 문장**의 관찰 구간, 판단 이유, 수정 요청을 보여 주는 거예요. 이 구성이 채용 판단에 도움이 될지는 추측이에요.
+
+한 문장을 끝까지 유지해요: **AI 음성 → 구간 표시 → 수정 요청 → 참고 낭독**. 괄호 안 판단은 실제로 들은 뒤에만 채워요.
 
 | 시간 | 화면 | 성우 김디도가 하는 말 |
 |---|---|---|
-| 0:00–0:20 | 소개 페이지 첫 화면 | 저는 AI 음성 비서의 목소리를 녹음했던 성우예요. 오늘은 AI 목소리가 사람과 가장 다르게 들리는 곳, 숫자 읽기를 보여 드릴게요. |
-| 0:20–1:00 | AI 소리 재생 → 숫자 사례 문장 | (AI가 읽은 문장을 들려준 뒤) 여기 "오전 9시 30분", 들으셨죠. 값은 맞는데 끊어 읽기와 억양이 어색해요. 저는 이걸 구간과 이유로 짚어요. |
-| 1:00–1:40 | 검수 카드(숫자 오류 코드) | 정확성 오류(값이 바뀜)는 반려, 자연스러움 문제는 0·1·2점과 수정 요청으로 나눠요. 제작자가 바로 고칠 수 있는 말로 써요. |
-| 1:40–2:20 | 성우 김디도 녹음 재생 | 같은 문장을 제가 읽으면 이렇게 들려요. 차이는 쉼의 위치와 말끝이에요. |
-| 2:20–2:50 | AI 비서 화면 · 숫자 읽기 정답표 | 이 기준을 코드로도 만들었어요. 숫자 표기를 사람이 읽는 말로 바꾸고, 애매한 것은 제가 정책으로 정해요. |
-| 2:50–3:00 | 연락처 | 짧은 AI 음성 묶음을 보내 주시면 구간별 의견과 수정 요청서로 돌려드려요. |
+| 0:00–0:20 | 성우 김디도 · 소개 | 저는 AI 음성 비서의 합성 학습용 음성을 녹음했던 성우 김디도예요. 제가 AI 음성을 들으며 특히 차이를 느꼈던 숫자 읽기를 살펴볼게요. |
+| 0:20–1:00 | 고른 문장 + AI 음성 재생 | 먼저 화면의 문장을 AI가 어떻게 읽는지 들어 볼게요. 값이 맞게 전달되는지와 끊어 읽기·억양이 자연스러운지를 나누어 들어 볼게요. (실제로 들은 뒤: 구간과 판단) |
+| 1:00–1:50 | 검수 카드 | 검수 카드에는 실제로 들은 구간과 판단 이유, 수정 요청을 함께 적어요. 정보가 달라지는 문제와 자연스러움 문제를 구분하고, 전달에 미치는 영향을 보고 반려나 수정 권고를 정해요. 제작자가 수정할 구간과 방향을 알 수 있도록 요청서를 써요. |
+| 1:50–2:40 | 참고 낭독 재생 | 이번에는 같은 문장을 제가 읽은 참고 낭독을 들어 볼게요. 두 소리의 쉼 위치와 말끝을 비교해 들어 주세요. (실제로 확인한 차이만 덧붙임) |
+| 2:40–2:50 | 숫자 읽기 기준 초안 | 이 판단을 반복해서 기록할 도구도 만들고 있어요. |
+| 2:50–3:00 | 성우 김디도 · 검토 제안 | 짧은 AI 음성 묶음을 검토해 구간별 의견과 수정 요청서를 작성해 드릴 수 있어요. |
 
-막힌 것(시연 전에 필요): ① 비교할 AI 소리 ② 성우 김디도 녹음(0:20·1:40 장면) ③ G19 확인지 답(2:20 장면의 정답표). 녹음·AI 소리 파일은 저장소에 넣지 않아요.
+배정 시간 합은 180초예요. 실제 재생·전환 시간은 전체를 재생하며 다시 재요.
+
+시연 전에 필요한 것: 비교할 AI 음성, 같은 문장의 참고 낭독, 실제 청취에 근거한 검수 카드, 숫자 읽기 정책 확인(G19)과 고른 문장의 변환 결과 점검. 음성 파일은 저장소에 넣지 않아요.
