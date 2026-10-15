@@ -9,3 +9,8 @@ apps/dido-assistant/tts_server/ref/
 apps/dido-assistant/voice/*
 !apps/dido-assistant/voice/README.md
 !apps/dido-assistant/voice/ref_sentence.txt
+
+# 비공개 자료(미발매 음원·커버·가사): 대표 PC에만, 커밋 금지
+docs/gpt/private/
+*.mp3
+*.wav
