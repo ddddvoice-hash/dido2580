@@ -20,13 +20,16 @@ dependencies = []
 [project.optional-dependencies]
 # 절기 시각을 1초 이내로 정확히 계산합니다. 없으면 내장 급수로 대체합니다.
 precise = ["ephem>=4.1"]
-dev = ["pytest>=7", "ephem>=4.1"]
+# 인스타 릴스 자동 생성기(reelgen). 영상 합성에는 ffmpeg가 따로 필요합니다.
+reels = ["anthropic>=1.15", "pillow>=10", "pydantic>=2"]
+dev = ["pytest>=7", "ephem>=4.1", "anthropic>=1.15", "pillow>=10", "pydantic>=2"]
 
 [project.scripts]
 saju = "saju.cli:main"
+reelgen = "reelgen.cli:main"
 
 [tool.setuptools]
-packages = ["saju"]
+packages = ["saju", "reelgen"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

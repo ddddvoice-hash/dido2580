@@ -1,0 +1,68 @@
+# 매일 정해진 시각에 릴스를 만들고, 비밀값이 설정돼 있으면 인스타그램에 올립니다.
+#
+# 저장소 Settings → Secrets and variables → Actions 에 넣을 값
+#   ANTHROPIC_API_KEY   (필수) 대본 작성용
+#   IG_USER_ID          (선택) 있으면 자동 게시
+#   IG_ACCESS_TOKEN     (선택) 있으면 자동 게시
+# Variables (선택): REELGEN_HANDLE, REELGEN_COUNT
+name: daily-reels
+
+on:
+  schedule:
+    - cron: "47 23 * * *"   # 매일 한국시간 08:47
+  workflow_dispatch:
+    inputs:
+      count:
+        description: "만들 릴스 수"
+        default: "1"
+      publish:
+        description: "인스타그램에 바로 올리기"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency: daily-reels
+
+jobs:
+  make:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: ffmpeg와 한글 폰트 설치
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-nanum
+
+      - run: pip install -e ".[reels]"
+
+      - name: 릴스 만들기
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        run: |
+          COUNT="${{ github.event.inputs.count || vars.REELGEN_COUNT || '1' }}"
+          PUBLISH=""
+          if [ -n "$IG_ACCESS_TOKEN" ] && { [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.publish }}" = "true" ]; }; then
+            PUBLISH="--publish"
+          fi
+          python -m reelgen auto --count "$COUNT" --out reels --handle "${{ vars.REELGEN_HANDLE }}" $PUBLISH
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reels-${{ github.run_number }}
+          path: reels/*/
+          retention-days: 14
+
+      - name: 제작 기록 저장 (같은 주제 반복 방지)
+        run: |
+          git config user.name "reelgen-bot"
+          git config user.email "reelgen-bot@users.noreply.github.com"
+          git add reels/history.json
+          git commit -m "릴스 제작 기록 갱신" || exit 0
+          git push
