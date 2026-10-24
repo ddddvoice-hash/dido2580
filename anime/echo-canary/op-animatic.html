@@ -50,7 +50,7 @@ td.tc { font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: v
 
 <div class="wrap">
   <header class="slate">
-    <div class="eyebrow">Echo Canary · OP Animatic v0.1 · 60 sec</div>
+    <div class="eyebrow">Echo Canary · OP Animatic v0.2 · 60 sec</div>
     <h1>잔향의 카나리아 — OP 애니마틱</h1>
     <p class="lede">SEED × 비밥 리부트의 첫 제작물. 색 블록 타이틀, 크루 컷인, 발진 뱅크, 레조넌스 장갑 기동, 무타 격파까지 OP 60초의 톤과 리듬을 잡는 가편집본입니다. 소리를 켜면 합성 재즈 가이드 트랙이 함께 나옵니다.</p>
   </header>
@@ -261,11 +261,11 @@ const SCENES = [
   { a: 5, b: 11, id: 'title', name: '타이틀', pic: '네 가지 색 띠가 교차로 밀려 들어오며 ECHO CANARY. 컷 전환으로 SESSION #01', snd: '브라스 스탭 + 스윙 리듬 진입', draw: sTitle },
   { a: 11, b: 21, id: 'crew', name: '크루', pic: '렌·카나·시즈·겐·치치 2초씩 컷인. 사선 색 블록 위 실루엣과 대형 이름', snd: '컷마다 스탭, 워킹 베이스', draw: sCrew },
   { a: 21, b: 28, id: 'launch', name: '발진', pic: '리와인드호 통과 → 격납고 레일 원근 → 수동 카타파르트 발진 뱅크', snd: '발진 직전 휘슬음, 발진 노이즈', draw: sLaunch },
-  { a: 28, b: 37, id: 'resonance', name: '레조넌스', pic: '회색 K07의 흉부 릴이 돌고, 카나의 노래와 함께 금색이 가슴에서 퍼진다. 기억 카운터 −1', snd: '카나 허밍 멜로디', draw: sResonance },
+  { a: 28, b: 37, id: 'resonance', name: '레조넌스', pic: '송 테이프가 흉부 릴에 장전되고(재생 1/3), 녹음된 카나의 노래와 함께 금색이 가슴에서 퍼진다. 기억 카운터 −1', snd: '카나 허밍 멜로디', draw: sResonance },
   { a: 37, b: 42, id: 'eye', name: '파형 각성', pic: '렌의 눈 초근접. 동공 둘레 스펙트로그램이 자라나 화면 전체 파형으로 번진다', snd: '리듬 유지, 베이스 강조', draw: sEye },
   { a: 42, b: 51, id: 'muta', name: '무타', pic: '부정색 무타 부상 → 2초 완전 무음 정지 → 결정 창 관통 → 반전 플래시 → 금빛 확산', snd: '저음 럼블, 무음, 충돌음', draw: sMuta },
   { a: 51, b: 56, id: 'rival', name: '라이벌', pic: '사선 분할. 금색 K07(렌) 대 검은 X00(카이토). 분할선이 섬광으로 갈라진다', snd: '스탭 연타', draw: sRival },
-  { a: 56, b: 60, id: 'end', name: '엔드 카드', pic: '타이틀 재등장, 우하단 REWIND, CANARY... 페이드아웃', snd: '마지막 화음 + 허밍', draw: sEnd },
+  { a: 56, b: 60, id: 'end', name: '엔드 카드', pic: '타이틀 재등장, 테이프 카운터가 000으로 되감기며 REWIND, CANARY... 페이드아웃', snd: '마지막 화음 + 허밍', draw: sEnd },
 ];
 
 function sTape(t) {
@@ -421,6 +421,12 @@ function sResonance(t) {
   const s = 700 * (1 + lt * 0.025);
   mecha(W / 2, 420, s, gold, t * (2 + lt * 2.5));
   txt('RF-K07 CANARY / RESONANCE ARMOR', 40, 52, `600 18px ${F.mono}`, C.cream);
+  const ld = eo(seg(lt, 0.2, 1.4));
+  ctx.fillStyle = C.cream; ctx.fillRect(W / 2 - 60, lerp(-80, 96, ld), 120, 74);
+  ctx.fillStyle = C.ink; ctx.fillRect(W / 2 - 48, lerp(-70, 106, ld), 96, 22);
+  txt('SONG TAPE 01', W / 2, lerp(-56, 120, ld), `600 12px ${F.mono}`, C.cream, 'center');
+  reel(W / 2 - 26, lerp(-30, 146, ld), 11, t * 6, C.ink); reel(W / 2 + 26, lerp(-30, 146, ld), 11, t * 6, C.ink);
+  txt(lt < 1.5 ? 'LOADING TAPE…' : '▶ PLAY 1 / 3', 40, 80, `600 16px ${F.mono}`, lt < 1.5 ? C.cream : C.gold);
   txt('SYNC ' + String(Math.round(gold * 100)).padStart(3, ' ') + '%', W - 40, 52, `600 22px ${F.mono}`, gold > 0.99 ? C.gold : C.cream, 'right');
   ctx.fillStyle = C.gold; ctx.fillRect(W - 240, 64, 200 * gold, 6);
   ctx.save(); ctx.translate(90, H / 2); ctx.rotate(-Math.PI / 2);
@@ -433,7 +439,7 @@ function sResonance(t) {
     ctx.fillStyle = C.gold; ctx.fillRect(px, py, pw, ph);
     ctx.beginPath(); ctx.rect(px, py, pw, ph); ctx.clip();
     figure('kana', px + 150, py + 548, 520, t, C.ink, C.gold);
-    txt('♪ KANA', px + 14, py + ph - 14, `600 18px ${F.mono}`, C.ink);
+    txt('♪ KANA · REC', px + 14, py + ph - 14, `600 18px ${F.mono}`, C.ink);
     ctx.restore();
   }
   if (lt > 6.4) {
@@ -573,6 +579,8 @@ function sEnd(t) {
   reel(W - 330, H - 66, 16, t * 3, C.cream);
   reel(W - 290, H - 66, 16, t * 3, C.cream);
   ctx.globalAlpha = 1;
+  const cnt = Math.max(0, Math.round(999 * (1 - seg(lt, 1.6, 3.0))));
+  txt('◀◀ ' + String(cnt).padStart(3, '0'), W - 420, H - 56, `600 26px ${F.mono}`, C.gold, 'right', seg(lt, 1.5, 1.8));
   txt('REWIND, CANARY...', W - 40, H - 56, `600 26px ${F.mono}`, C.cream, 'right', e);
   fadeBlack(seg(lt, 3.4, 4));
 }
