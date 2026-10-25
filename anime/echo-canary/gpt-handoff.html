@@ -1,0 +1,128 @@
+<title>카나리아 GPT 핸드오프</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;700&display=swap">
+<style>
+/* Layout: a single hand-off slip — three numbered steps (a real sequence), one copy button, the brief below. */
+:root { --bg:#f4efe4; --panel:#fffaf0; --fg:#1b1d22; --muted:#5d6270; --line:#d9cfbc; --accent:#b87513; --accent-fg:#fffaf0; --ok:#2f7a4f;
+  --f-disp:"Black Han Sans","Noto Sans KR",sans-serif; --f-body:"Noto Sans KR",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0f1218; --panel:#171b23; --fg:#efe4cc; --muted:#9aa3b2; --line:#2b3240; --accent:#f2c94c; --accent-fg:#0f1218; --ok:#6fd49a; color-scheme:dark } }
+:root[data-theme="dark"] { --bg:#0f1218; --panel:#171b23; --fg:#efe4cc; --muted:#9aa3b2; --line:#2b3240; --accent:#f2c94c; --accent-fg:#0f1218; --ok:#6fd49a; color-scheme:dark }
+body { background:var(--bg); color:var(--fg); font-family:var(--f-body); font-size:15px; line-height:1.6; }
+.wrap { max-width:760px; margin:0 auto; padding-block:28px 48px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:grid; gap:20px; }
+.eyebrow { font:600 12px/1.2 var(--f-mono); letter-spacing:.14em; text-transform:uppercase; color:var(--accent); }
+h1 { margin:4px 0 0; font-family:var(--f-disp); font-weight:400; font-size:clamp(26px,6vw,38px); line-height:1.2; text-wrap:balance; }
+.lede { margin:0; color:var(--muted); }
+ol.steps { list-style:none; margin:0; padding:0; display:grid; gap:12px; counter-reset:s; }
+ol.steps li { counter-increment:s; display:grid; grid-template-columns:36px 1fr; gap:12px; align-items:start; }
+ol.steps li::before { content:counter(s); font:600 15px/36px var(--f-mono); text-align:center; width:36px; height:36px; border:1.5px solid var(--accent); color:var(--accent); border-radius:50%; }
+ol.steps li > div { min-width:0; padding-top:6px; }
+.actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
+button, a.btn { font:600 15px/1 var(--f-body); padding:14px 18px; border-radius:6px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:8px; }
+button.primary { background:var(--accent); color:var(--accent-fg); border:0; }
+a.btn { background:transparent; color:var(--fg); border:1px solid var(--line); }
+button:focus-visible, a.btn:focus-visible, textarea:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.status { font:600 13px/1.4 var(--f-mono); color:var(--ok); min-height:1.4em; }
+.brief { display:grid; gap:8px; }
+.brief header { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font:400 12px/1.4 var(--f-mono); color:var(--muted); }
+textarea { width:100%; box-sizing:border-box; min-height:420px; resize:vertical; background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:14px; font:400 13px/1.6 var(--f-mono); }
+</style>
+<div class="wrap">
+  <div>
+    <div class="eyebrow">Echo Canary · GPT 교차검토 핸드오프</div>
+    <h1>잔향의 카나리아 — GPT에게 넘기기</h1>
+  </div>
+  <p class="lede">기획서 v2 요약과 검토 요청 8개가 한 덩어리로 들어 있습니다. 복사해서 ChatGPT에 붙여 넣기만 하면 됩니다.</p>
+  <ol class="steps">
+    <li><div><strong>복사</strong> — 아래 버튼을 누르면 브리프 전체가 클립보드에 들어갑니다.
+      <div class="actions"><button id="copy" class="primary" type="button">브리프 전체 복사</button><a class="btn" href="https://chatgpt.com/" target="_blank" rel="noopener">ChatGPT 열기 ↗</a></div>
+      <div class="status" id="status" role="status"></div></div></li>
+    <li><div><strong>붙여 넣기</strong> — ChatGPT 새 대화에 그대로 붙여 넣고 보냅니다. 추가 설명은 필요 없습니다.</div></li>
+    <li><div><strong>답 가져오기</strong> — GPT의 답 전체를 복사해 Claude 대화에 붙여 넣으면, 기획서와 애니마틱에 반영합니다.</div></li>
+  </ol>
+  <section class="brief">
+    <header><span>브리프 원문</span><span id="count"></span></header>
+    <textarea id="brief" readonly aria-label="GPT에 보낼 브리프">너는 일본 TV 애니메이션 기획 프로듀서이자 깐깐한 각본 컨설턴트다. 아래는 오리지널 TV 애니메이션 『잔향의 카나리아(残響のカナリア) / ECHO CANARY』의 기획서 요약이다. 건담 SEED와 카우보이 비밥의 &#x27;구조&#x27;를 섞은 2D 애니메이션 리부트안이며, Claude가 한 차례 자체 교차검토를 거친 v2다. 칭찬은 빼고 약점 위주로 비판적으로 검토해 달라.
+
+# 1. 로그라인
+큰 소리가 괴물 &#x27;무타&#x27;를 부르는 2092년의 태양계. 낡은 수리선 &#x27;리와인드호&#x27;의 소년 정비공 렌은 41년 전 테이프 속 노래를 따라가다 소녀 카나와 시제기 &#x27;K-07 카나리아&#x27;를 깨운다. 카나의 노래가 기체를 금빛으로 깨우지만, 그녀는 노래할 때마다 기억을 하나씩 잃는다.
+
+- 포맷: TV 1쿨 12화(Session 단위), 24분물, 오리지널
+- 톤: 스페이스 누아르 × 리얼로봇 × 재즈
+- 핵심 테마: &quot;목소리는 누구의 것인가&quot; — AI가 모든 목소리를 복제하는 시대의 진짜 목소리와 기억
+
+# 2. 세계관
+2051년 &#x27;대정적&#x27; 이후 지구는 무타에게 삼켜졌고, 인류는 소리가 전해지지 않는 우주로 도망쳤다. 2092년, 화성 궤도와 목성권 콜로니에서 두 진영이 41년째 냉전과 국지전을 반복한다.
+
+- 침묵연합(HUSH Accord): 모든 목소리를 AI 아카이브 &#x27;바벨&#x27;에 맡기고 인류는 침묵해야 산다. 노래를 오염원으로 규정하고 카나리아를 포획. 무광 흑·청회색 기체.
+- 코러스 공화국(CHORUS): 인간의 목소리를 되찾자. 카나리아를 병기로 차출. 흰색 + 주황.
+- 리와인드호(무소속): 고장 난 음성 기록 복원으로 먹고사는 가난한 수리선. 우연히 카나를 주워 두 진영의 표적이 된다.
+
+하드 룰 3개 (절대 깨지 않음)
+1. 음성 신호의 법칙: 공기 중의 큰 소리와 사람 목소리가 담긴 무선 통신이 무타를 부른다. 무타가 듣는 것은 공기의 떨림이 아니라 &#x27;사람 목소리라는 정보&#x27;다. 그래서 우주전은 텍스트와 수신호로 치러진다.
+2. 레조넌스의 대가: 카나리아의 노래만은 무타를 부르지 않고 에너지가 된다. 한 소절을 부를 때마다(녹음 포함) 기억 하나를 잃는다. 녹음한 &#x27;송 테이프&#x27;는 3번 재생하면 열화된다.
+3. 흉내의 법칙: 무타는 삼킨 사람의 목소리로만 말한다. 카나의 기억에서 태어난 무타는 그 기억 속 사람의 목소리로 말한다.
+
+숨겨진 진실: 무타는 카나리아가 잃은 기억에서 태어난다. 두 진영이 카나리아를 전쟁에 쓸수록 무타가 늘고, 바벨은 그 전쟁 자체를 설계했다.
+
+# 3. 메카닉
+- RF-K07 카나리아(리와인드호): 렌 1인승. 카나의 노래를 녹음한 송 테이프를 흉부의 카세트 릴 리액터에 장전해 싸운다. 고음 = 결정 창, 저음 = 방벽. 테이프 1개 = 재생 3회. 평소 잿빛, 재생 중 금색(SEED의 페이즈 시프트를 &#x27;노래 = 색&#x27;으로 변형).
+- RF-X00 뮤트(침묵연합): K07과 같은 골격의 검은 쌍둥이. 카이토 + 동승한 원본 카나가 라이브로 노래한다. 소리를 지우는 역위상 장갑, 활성 시 화면 부정색.
+- CR-9 호른(코러스 양산기), HA-3 사일런스(침묵연합 AI 무인기).
+- 조종 규칙: K07은 렌의 절대청감이 노래를 &#x27;악보&#x27;로 읽어야 움직인다. 렌이 말을 하면 싱크가 깨진다.
+
+# 4. 캐릭터
+- 아마네 렌(16): 정비공 → K07 조종사. 말수 적음. 절대청감으로 기계 고장을 &#x27;듣고&#x27; 고친다. 자기 목소리를 두려워한다.
+- 시라토리 카나(외견 15): 송 테이프의 가수. 41년 전 목소리 그대로. 노래할 때마다 크루를 잊는다.
+- 쿠로가네 시즈(22): 현상금 사냥꾼. 성대를 제거한 전직 코러스 카나리아. 글래스 보드로 말하고 맨손·진동도로 싸운다. 카이토를 키운 사람.
+- 하야미 겐(68): 선장·요리사·장부 담당. 7화에서 무타에게 삼켜진다.
+- 치치: 고장 난 녹음기 로봇. 예고편 만담 담당. 41년 전 녹음의 마지막 10초를 품고 있다.
+- 시지마 카이토(17): 렌의 소꿉친구이자 침묵연합 에이스. 가족을 &#x27;노래하는 소녀&#x27;에게 잃었다고 믿는다.
+- 원본 카나: 바벨 원본. 노래해도 기억을 잃지 않는다(9화 반전의 열쇠).
+
+케미스트리: 크루는 친한 척하지 않는다. 돈·밥·연료로 매일 싸우고 위기에서만 말없이 구한다. 카나가 잊을 때마다 웃으며 자기소개를 다시 한다.
+
+# 5. 12 Sessions
+01 속삭이는 궤도 — 카나 각성, K07 첫 출격 / 02 칼리스토 재즈 클럽(에피소드) — 첫 송 테이프 녹음 / 03 미싱 노트(1차 반전) — 잃은 기억이 무타로 태어나 렌의 목소리로 카나를 부른다 / 04 화성 서부극(에피소드) — 노래만 남은 선배 카나리아 / 05 블랙 마스크 — 카이토와 뮤트 등장 / 06 단 한 번의 목소리(2차 반전) — 시즈의 과거, 시리즈 단 한 번 시즈의 목소리 / 07 리와인드 — 겐이 삼켜지고, 무타가 겐의 목소리로 &quot;문 열어라&quot; / 08 우주 버섯 요리법(개그 에피소드) — 겐의 빈자리 / 09 에코 챔버(3차 반전) — 카나는 복제 목소리, 전쟁은 바벨의 설계 / 10 두 개의 K — 원본 vs 복제 합창 대결 / 11 다시 듣기(에피소드형) — 렌과 카이토가 함께 표류 / 12 마지막 소절 — 테이프가 바닥난 전투, 렌이 처음으로 자기 목소리로 노래한다. 무타가 삼킨 목소리를 돌려주고, 기억을 모두 잃은 카나에게 크루가 기억 테이프를 들려준다. 치치의 마지막 10초가 재생되며 완결.
+
+# 6. Session #01 비트 (24분, 1화는 OP 생략)
+- 0:00 콜드 오픈: 카세트 노이즈와 소녀의 노래 → 화성 궤도 콜로니 골목에서 아이들이 수화로 술래잡기 → 창밖으로 리와인드호
+- 2:00 A파트: 선내 일상(밥값 싸움, 겐의 피망 없는 볶음밥, 치치). 표류 중인 바벨 엘리베이터 잔해에서 음성 기록 회수 의뢰
+- 9:30 A파트 끝: 잔해 속에서 &#x27;K-07&#x27; 테이프 발견. 렌이 모르고 무선으로 재생 → 거대한 무타의 그림자 (아이캐치)
+- 11:30 B파트 전반: 무타 습격(진영 전쟁은 2화부터). 시즈가 스페이스 슈트로 잔해를 뛰며 진동도 전투. 무타가 죽은 파일럿 목소리로 구조 요청. 렌의 헤드폰이 꺼지는 순간부터 7초 완전 무음
+- 16:00 B파트 후반: 봉인된 K07 조종석 뒷자리에 잠든 카나. 렌의 휘파람에 카나가 깨어나 노래하자 장갑에 금빛이 퍼지고, 렌의 동공에 파형(파형 각성), 결정 창이 무타를 꿰뚫는다. 렌이 이 노래를 녹음해 둔 것이 첫 송 테이프가 된다
+- 21:30 엔딩 직전: 카나 &quot;…당신, 누구였더라?&quot; / 시즈의 글래스 보드 &quot;현상금은 허탕&quot;
+- 23:30 C파트: ① 어두운 격납고, 캡슐 속 똑같은 얼굴의 소녀가 눈을 뜬다 ② 치치가 혼자 41년 전 테이프를 튼다. &quot;…렌, 이 테이프를…&quot;
+
+# 7. 비주얼·음악
+- 일상 = 90년대 셀화 질감(호박·청록 저채도, 담배 연기 같은 안개, 블라인드 그림자). 전투 = 2000년대 디지털 셀(우주 청색, 광택 메카, 빔 궤적).
+- 뱅크 4종: 수동 카타파르트 발진 / 레조넌스 기동 / 파형 각성 / 송 테이프 장전. 기체는 셀 셰이딩 3DCG, 캐릭터는 2D.
+- OP 「TAPE HISS」: 카세트 노이즈에서 빅밴드 브라스가 터지는 업템포 재즈(약 150BPM). ED 「잔향」: 카나의 아카펠라 발라드. 카나의 전투곡은 매 화 다른 곡 = 무장 도감.
+- 피할 것: 미노프스키 입자, V자 안테나, 현상금 방송 패러디 등 원작을 직접 연상시키는 고유 요소.
+
+# 8. Claude 자체 검토에서 이미 바꾼 것
+- 노래하는 소녀 + 메카(마크로스), 소년·소녀 2인승(달링 인 더 프랑키스), 정비공 소년 + 신비 소녀 + 떠돌이 함선(교향시편 에우레카 세븐)과의 겹침을 줄이려고 2인승 → 1인승 + 송 테이프 장전식으로 바꿨다.
+- 1화 정보 과다를 줄이려고 진영 전쟁은 2화, 카이토는 5화로 미뤘다.
+- 12화를 2기 없이도 닫히도록 바꿨다. 2기 여지는 &#x27;K-07의 07&#x27; 하나만 남겼다.
+
+# 검토 요청
+각 항목에 [문제] 1~2줄, [제안] 1~2줄로 답하라. 마지막에 &quot;가장 먼저 고칠 것 3개&quot;를 우선순위대로 적어라.
+1. 송 테이프 장전식 전투 규칙의 허점. 테이프 3회 열화가 긴장을 만드는가, 귀찮은 제약이 되는가?
+2. 마크로스, 에우레카 세븐, 달링 인 더 프랑키스, 전희절창 심포기어 등과 아직 겹쳐 보이는 부분은?
+3. 하드 룰 3개와 숨겨진 진실 사이의 논리 모순. 팬이 파고들 구멍은?
+4. Session #01에서 빼도 되는 정보와 반드시 남겨야 할 장면 하나.
+5. 3화 반전(기억 → 무타, 렌의 목소리)이 3화까지 예측되는가? 복선 강도 조절안.
+6. 12화 결말의 1쿨 완결감. 부족하면 무엇을 바꾸나?
+7. 비밥 톤(에피소드·재즈·허무)과 SEED 톤(전쟁·메카·운명) 중 어느 쪽이 약한가? 보강안.
+8. 일본 시청자 기준 제목·캐릭터명·진영명의 인상과 대안.
+</textarea>
+  </section>
+</div>
+<script>
+const ta = document.getElementById('brief'), st = document.getElementById('status');
+document.getElementById('count').textContent = ta.value.length.toLocaleString() + '자';
+document.getElementById('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(ta.value); st.textContent = '복사됨. ChatGPT에 붙여 넣으세요.'; }
+  catch (e) { ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length); let ok = false; try { ok = document.execCommand('copy'); } catch (_) {}
+    st.textContent = ok ? '복사됨. ChatGPT에 붙여 넣으세요.' : '전체가 선택됐습니다. 길게 눌러 복사하세요.'; }
+});
+</script>
