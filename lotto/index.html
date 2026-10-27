@@ -83,12 +83,8 @@ section { display: flex; flex-direction: column; gap: 14px; }
 
 /* 오늘의 추천: 로또 용지 */
 .slip {
-  background: var(--card); border: 2px solid var(--slip); border-radius: 6px;
-  position: relative; padding: 22px 18px 18px; display: flex; flex-direction: column; gap: 18px;
-}
-.slip::before {
-  content: ""; position: absolute; left: 10px; right: 10px; top: 8px; height: 0;
-  border-top: 2px dashed var(--slip); opacity: .35;
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  position: relative; padding: 18px; display: flex; flex-direction: column; gap: 18px;
 }
 .slip-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .slip-head .tag { color: var(--slip); font-family: var(--font-display); font-size: 18px; }
@@ -122,15 +118,14 @@ section { display: flex; flex-direction: column; gap: 14px; }
   display: grid; place-items: center; background: rgba(255, 255, 255, .16);
   font: 700 15px/1 var(--font-num); color: #14161c; font-variant-numeric: tabular-nums;
 }
-.bslot.on { background: #fbfbf7; box-shadow: inset 0 0 0 3px var(--c); animation: pop .45s cubic-bezier(.2,1.4,.4,1) both; }
+.bslot.on { background: #fbfbf7; box-shadow: inset 0 0 0 3px var(--c); }
 .bslot[data-g="1"] { --c: var(--ball-y); } .bslot[data-g="2"] { --c: var(--ball-b); } .bslot[data-g="3"] { --c: var(--ball-r); }
 .bslot[data-g="4"] { --c: var(--ball-g); } .bslot[data-g="5"] { --c: var(--ball-n); }
 @media (max-width: 400px) { .bslot { width: 30px; height: 30px; font-size: 13px; } .board-balls { gap: 4px; } .board-tag { font-size: 15px; } }
-@media (prefers-reduced-motion: reduce) { .bslot.on { animation: none; } }
 .board-sorted { margin: -8px 0 0; font-size: 13px; color: var(--muted); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .slip-foot .btns { display: flex; gap: 8px; }
-.ball.pop { animation: pop .5s cubic-bezier(.2,1.4,.4,1) both; }
+
 @keyframes pop { from { transform: scale(.4); } to { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .ball.pop { animation: none; } }
 
@@ -142,12 +137,7 @@ section { display: flex; flex-direction: column; gap: 14px; }
 .meter .track { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
 .meter .fill { height: 100%; background: var(--slip); border-radius: 4px; }
 .meter .v { text-align: right; }
-.checks { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip {
-  font-size: 12px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line);
-  color: var(--muted); background: var(--paper);
-}
-.chip.ok { color: var(--good); border-color: currentColor; background: transparent; }
+.facts { margin: 0; font-size: 13px; color: var(--muted); }
 .slip-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
 
 button, select {
@@ -281,7 +271,7 @@ button.link { border: 0; background: none; padding: 4px 0; color: var(--slip); }
         <span class="muted" id="today-rank">분석 중…</span>
       </div>
       <div class="meters" id="today-meters"></div>
-      <div class="checks" id="today-checks"></div>
+      <p class="facts" id="today-checks"></p>
       <div class="slip-foot">
         <span class="muted" id="today-sim"></span>
         <span class="btns">
@@ -889,14 +879,6 @@ const Drum = (() => {
     // 나온 공들
     for (const o of outs) if (o.st === "tray" || o.st === "done") shadow(o.x, o.y, o.rad);
     for (const o of outs) drawBall(o.x, o.y, o.rad, o.n, o.st === "enter" ? o.M : rz(o.a), DPR);
-    // 왼쪽 위 클로즈업 화면 (방송 화면 분할처럼)
-    const s = Math.min(0.9 * R, 120), ix = 6, iy = 6;
-    rrect(ix, iy, s, s * 0.82, 8); ctx.fillStyle = C.inset; ctx.fill();
-    ctx.fillStyle = C.insetFg; ctx.font = `600 10px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = "left"; ctx.textBaseline = "top";
-    ctx.fillText("LIVE  캡슐 카메라", ix + 8, iy + 7);
-    const cur = outs.find((o) => o.st === "hold") || outs.find((o) => o.st === "rise" && o.p > 0.7);
-    if (cur) drawBall(ix + s / 2, iy + s * 0.48, s * 0.27, cur.n, rz(cur.st === "hold" ? 0 : cur.a), DPR);
-    else { ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(k >= 6 && doneAt >= 0 ? "추첨 끝" : "섞는 중", ix + s / 2, iy + s * 0.48); }
   }
 
   function tick(now) {
@@ -905,7 +887,7 @@ const Drum = (() => {
     for (const b of balls) { const sp = Math.hypot(b.vx, b.vy); if (sp > 0.02) rotM(b.M, b.vy, -b.vx, sp * 0.3, (sp / RR) * dt); }
     if (k < 6 && t >= nextAt) extract();
     moveOuts(dt);
-    if (k === 6 && doneAt < 0 && outs.every((o) => o.st === "done")) { doneAt = t; mixing = false; Sfx.finale(); }
+    if (k === 6 && doneAt < 0 && outs.every((o) => o.st === "done")) { doneAt = t; mixing = false; }
     Sfx.frame(mixing, outs.reduce((sum, o) => sum + (o.st === "chute" || o.st === "tray" ? o.spd || 0 : 0), 0));
     draw();
     if (doneAt >= 0 && t > doneAt + 5) { raf = 0; return; }
@@ -1051,7 +1033,7 @@ function renderNews() {
     return;
   }
   const c = pick.map((p) => p.n), sc = scoreCombo(c, A);
-  $("news-balls").innerHTML = c.map((n) => ballHTML(n, "pop")).join("");
+  $("news-balls").innerHTML = c.map((n) => ballHTML(n)).join("");
   $("news-score").innerHTML = `${pct(sc.total)}%<small>적합도 · 역대 1등 조합과 다름</small>`;
   $("news-list").innerHTML = pick.map((p) => {
     const src = p.it
@@ -1102,14 +1084,10 @@ function renderToday() {
   const meter = (label, v) => `<div class="meter"><span>${label}</span><span class="track"><span class="fill" style="width:${v.toFixed(1)}%;display:block"></span></span><span class="v num">${pct(v, 1)}%</span></div>`;
   $("today-meters").innerHTML = meter("번호 가중치", best.s.num) + meter("패턴 일치도", best.s.pat);
   const ov = maxOverlap(best.c, REC.used); const f = best.s.f;
-  $("today-checks").innerHTML = [
-    `<span class="chip ok">역대 1등 조합과 다름</span>`,
-    `<span class="chip">과거 최대 ${ov.best}개 일치${ov.at ? ` (${ov.at}회)` : ""}</span>`,
-    `<span class="chip">합계 ${f.rawSum}</span>`,
-    `<span class="chip">홀${f.odd}:짝${6 - f.odd}</span>`,
-    `<span class="chip">저${f.low}:고${6 - f.low}</span>`,
-    `<span class="chip">AC ${f.ac}</span>`,
-  ].join("");
+  $("today-checks").textContent = [
+    "역대 1등 조합과 다름", `과거 최대 ${ov.best}개 일치${ov.at ? ` (${ov.at}회)` : ""}`,
+    `합계 ${f.rawSum}`, `홀짝 ${f.odd}:${6 - f.odd}`, `저고 ${f.low}:${6 - f.low}`, `AC ${f.ac}`,
+  ].join(" · ");
   $("today-sim").textContent = `후보 ${comma(N - skipped)}개 비교 · 역대 1등 조합 ${comma(skipped)}개 제외`;
   $("runners").innerHTML = top.slice(1).map((t) => `<div class="row"><span class="rank num">${t.r}</span><div class="balls">${t.c.map((n) => ballHTML(n, "sm")).join("")}</div><span class="pct num">${pct(t.s.total)}%</span></div>`).join("");
 }
@@ -1178,7 +1156,7 @@ function generate() {
     if (A.keys.has(key) || keys.has(key)) continue; keys.add(key);
     out.push({ c, s: scoreCombo(c, A) });
   }
-  $("gen-list").innerHTML = out.map((o) => `<div class="gen-row"><div class="balls" style="gap:5px">${o.c.map((x) => ballHTML(x, "sm pop")).join("")}</div><div class="meta"><span class="num" style="color:var(--ink);font-size:14px">${pct(o.s.total)}%</span><br><button type="button" class="link" data-copy="${o.c.join(" ")}">복사</button></div></div>`).join("");
+  $("gen-list").innerHTML = out.map((o) => `<div class="gen-row"><div class="balls" style="gap:5px">${o.c.map((x) => ballHTML(x, "sm")).join("")}</div><div class="meta"><span class="num" style="color:var(--ink);font-size:14px">${pct(o.s.total)}%</span><br><button type="button" class="link" data-copy="${o.c.join(" ")}">복사</button></div></div>`).join("");
 }
 
 function renderAll() {
