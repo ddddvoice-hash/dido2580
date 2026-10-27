@@ -759,40 +759,40 @@ const Drum = (() => {
   "date": "2026-10-27",
   "items": [
     {
-      "t": "코스피, 1.46% 내린 5,469.47로 마감… 7개월 만에 최저 (10월 26일)",
-      "v": "5469.47",
+      "t": "3분기 GDP 1.0% '깜짝 성장'… 반도체 호황에 전망치(0.3%) 3배 웃돌아",
+      "v": "1.0",
+      "src": "머니투데이",
+      "url": "https://www.mt.co.kr/economy/2026/10/27/2026102709392085536"
+    },
+    {
+      "t": "美 반도체 훈풍에 코스피 3.46% 오른 5,658.65로 개장… 장중 5,700선 회복",
+      "v": "5658.65",
+      "src": "파이낸셜뉴스",
+      "url": "https://www.fnnews.com/news/202610270855358486"
+    },
+    {
+      "t": "3분기 설비투자 4.1% 증가… 성장 견인",
+      "v": "4.1",
+      "src": "전자신문",
+      "url": "https://www.etnews.com/20261027000009"
+    },
+    {
+      "t": "3분기 성장률 전년 같은 기간 대비 3.4%",
+      "v": "3.4",
+      "src": "한국경제",
+      "url": "https://www.hankyung.com/article/2026102766677"
+    },
+    {
+      "t": "김건희 여사 구속기간 31일 만료… 오늘 추가 구속영장 심문",
+      "v": "31",
       "src": "SBS",
-      "url": "https://news.sbs.co.kr/news/endPage.do?news_id=N1008815543"
+      "url": "https://news.sbs.co.kr/english/article.do?news_id=N1008816003"
     },
     {
-      "t": "3분기 경제성장률 전 분기 대비 1%… 반도체 수출 호조",
-      "v": "1",
-      "src": "The Korea Times",
-      "url": "https://www.koreatimes.co.kr/"
-    },
-    {
-      "t": "정부, 안보리에 'DMZ 지뢰 폭발(9월 21일)' 북한 책임 촉구 서한",
-      "v": "21",
-      "src": "The Korea Times",
-      "url": "https://www.koreatimes.co.kr/20261023/s-korea-sends-letter-to-unsc-urging-nk-to-take-responsibility-for-dmz-mine-blasts"
-    },
-    {
-      "t": "DMZ 지뢰 폭발로 우리 장병 3명 부상… 북한은 '조작'이라 반발",
-      "v": "3",
-      "src": "UPI",
-      "url": "https://www.upi.com/Top_News/World-News/2026/10/26/North-Korea-DMZ-mine-blast-UNSC-letter/3891792997390/"
-    },
-    {
-      "t": "코스피 하루 하락폭 80.83포인트",
-      "v": "80.83",
-      "src": "SBS",
-      "url": "https://news.sbs.co.kr/news/endPage.do?news_id=N1008815543"
-    },
-    {
-      "t": "코스피 하락률 1.46%",
-      "v": "1.46",
-      "src": "SBS",
-      "url": "https://news.sbs.co.kr/news/endPage.do?news_id=N1008815543"
+      "t": "3분기 정부소비 1.9% 증가, 민간소비는 0.2% 감소",
+      "v": "1.9",
+      "src": "전자신문",
+      "url": "https://www.etnews.com/20261027000009"
     }
   ]
 };/*NEWS-END*/
@@ -810,6 +810,7 @@ function numCandidates(raw) {
   if (Number.isInteger(x)) { if (x <= 45) add(x, `${x} 그대로`); else add(mod45(x), `${comma(x)} ÷ 45 나머지`); }
   else if (ip >= 1 && ip <= 45) add(ip, `${s}의 정수 부분`);
   else if (ip > 45) add(mod45(ip), `${comma(ip)} ÷ 45 나머지`);
+  else add(mod45(+digits), `${s}의 소수점 떼고 ${digits}`); // 0.3 같은 1보다 작은 수
   if (digits.length > 1) add(dsum > 45 ? mod45(dsum) : dsum, `자릿수 합 ${[...digits].join("+")}${dsum > 45 ? " ÷ 45 나머지" : ""}`);
   if (digits.length > 2) add(mod45(+digits), `소수점 떼고 ${digits} ÷ 45 나머지`);
   if (digits.length > 2) add(+digits.slice(-2), `${digits}의 끝 두 자리`);
