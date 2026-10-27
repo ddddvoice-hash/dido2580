@@ -122,7 +122,9 @@ section { display: flex; flex-direction: column; gap: 14px; }
 .bslot[data-g="1"] { --c: var(--ball-y); } .bslot[data-g="2"] { --c: var(--ball-b); } .bslot[data-g="3"] { --c: var(--ball-r); }
 .bslot[data-g="4"] { --c: var(--ball-g); } .bslot[data-g="5"] { --c: var(--ball-n); }
 @media (max-width: 400px) { .bslot { width: 30px; height: 30px; font-size: 13px; } .board-balls { gap: 4px; } .board-tag { font-size: 15px; } }
-.board-sorted { margin: -8px 0 0; font-size: 13px; color: var(--muted); }
+.draw-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: -6px; }
+.board-sorted { margin: 0; font-size: 13px; color: var(--muted); min-width: 0; }
+.draw-row .primary { flex: none; padding: 12px 18px; font-size: 15px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .slip-foot .btns { display: flex; gap: 8px; }
 
@@ -148,6 +150,7 @@ button:hover { border-color: var(--muted); }
 button:focus-visible, select:focus-visible { outline: 2px solid var(--slip); outline-offset: 2px; }
 button.primary { background: var(--slip); border-color: var(--slip); color: #fff; font-weight: 700; }
 button.primary:hover { filter: brightness(1.07); }
+button:disabled { opacity: .55; cursor: default; }
 button.link { border: 0; background: none; padding: 4px 0; color: var(--slip); }
 
 /* 후보 순위 */
@@ -264,7 +267,10 @@ button.link { border: 0; background: none; padding: 4px 0; color: var(--slip); }
         <span class="board-tag"><small>제</small><span class="num" id="board-no"></span><small>회</small></span>
         <div class="board-balls" id="board-balls"></div>
       </div>
-      <p class="board-sorted" id="board-sorted">추첨기가 공을 섞고 있습니다.</p>
+      <div class="draw-row">
+        <p class="board-sorted" id="board-sorted">추첨기가 공을 섞고 있습니다.</p>
+        <button type="button" class="primary" id="replay">공 뽑기</button>
+      </div>
       <div class="sr-only" id="today-balls"></div>
       <div class="score">
         <span class="big num" id="today-score">–</span>
@@ -276,7 +282,6 @@ button.link { border: 0; background: none; padding: 4px 0; color: var(--slip); }
         <span class="muted" id="today-sim"></span>
         <span class="btns">
           <button type="button" id="sound" aria-pressed="true">소리 켜짐</button>
-          <button type="button" id="replay">추첨 다시 보기</button>
           <button type="button" id="copy-today">번호 복사</button>
         </span>
       </div>
@@ -605,10 +610,10 @@ const Drum = (() => {
   const cv = $("drum"), ctx = cv.getContext("2d");
   const reduce = matchMedia("(prefers-reduced-motion: reduce)");
   // 구 반지름을 1로 둔 단위. RR: 안쪽 공 반지름, SW: 기둥 반폭
-  const RR = 0.1, SW = 0.07, G = 2.4, JET = 6.2, SWIRL = 7, E = 0.82, GAP_SEC = 4.2;
+  const RR = 0.1, SW = 0.07, G = 3.4, JET = 12.5, SWIRL = 16, E = 0.84, VMAX = 5.5;
   let W = 0, H = 0, R = 0, cx = 0, cy = 0, trayR = 0, capY = 0, capR = 0;
   let trayL = 0, trayRt = 0, trayYL = 0, trayYR = 0, path = [], pathLen = 0;
-  let balls = [], outs = [], order = [], t = 0, nextAt = 0, k = 0;
+  let balls = [], outs = [], order = [], t = 0, k = 0, pending = 0, lastActive = 0, calmAt = -1;
   let mixing = false, raf = 0, last = 0, frame = 0, doneAt = -1, C = {}, onLand = null, seq = 0, DPR = 1;
 
   function readColors() {
@@ -653,7 +658,7 @@ const Drum = (() => {
     H = Math.ceil(cy + 2.32 * R);
     // 캡슐 오른쪽 출구 → 원판 바깥을 돌아 → S자로 꺾여 → 받침대 오른쪽 끝
     buildPath([[0.16, -1.36], [0.48, -1.33], [0.86, -1.1], [1.16, -0.66], [1.27, -0.1], [1.22, 0.48], [1.06, 0.98], [0.92, 1.24], [1.1, 1.42], [1.06, 1.58], [trayRt / R - cx / R, (trayYR - cy) / R]]);
-    const dpr = Math.min(window.devicePixelRatio || 1, 3); DPR = Math.min(dpr, 2.5);
+    const dpr = Math.min(window.devicePixelRatio || 1, 3); DPR = Math.min(dpr, 2);
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
@@ -663,7 +668,7 @@ const Drum = (() => {
       b.vy += G * dt;
       if (mixing && b.y > -0.15) { b.vy -= JET * (0.35 + Math.random()) * dt; b.vx += (Math.random() - 0.5) * SWIRL * dt; }
       if (!mixing) { b.vx *= 0.992; b.vy *= 0.992; }
-      const sp = Math.hypot(b.vx, b.vy); if (sp > 3) { b.vx *= 3 / sp; b.vy *= 3 / sp; }
+      const sp = Math.hypot(b.vx, b.vy); if (sp > VMAX) { b.vx *= VMAX / sp; b.vy *= VMAX / sp; }
       b.x += b.vx * dt; b.y += b.vy * dt; b.a += (b.vx / RR) * dt;
       // 가운데 기둥에 부딪힘
       if (Math.abs(b.x) < SW + RR) { const sx = b.x >= 0 ? 1 : -1; b.x = sx * (SW + RR); if (b.vx * sx < 0) { b.vx = -b.vx * E; if (Math.abs(b.vx) > 0.9) Sfx.clack(0.4); } }
@@ -698,26 +703,26 @@ const Drum = (() => {
     balls.splice(balls.indexOf(best), 1);
     const x = cx + best.x * R, y = cy + best.y * R;
     outs.push({ n: num, i: k, st: "enter", p: 0, x0: x, y0: y, x, y, rad: RR * R, a: 0, M: best.M, v: 0, s: 0 });
-    k++; nextAt = t + GAP_SEC; Sfx.exit();
+    k++; Sfx.exit();
   }
 
   function moveOuts(dt) {
     const ease = (p) => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2);
     for (const o of outs) {
       if (o.st === "enter") {
-        o.p = Math.min(1, o.p + dt / 0.4); const e = ease(o.p);
+        o.p = Math.min(1, o.p + dt / 0.25); const e = ease(o.p);
         o.x = o.x0 + (cx - o.x0) * e; o.y = o.y0 + (cy + 0.9 * R - o.y0) * e;
         rotM(o.M, 0.3, 1, 0.2, dt * 8);
         if (o.p >= 1) { o.st = "rise"; o.p = 0; o.a = 0; }
       } else if (o.st === "rise") { // 기둥을 타고 위로
-        o.p = Math.min(1, o.p + dt / 1.1); const e = ease(o.p);
+        o.p = Math.min(1, o.p + dt / 0.7); const e = ease(o.p);
         o.x = cx; o.y = cy + 0.9 * R + (capY - cy - 0.9 * R) * e; o.rad = R * (RR + 0.03 * e); o.a += dt * 6;
         if (o.p >= 1) { o.st = "hold"; o.p = 0; Sfx.land(); }
       } else if (o.st === "hold") { // 캡슐에서 잠시 멈춤 (클로즈업 화면에 번호)
         o.p += dt; o.y = capY + Math.sin(o.p * 9) * 1.2 * (1 - Math.min(1, o.p)); o.a *= 0.85;
-        if (o.p >= 1.1) { o.st = "chute"; o.s = 0; o.v = 40; }
+        if (o.p >= 0.5) { o.st = "chute"; o.s = 0; o.v = 60; }
       } else if (o.st === "chute") { // 옆 관을 따라 내려옴
-        o.v = Math.min(240, o.v + 380 * dt); o.s += o.v * dt;
+        o.v = Math.min(320, o.v + 620 * dt); o.s += o.v * dt;
         const [x, y] = pathAt(o.s); o.x = x; o.y = y;
         const f = Math.min(1, o.s / pathLen); o.rad = R * (RR + 0.03) + (trayR - R * (RR + 0.03)) * f;
         o.a += (o.v / o.rad) * dt; o.spd = o.v;
@@ -774,44 +779,58 @@ const Drum = (() => {
   }
   function randomM(rand) { const M = [1, 0, 0, 0, 1, 0, 0, 0, 1]; rotM(M, rand() - 0.5, rand() - 0.5, rand() - 0.5, rand() * 6.3); return M; }
 
-  function drawBall(x, y, rad, n, M, scale) {
-    const pr = Math.max(3, Math.round(rad * scale)), size = pr * 2 + 2;
-    if (scratch.width < size + 2) { scratch.width = scratch.height = Math.max(size + 2, 64); }
-    let img = imgCache.get(size); if (!img) { img = sctx.createImageData(size, size); imgCache.set(size, img); }
-    const d = img.data, base = rgb(C.ball[group(n)]), gl = glyph(n), inv = 1 / pr;
-    const [m0, m1, m2, m3, m4, m5, m6, m7, m8] = M;
+  // 크기(픽셀 반지름)마다 한 번만: 구 안쪽 픽셀 목록과 법선·빛·가장자리 투명도
+  const geoCache = new Map();
+  function geo(pr) {
+    let g = geoCache.get(pr); if (g) return g;
+    const size = pr * 2 + 2, inv = 1 / pr, q = [], X = [], Y = [], Z = [], K = [], S = [], A = [];
     for (let py = 0; py < size; py++) {
       const sy = (py + 0.5 - pr - 1) * inv;
       for (let px = 0; px < size; px++) {
-        const sx = (px + 0.5 - pr - 1) * inv, d2 = sx * sx + sy * sy, q = (py * size + px) * 4;
-        if (d2 > 1 + 2 * inv) { d[q + 3] = 0; continue; }
-        const alpha = Math.max(0, Math.min(1, (1 - Math.sqrt(d2)) * pr + 0.5));
+        const sx = (px + 0.5 - pr - 1) * inv, d2 = sx * sx + sy * sy;
+        if (d2 > 1 + 2 * inv) continue;
         const nz = Math.sqrt(Math.max(0, 1 - d2));
-        // 공 표면의 로컬 좌표 (회전의 역 = 전치)
-        const lx = m0 * sx + m3 * sy + m6 * nz, ly = m1 * sx + m4 * sy + m7 * nz, lz = m2 * sx + m5 * sy + m8 * nz;
-        let r, g, b;
-        const az = Math.abs(lz);
-        if (az > LABEL) {                                  // 흰 원 + 번호
-          let u = lx / LABEL_S; const v = ly / LABEL_S; if (lz < 0) u = -u;
-          const tx = Math.min(TEX - 1, Math.max(0, ((u * 0.5 + 0.5) * TEX) | 0)), ty = Math.min(TEX - 1, Math.max(0, ((v * 0.5 + 0.5) * TEX) | 0));
-          const ink = gl[ty * TEX + tx] / 255;
-          r = 250 - 230 * ink; g = 250 - 228 * ink; b = 244 - 216 * ink;
-        } else if (az > LABEL - 0.045) { r = 28; g = 28; b = 34; } // 번호 원 테두리
-        else {
-          const w = lx + 0.55 * ly * lz;                    // 물결 모양 검은 띠 두 줄
-          if (Math.abs(Math.abs(w) - 0.5) < 0.11) { r = 24; g = 24; b = 30; } else { r = base[0]; g = base[1]; b = base[2]; }
-        }
         const dif = Math.max(0, sx * LX + sy * LY + nz * LZ);
-        const sp = Math.max(0, sx * HX + sy * HY + nz * HZ), spec = Math.pow(sp, 60) * 255 * 0.95 + Math.pow(sp, 8) * 255 * 0.08;
-        const rim = 1 - 0.45 * Math.pow(1 - nz, 2.5), k = (0.3 + 0.82 * dif) * rim;
-        d[q] = Math.min(255, r * k + spec); d[q + 1] = Math.min(255, g * k + spec); d[q + 2] = Math.min(255, b * k + spec);
-        d[q + 3] = alpha * 255;
+        const sp = Math.max(0, sx * HX + sy * HY + nz * HZ);
+        q.push((py * size + px) * 4); X.push(sx); Y.push(sy); Z.push(nz);
+        K.push((0.3 + 0.82 * dif) * (1 - 0.45 * Math.pow(1 - nz, 2.5)));
+        S.push(Math.pow(sp, 60) * 242 + Math.pow(sp, 8) * 20);
+        A.push(Math.max(0, Math.min(1, (1 - Math.sqrt(d2)) * pr + 0.5)) * 255);
       }
+    }
+    g = { size, n: q.length, q: Int32Array.from(q), x: Float32Array.from(X), y: Float32Array.from(Y), z: Float32Array.from(Z),
+      k: Float32Array.from(K), s: Float32Array.from(S), a: Uint8Array.from(A) };
+    geoCache.set(pr, g); return g;
+  }
+  function drawBall(x, y, rad, n, M, scale) {
+    const pr = Math.max(3, Math.round(rad * scale)), G3 = geo(pr), size = G3.size;
+    if (scratch.width < size + 2) { scratch.width = scratch.height = Math.max(size + 2, 64); }
+    let img = imgCache.get(size); if (!img) { img = sctx.createImageData(size, size); imgCache.set(size, img); }
+    const d = img.data, base = rgb(C.ball[group(n)]), gl = glyph(n);
+    const [m0, m1, m2, m3, m4, m5, m6, m7, m8] = M;
+    const { q, x: X, y: Y, z: Z, k: K, s: SP, a: A } = G3;
+    for (let i = 0; i < G3.n; i++) {
+      const sx = X[i], sy = Y[i], nz = Z[i];
+      const lx = m0 * sx + m3 * sy + m6 * nz, ly = m1 * sx + m4 * sy + m7 * nz, lz = m2 * sx + m5 * sy + m8 * nz;
+      let r, g, b; const az = lz < 0 ? -lz : lz;
+      if (az > LABEL) {                                  // 흰 원 + 번호
+        let u = lx / LABEL_S; const v = ly / LABEL_S; if (lz < 0) u = -u;
+        let tx = ((u * 0.5 + 0.5) * TEX) | 0, ty = ((v * 0.5 + 0.5) * TEX) | 0;
+        tx = tx < 0 ? 0 : tx >= TEX ? TEX - 1 : tx; ty = ty < 0 ? 0 : ty >= TEX ? TEX - 1 : ty;
+        const ink = gl[ty * TEX + tx] / 255;
+        r = 250 - 230 * ink; g = 250 - 228 * ink; b = 244 - 216 * ink;
+      } else if (az > LABEL - 0.045) { r = 28; g = 28; b = 34; } // 번호 원 테두리
+      else {
+        const w = lx + 0.55 * ly * lz, ww = (w < 0 ? -w : w) - 0.5;   // 물결 모양 검은 띠 두 줄
+        if (ww < 0.11 && ww > -0.11) { r = 24; g = 24; b = 30; } else { r = base[0]; g = base[1]; b = base[2]; }
+      }
+      const kk = K[i], ss = SP[i], o = q[i];
+      d[o] = r * kk + ss; d[o + 1] = g * kk + ss; d[o + 2] = b * kk + ss; d[o + 3] = A[i];
     }
     sctx.clearRect(0, 0, size + 2, size + 2); // 이전 공의 픽셀이 가장자리로 번지지 않게
     sctx.putImageData(img, 0, 0);
-    const o = (pr + 1) / scale;
-    ctx.drawImage(scratch, 0, 0, size, size, x - o, y - o, size / scale, size / scale);
+    const off = (pr + 1) / scale;
+    ctx.drawImage(scratch, 0, 0, size, size, x - off, y - off, size / scale, size / scale);
   }
   // 받침대·관 위 공 아래의 부드러운 그림자
   function shadow(x, y, rad) {
@@ -865,7 +884,7 @@ const Drum = (() => {
     // 가운데 기둥과 캡슐로 이어지는 목
     rrect(cx - SW * R, capY, 2 * SW * R, cy + R - capY, SW * R); ctx.fillStyle = C.glass; ctx.fill(); ctx.strokeStyle = C.rim; ctx.stroke();
     // 안의 공들
-    const inner = Math.min(DPR, 1.6); // 안쪽 작은 공은 해상도를 조금 낮춰 가볍게
+    const inner = Math.min(DPR, 1.25); // 안쪽 작은 공은 해상도를 조금 낮춰 가볍게
     for (const b of balls) drawBall(cx + b.x * R, cy + b.y * R, RR * R, b.n, b.M, inner);
     // 구 테두리와 반사광
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.lineWidth = 2; ctx.strokeStyle = C.rim; ctx.stroke();
@@ -883,14 +902,17 @@ const Drum = (() => {
 
   function tick(now) {
     const dt = Math.min(0.033, (now - last) / 1000 || 0.016); last = now; t += dt;
-    physics(dt / 2); physics(dt / 2);
+    physics(dt / 3); physics(dt / 3); physics(dt / 3);
     for (const b of balls) { const sp = Math.hypot(b.vx, b.vy); if (sp > 0.02) rotM(b.M, b.vy, -b.vx, sp * 0.3, (sp / RR) * dt); }
-    if (k < 6 && t >= nextAt) extract();
+    // 버튼을 누른 만큼, 앞 공이 캡슐을 떠나면 다음 공을 빨아올림
+    if (pending > 0 && k < 6 && !outs.some((o) => o.st === "enter" || o.st === "rise" || o.st === "hold")) { extract(); pending--; }
     moveOuts(dt);
-    if (k === 6 && doneAt < 0 && outs.every((o) => o.st === "done")) { doneAt = t; mixing = false; }
+    const busy = pending > 0 || outs.some((o) => o.st !== "done");
+    // 6개를 다 뽑았거나 1분 동안 안 누르면 바람을 끄고 쉼
+    if (mixing && !busy && (k === 6 || t - lastActive > 60)) { mixing = false; calmAt = t; }
     Sfx.frame(mixing, outs.reduce((sum, o) => sum + (o.st === "chute" || o.st === "tray" ? o.spd || 0 : 0), 0));
     draw();
-    if (doneAt >= 0 && t > doneAt + 5) { raf = 0; return; }
+    if (!mixing && !busy && calmAt >= 0 && t - calmAt > 4) { raf = 0; return; }
     raf = requestAnimationFrame(tick);
   }
 
@@ -905,19 +927,26 @@ const Drum = (() => {
       const ang = rand() * Math.PI, rad = 0.25 + rand() * 0.6;
       balls.push({ n, x: Math.cos(ang) * rad, y: Math.sin(ang) * rad, vx: 0, vy: 0, a: 0, M: randomM(rand) });
     }
-    outs = []; k = 0; t = 0; nextAt = 1.8; mixing = true; doneAt = -1;
+    outs = []; k = 0; t = 0; pending = 0; lastActive = 0; calmAt = -1; mixing = !reduce.matches;
     Sfx.frame(false, 0);
     layout(); readColors();
-    cv.setAttribute("aria-label", "추첨기에서 나온 오늘의 번호: " + order.join(", "));
-    if (reduce.matches) {
-      mixing = false; balls = balls.filter((b) => !order.includes(b.n));
-      for (let i = 0; i < 400; i++) physics(1 / 60);
-      outs = order.map((n, i) => ({ n, i, st: "done", x: stopX(i), y: trayY(stopX(i)), rad: trayR, a: 0 })); k = 6; doneAt = 0;
-      order.forEach((n, i) => onLand && onLand(i, n));
-      draw(); return order;
-    }
+    cv.setAttribute("aria-label", "로또 추첨기. 공 뽑기 버튼을 누르면 공이 하나씩 나옵니다.");
+    if (reduce.matches) { for (let i = 0; i < 400; i++) physics(1 / 60); draw(); return; }
     if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
-    return order;
+  }
+
+  /** 공 하나 뽑기. 남은 공이 없으면 false */
+  function drawOne() {
+    if (k + pending >= 6) return false;
+    if (reduce.matches) { // 동작 줄이기: 바로 받침대에 놓음
+      const n = order[k]; balls = balls.filter((b) => b.n !== n);
+      outs.push({ n, i: k, st: "done", x: stopX(k), y: trayY(stopX(k)), rad: trayR, a: 0 });
+      onLand && onLand(k, n); k++; draw(); return true;
+    }
+    pending++; lastActive = t;
+    if (!mixing) { mixing = true; calmAt = -1; }
+    if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
+    return true;
   }
 
   new ResizeObserver(() => {
@@ -926,7 +955,7 @@ const Drum = (() => {
     if (!raf) draw();
   }).observe(cv);
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readColors(); if (!raf && order.length) draw(); });
-  return { start };
+  return { start, drawOne, left: () => 6 - k - pending };
 })();
 
 // ───────── 뉴스 숫자 번호 ─────────
@@ -1057,14 +1086,21 @@ function startDraw() {
   const nums = REC.sim.top[0].c, sorted = nums.slice().sort((a, b) => a - b);
   $("board-no").textContent = REC.target;
   $("board-balls").innerHTML = '<span class="bslot"></span>'.repeat(6);
-  $("board-sorted").textContent = "추첨기가 공을 섞고 있습니다.";
-  let landed = 0;
+  $("board-sorted").textContent = "'공 뽑기'를 누르면 공이 하나씩 나옵니다.";
+  landed = 0; drawButton();
   Drum.start(nums, TODAY, (i, n) => {
     const el = $("board-balls").children[i]; if (!el) return;
     el.textContent = n; el.dataset.g = group(n); el.classList.add("on");
     landed++;
     $("board-sorted").textContent = landed < 6 ? `${landed}번째 공: ${n}` : `작은 순서로: ${sorted.join(" · ")}`;
+    drawButton();
   });
+}
+let landed = 0;
+function drawButton() {
+  const left = Drum.left(), btn = $("replay");
+  btn.disabled = left === 0 && landed < 6;
+  btn.textContent = left > 0 ? `공 뽑기 (${6 - left + 1}/6)` : landed < 6 ? "추첨 중…" : "다시 추첨";
 }
 
 function renderHeader() {
@@ -1177,7 +1213,11 @@ function boot() {
   }, 50);
 }
 
-$("replay").addEventListener("click", () => { Sfx.unlock(); if (REC) startDraw(); });
+$("replay").addEventListener("click", () => {
+  Sfx.unlock(); if (!REC) return;
+  if (Drum.left() > 0) Drum.drawOne(); else startDraw();
+  drawButton();
+});
 const syncSound = () => { $("sound").setAttribute("aria-pressed", Sfx.isOn()); $("sound").textContent = Sfx.isOn() ? "소리 켜짐" : "소리 꺼짐"; };
 $("sound").addEventListener("click", () => { Sfx.toggle(); syncSound(); });
 syncSound();
