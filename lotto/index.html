@@ -98,8 +98,11 @@ section { display: flex; flex-direction: column; gap: 14px; }
   display: grid; place-items: center; color: #fff;
   font: 600 calc(var(--s) * .4)/1 var(--font-num); font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 2px rgba(0,0,0,.35);
-  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), rgba(255,255,255,0) 42%), var(--c);
-  box-shadow: inset 0 -3px 6px rgba(0,0,0,.18);
+  background:
+    radial-gradient(circle at 34% 27%, rgba(255,255,255,.95) 0, rgba(255,255,255,.5) 9%, rgba(255,255,255,0) 30%),
+    radial-gradient(circle at 50% 120%, rgba(255,255,255,.28), rgba(255,255,255,0) 45%),
+    var(--c);
+  box-shadow: inset -0.12em -0.2em 0.45em rgba(0,0,0,.38), inset 0.08em 0.1em 0.25em rgba(255,255,255,.25), 0 0.12em 0.3em rgba(0,0,0,.22);
 }
 .ball.sm { --s: 32px; }
 .ball.xs { --s: 26px; }
@@ -616,7 +619,7 @@ const Drum = (() => {
   let W = 0, H = 0, R = 0, cx = 0, cy = 0, trayR = 0, capY = 0, capR = 0;
   let trayL = 0, trayRt = 0, trayYL = 0, trayYR = 0, path = [], pathLen = 0;
   let balls = [], outs = [], order = [], t = 0, nextAt = 0, k = 0;
-  let mixing = false, raf = 0, last = 0, frame = 0, doneAt = -1, C = {}, onLand = null, seq = 0;
+  let mixing = false, raf = 0, last = 0, frame = 0, doneAt = -1, C = {}, onLand = null, seq = 0, DPR = 1;
 
   function readColors() {
     const cs = getComputedStyle(document.documentElement), g = (v) => cs.getPropertyValue(v).trim();
@@ -660,7 +663,7 @@ const Drum = (() => {
     H = Math.ceil(cy + 2.32 * R);
     // 캡슐 오른쪽 출구 → 원판 바깥을 돌아 → S자로 꺾여 → 받침대 오른쪽 끝
     buildPath([[0.16, -1.36], [0.48, -1.33], [0.86, -1.1], [1.16, -0.66], [1.27, -0.1], [1.22, 0.48], [1.06, 0.98], [0.92, 1.24], [1.1, 1.42], [1.06, 1.58], [trayRt / R - cx / R, (trayYR - cy) / R]]);
-    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const dpr = Math.min(window.devicePixelRatio || 1, 3); DPR = Math.min(dpr, 2.5);
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
@@ -704,7 +707,7 @@ const Drum = (() => {
     best.n = num;
     balls.splice(balls.indexOf(best), 1);
     const x = cx + best.x * R, y = cy + best.y * R;
-    outs.push({ n: num, i: k, st: "enter", p: 0, x0: x, y0: y, x, y, rad: RR * R, a: best.a, v: 0, s: 0 });
+    outs.push({ n: num, i: k, st: "enter", p: 0, x0: x, y0: y, x, y, rad: RR * R, a: 0, M: best.M, v: 0, s: 0 });
     k++; nextAt = t + GAP_SEC; Sfx.exit();
   }
 
@@ -714,7 +717,8 @@ const Drum = (() => {
       if (o.st === "enter") {
         o.p = Math.min(1, o.p + dt / 0.4); const e = ease(o.p);
         o.x = o.x0 + (cx - o.x0) * e; o.y = o.y0 + (cy + 0.9 * R - o.y0) * e;
-        if (o.p >= 1) { o.st = "rise"; o.p = 0; }
+        rotM(o.M, 0.3, 1, 0.2, dt * 8);
+        if (o.p >= 1) { o.st = "rise"; o.p = 0; o.a = 0; }
       } else if (o.st === "rise") { // 기둥을 타고 위로
         o.p = Math.min(1, o.p + dt / 1.1); const e = ease(o.p);
         o.x = cx; o.y = cy + 0.9 * R + (capY - cy - 0.9 * R) * e; o.rad = R * (RR + 0.03 * e); o.a += dt * 6;
@@ -738,26 +742,92 @@ const Drum = (() => {
   }
 
   function rrect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
-  // 실제 추첨 공처럼: 바탕색 + 검은 곡선 무늬 + 흰 원 안의 번호
-  function drawBall(x, y, rad, n, a, label) {
-    ctx.save(); ctx.translate(x, y);
-    ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = C.ball[group(n)]; ctx.fill();
-    ctx.save(); ctx.clip(); ctx.rotate(a + n);
-    ctx.strokeStyle = "rgba(18,18,22,.88)"; ctx.lineWidth = rad * 0.3;
-    ctx.beginPath(); ctx.arc(-rad * 1.25, -rad * 0.2, rad * 1.05, -0.9, 0.9); ctx.stroke();
-    ctx.beginPath(); ctx.arc(rad * 1.25, rad * 0.2, rad * 1.05, Math.PI - 0.9, Math.PI + 0.9); ctx.stroke();
-    ctx.restore();
-    if (label) {
-      ctx.save(); ctx.rotate(a);
-      ctx.beginPath(); ctx.arc(0, 0, rad * 0.56, 0, Math.PI * 2); ctx.fillStyle = "#fbfbf7"; ctx.fill();
-      ctx.fillStyle = "#14161c"; ctx.font = `700 ${(rad * 0.66).toFixed(1)}px "IBM Plex Mono", ui-monospace, monospace`;
-      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(n, 0, rad * 0.05);
-      ctx.restore();
+  // ── 3D 공: 화면 픽셀마다 구의 법선을 구해 공 표면 무늬·번호·빛을 계산 ──
+  // M 은 공(로컬) → 화면 회전행렬(3x3, 행 우선). 화면 좌표: x 오른쪽, y 아래, z 보는 사람 쪽.
+  const LX = -0.45, LY = -0.62, LZ = 0.64;                 // 왼쪽 위 앞에서 오는 빛
+  const HL = Math.hypot(LX, LY, LZ + 1), HX = LX / HL, HY = LY / HL, HZ = (LZ + 1) / HL;
+  const LABEL = 0.8, LABEL_S = Math.sqrt(1 - LABEL * LABEL); // 번호 원 크기(양쪽 극에 하나씩, 실제 공처럼)
+  const TEX = 48, glyphs = [], rgbCache = {}, imgCache = new Map();
+  const scratch = document.createElement("canvas"), sctx = scratch.getContext("2d");
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { glyphs.length = 0; });
+  function glyph(n) {
+    if (glyphs[n]) return glyphs[n];
+    const c = document.createElement("canvas"); c.width = c.height = TEX; const g = c.getContext("2d");
+    g.fillStyle = "#000"; g.font = `700 ${n > 9 ? 25 : 30}px "IBM Plex Mono", ui-monospace, monospace`;
+    g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(n, TEX / 2, TEX / 2 + 1);
+    const d = g.getImageData(0, 0, TEX, TEX).data, a = new Uint8Array(TEX * TEX);
+    for (let q = 0; q < a.length; q++) a[q] = d[q * 4 + 3];
+    return (glyphs[n] = a);
+  }
+  function rgb(hex) {
+    if (rgbCache[hex]) return rgbCache[hex];
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); const v = m ? parseInt(m[1], 16) : 0x8e96a3;
+    return (rgbCache[hex] = [v >> 16 & 255, v >> 8 & 255, v & 255]);
+  }
+  const rz = (a) => { const c = Math.cos(a), si = Math.sin(a); return [c, -si, 0, si, c, 0, 0, 0, 1]; };
+  /** 화면 축 (ax,ay,az) 둘레로 ang 만큼 돌림: M ← Rot·M, 그리고 직교 정리 */
+  function rotM(M, ax, ay, az, ang) {
+    const l = Math.hypot(ax, ay, az); if (!l || !ang) return; ax /= l; ay /= l; az /= l;
+    const c = Math.cos(ang), si = Math.sin(ang), t1 = 1 - c;
+    const r = [t1 * ax * ax + c, t1 * ax * ay - si * az, t1 * ax * az + si * ay,
+      t1 * ax * ay + si * az, t1 * ay * ay + c, t1 * ay * az - si * ax,
+      t1 * ax * az - si * ay, t1 * ay * az + si * ax, t1 * az * az + c];
+    const o = M.slice();
+    for (let row = 0; row < 3; row++) for (let col = 0; col < 3; col++)
+      M[row * 3 + col] = r[row * 3] * o[col] + r[row * 3 + 1] * o[3 + col] + r[row * 3 + 2] * o[6 + col];
+    // 열벡터 그람-슈미트 (오차 누적 방지)
+    let x0 = M[0], x1 = M[3], x2 = M[6]; let n = Math.hypot(x0, x1, x2); x0 /= n; x1 /= n; x2 /= n;
+    let y0 = M[1], y1 = M[4], y2 = M[7]; const dd = x0 * y0 + x1 * y1 + x2 * y2; y0 -= dd * x0; y1 -= dd * x1; y2 -= dd * x2;
+    n = Math.hypot(y0, y1, y2); y0 /= n; y1 /= n; y2 /= n;
+    M[0] = x0; M[3] = x1; M[6] = x2; M[1] = y0; M[4] = y1; M[7] = y2;
+    M[2] = x1 * y2 - x2 * y1; M[5] = x2 * y0 - x0 * y2; M[8] = x0 * y1 - x1 * y0;
+  }
+  function randomM(rand) { const M = [1, 0, 0, 0, 1, 0, 0, 0, 1]; rotM(M, rand() - 0.5, rand() - 0.5, rand() - 0.5, rand() * 6.3); return M; }
+
+  function drawBall(x, y, rad, n, M, scale) {
+    const pr = Math.max(3, Math.round(rad * scale)), size = pr * 2 + 2;
+    if (scratch.width < size + 2) { scratch.width = scratch.height = Math.max(size + 2, 64); }
+    let img = imgCache.get(size); if (!img) { img = sctx.createImageData(size, size); imgCache.set(size, img); }
+    const d = img.data, base = rgb(C.ball[group(n)]), gl = glyph(n), inv = 1 / pr;
+    const [m0, m1, m2, m3, m4, m5, m6, m7, m8] = M;
+    for (let py = 0; py < size; py++) {
+      const sy = (py + 0.5 - pr - 1) * inv;
+      for (let px = 0; px < size; px++) {
+        const sx = (px + 0.5 - pr - 1) * inv, d2 = sx * sx + sy * sy, q = (py * size + px) * 4;
+        if (d2 > 1 + 2 * inv) { d[q + 3] = 0; continue; }
+        const alpha = Math.max(0, Math.min(1, (1 - Math.sqrt(d2)) * pr + 0.5));
+        const nz = Math.sqrt(Math.max(0, 1 - d2));
+        // 공 표면의 로컬 좌표 (회전의 역 = 전치)
+        const lx = m0 * sx + m3 * sy + m6 * nz, ly = m1 * sx + m4 * sy + m7 * nz, lz = m2 * sx + m5 * sy + m8 * nz;
+        let r, g, b;
+        const az = Math.abs(lz);
+        if (az > LABEL) {                                  // 흰 원 + 번호
+          let u = lx / LABEL_S; const v = ly / LABEL_S; if (lz < 0) u = -u;
+          const tx = Math.min(TEX - 1, Math.max(0, ((u * 0.5 + 0.5) * TEX) | 0)), ty = Math.min(TEX - 1, Math.max(0, ((v * 0.5 + 0.5) * TEX) | 0));
+          const ink = gl[ty * TEX + tx] / 255;
+          r = 250 - 230 * ink; g = 250 - 228 * ink; b = 244 - 216 * ink;
+        } else if (az > LABEL - 0.045) { r = 28; g = 28; b = 34; } // 번호 원 테두리
+        else {
+          const w = lx + 0.55 * ly * lz;                    // 물결 모양 검은 띠 두 줄
+          if (Math.abs(Math.abs(w) - 0.5) < 0.11) { r = 24; g = 24; b = 30; } else { r = base[0]; g = base[1]; b = base[2]; }
+        }
+        const dif = Math.max(0, sx * LX + sy * LY + nz * LZ);
+        const sp = Math.max(0, sx * HX + sy * HY + nz * HZ), spec = Math.pow(sp, 60) * 255 * 0.95 + Math.pow(sp, 8) * 255 * 0.08;
+        const rim = 1 - 0.45 * Math.pow(1 - nz, 2.5), k = (0.3 + 0.82 * dif) * rim;
+        d[q] = Math.min(255, r * k + spec); d[q + 1] = Math.min(255, g * k + spec); d[q + 2] = Math.min(255, b * k + spec);
+        d[q + 3] = alpha * 255;
+      }
     }
-    const g = ctx.createRadialGradient(-rad * 0.35, -rad * 0.42, rad * 0.05, -rad * 0.1, -rad * 0.1, rad * 1.05);
-    g.addColorStop(0, "rgba(255,255,255,.75)"); g.addColorStop(0.4, "rgba(255,255,255,0)"); g.addColorStop(1, "rgba(0,0,0,.28)");
-    ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
-    ctx.restore();
+    sctx.clearRect(0, 0, size + 2, size + 2); // 이전 공의 픽셀이 가장자리로 번지지 않게
+    sctx.putImageData(img, 0, 0);
+    const o = (pr + 1) / scale;
+    ctx.drawImage(scratch, 0, 0, size, size, x - o, y - o, size / scale, size / scale);
+  }
+  // 받침대·관 위 공 아래의 부드러운 그림자
+  function shadow(x, y, rad) {
+    const g = ctx.createRadialGradient(x + rad * 0.15, y + rad * 0.92, 0, x + rad * 0.15, y + rad * 0.92, rad);
+    g.addColorStop(0, "rgba(0,0,0,.28)"); g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.save(); ctx.translate(0, 0); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x + rad * 0.15, y + rad * 0.92, rad * 0.95, rad * 0.32, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
   // 투명한 관: 테두리 → 바탕 → 유리색 순서로 겹쳐 그림
   function tube(points, w) {
@@ -805,7 +875,8 @@ const Drum = (() => {
     // 가운데 기둥과 캡슐로 이어지는 목
     rrect(cx - SW * R, capY, 2 * SW * R, cy + R - capY, SW * R); ctx.fillStyle = C.glass; ctx.fill(); ctx.strokeStyle = C.rim; ctx.stroke();
     // 안의 공들
-    for (const b of balls) drawBall(cx + b.x * R, cy + b.y * R, RR * R, b.n, b.a, false);
+    const inner = Math.min(DPR, 1.6); // 안쪽 작은 공은 해상도를 조금 낮춰 가볍게
+    for (const b of balls) drawBall(cx + b.x * R, cy + b.y * R, RR * R, b.n, b.M, inner);
     // 구 테두리와 반사광
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.lineWidth = 2; ctx.strokeStyle = C.rim; ctx.stroke();
     ctx.lineCap = "round"; ctx.strokeStyle = C.shine;
@@ -816,20 +887,22 @@ const Drum = (() => {
     ctx.beginPath(); ctx.arc(cx, capY, capR, 0, Math.PI * 2); ctx.fillStyle = C.glass; ctx.fill(); ctx.strokeStyle = C.rim; ctx.stroke();
     rrect(cx - capR * 0.75, capY - capR - 0.16 * R, capR * 1.5, 0.2 * R, 0.05 * R); ctx.fillStyle = C.lid; ctx.fill(); ctx.stroke();
     // 나온 공들
-    for (const o of outs) drawBall(o.x, o.y, o.rad, o.n, o.a, o.st !== "enter" && o.st !== "rise" || o.p > 0.5);
+    for (const o of outs) if (o.st === "tray" || o.st === "done") shadow(o.x, o.y, o.rad);
+    for (const o of outs) drawBall(o.x, o.y, o.rad, o.n, o.st === "enter" ? o.M : rz(o.a), DPR);
     // 왼쪽 위 클로즈업 화면 (방송 화면 분할처럼)
     const s = Math.min(0.9 * R, 120), ix = 6, iy = 6;
     rrect(ix, iy, s, s * 0.82, 8); ctx.fillStyle = C.inset; ctx.fill();
     ctx.fillStyle = C.insetFg; ctx.font = `600 10px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = "left"; ctx.textBaseline = "top";
     ctx.fillText("LIVE  캡슐 카메라", ix + 8, iy + 7);
     const cur = outs.find((o) => o.st === "hold") || outs.find((o) => o.st === "rise" && o.p > 0.7);
-    if (cur) drawBall(ix + s / 2, iy + s * 0.48, s * 0.27, cur.n, cur.st === "hold" ? 0 : cur.a, true);
+    if (cur) drawBall(ix + s / 2, iy + s * 0.48, s * 0.27, cur.n, rz(cur.st === "hold" ? 0 : cur.a), DPR);
     else { ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(k >= 6 && doneAt >= 0 ? "추첨 끝" : "섞는 중", ix + s / 2, iy + s * 0.48); }
   }
 
   function tick(now) {
     const dt = Math.min(0.033, (now - last) / 1000 || 0.016); last = now; t += dt;
     physics(dt / 2); physics(dt / 2);
+    for (const b of balls) { const sp = Math.hypot(b.vx, b.vy); if (sp > 0.02) rotM(b.M, b.vy, -b.vx, sp * 0.3, (sp / RR) * dt); }
     if (k < 6 && t >= nextAt) extract();
     moveOuts(dt);
     if (k === 6 && doneAt < 0 && outs.every((o) => o.st === "done")) { doneAt = t; mixing = false; Sfx.finale(); }
@@ -848,7 +921,7 @@ const Drum = (() => {
     balls = [];
     for (let n = 1; n <= 45; n++) {
       const ang = rand() * Math.PI, rad = 0.25 + rand() * 0.6;
-      balls.push({ n, x: Math.cos(ang) * rad, y: Math.sin(ang) * rad, vx: 0, vy: 0, a: rand() * 6 });
+      balls.push({ n, x: Math.cos(ang) * rad, y: Math.sin(ang) * rad, vx: 0, vy: 0, a: 0, M: randomM(rand) });
     }
     outs = []; k = 0; t = 0; nextAt = 1.8; mixing = true; doneAt = -1;
     Sfx.frame(false, 0);
