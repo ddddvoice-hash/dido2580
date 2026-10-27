@@ -27,6 +27,9 @@
   --glass-hi: rgba(255, 255, 255, .55);
   --glass-rim: rgba(40, 62, 110, .38);
   --glass-shine: rgba(255, 255, 255, .9);
+  --base: #2f63d6; --base-dark: #1b3e96; --lid: #eef1f6;
+  --inset: #0f1828; --inset-fg: #bcd6ff;       /* 방송 화면: 두 테마 모두 어두움 */
+  --board-bg: #0f6f6a; --board-bg2: #0a4f4c; --board-fg: #ffffff;
   --ball-y: #f2b500; --ball-b: #3fa6dc; --ball-r: #f05a5a; --ball-g: #8e96a3; --ball-n: #7cb342;
   --font-display: "Black Han Sans", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
@@ -39,6 +42,7 @@
     --slip: #ff6178; --slip-soft: #2a1a20; --good: #4cc38a; --bar: #3a4357;
     --glass: rgba(150, 180, 255, .07); --glass-hi: rgba(190, 210, 255, .16);
     --glass-rim: rgba(190, 210, 255, .42); --glass-shine: rgba(255, 255, 255, .55);
+    --base: #2a55b8; --base-dark: #14306f; --lid: #c9d0dc;
     color-scheme: dark;
   }
 }
@@ -47,6 +51,7 @@
   --slip: #ff6178; --slip-soft: #2a1a20; --good: #4cc38a; --bar: #3a4357;
   --glass: rgba(150, 180, 255, .07); --glass-hi: rgba(190, 210, 255, .16);
   --glass-rim: rgba(190, 210, 255, .42); --glass-shine: rgba(255, 255, 255, .55);
+  --base: #2a55b8; --base-dark: #14306f; --lid: #c9d0dc;
   color-scheme: dark;
 }
 :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
@@ -101,7 +106,25 @@ section { display: flex; flex-direction: column; gap: 14px; }
 .ball[data-g="1"] { --c: var(--ball-y); } .ball[data-g="2"] { --c: var(--ball-b); }
 .ball[data-g="3"] { --c: var(--ball-r); } .ball[data-g="4"] { --c: var(--ball-g); }
 .ball[data-g="5"] { --c: var(--ball-n); }
-.drum { display: block; width: 100%; height: 360px; }
+.drum { display: block; width: 100%; height: 440px; }
+.board {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px;
+  background: linear-gradient(var(--board-bg), var(--board-bg2)); color: var(--board-fg);
+}
+.board-tag { font-family: var(--font-display); font-size: 17px; white-space: nowrap; line-height: 1; }
+.board-tag small { font-size: 13px; opacity: .85; }
+.board-balls { display: flex; gap: 6px; flex: 1; justify-content: space-between; }
+.bslot {
+  --c: transparent; width: 34px; height: 34px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; background: rgba(255, 255, 255, .16);
+  font: 700 15px/1 var(--font-num); color: #14161c; font-variant-numeric: tabular-nums;
+}
+.bslot.on { background: #fbfbf7; box-shadow: inset 0 0 0 3px var(--c); animation: pop .45s cubic-bezier(.2,1.4,.4,1) both; }
+.bslot[data-g="1"] { --c: var(--ball-y); } .bslot[data-g="2"] { --c: var(--ball-b); } .bslot[data-g="3"] { --c: var(--ball-r); }
+.bslot[data-g="4"] { --c: var(--ball-g); } .bslot[data-g="5"] { --c: var(--ball-n); }
+@media (max-width: 400px) { .bslot { width: 30px; height: 30px; font-size: 13px; } .board-balls { gap: 4px; } .board-tag { font-size: 15px; } }
+@media (prefers-reduced-motion: reduce) { .bslot.on { animation: none; } }
+.board-sorted { margin: -8px 0 0; font-size: 13px; color: var(--muted); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .slip-foot .btns { display: flex; gap: 8px; }
 .ball.pop { animation: pop .5s cubic-bezier(.2,1.4,.4,1) both; }
@@ -244,6 +267,11 @@ button.link { border: 0; background: none; padding: 4px 0; color: var(--slip); }
         <span class="muted num" id="today-date"></span>
       </div>
       <canvas class="drum" id="drum" role="img" aria-label="로또 추첨기"></canvas>
+      <div class="board" aria-hidden="true">
+        <span class="board-tag"><small>제</small><span class="num" id="board-no"></span><small>회</small></span>
+        <div class="board-balls" id="board-balls"></div>
+      </div>
+      <p class="board-sorted" id="board-sorted">추첨기가 공을 섞고 있습니다.</p>
       <div class="sr-only" id="today-balls"></div>
       <div class="score">
         <span class="big num" id="today-score">–</span>
@@ -577,30 +605,61 @@ const Sfx = (() => {
   };
 })();
 
-// ───────── 추첨기: 투명한 유리 구 안에서 공이 섞이고, 하나씩 굴러 나옴 ─────────
+// ───────── 추첨기: 방송 추첨기 모양 ─────────
+// 아크릴 원판 앞의 투명 구, 가운데 기둥, 위쪽 캡슐, 옆의 S자 관, 앞쪽 받침대, 파란 받침.
+// 공 하나가 기둥을 타고 캡슐로 올라갔다가 관을 따라 내려와 받침대에 순서대로 놓입니다.
 const Drum = (() => {
   const cv = $("drum"), ctx = cv.getContext("2d");
   const reduce = matchMedia("(prefers-reduced-motion: reduce)");
-  // 구 반지름을 1로 둔 단위. RR: 공 반지름, G: 중력, JET: 바닥에서 올라오는 바람
-  const RR = 0.1, G = 2.4, JET = 6.2, SWIRL = 7, E = 0.82, GAP_SEC = 2.4;
-  let W = 0, H = 0, R = 0, cx = 0, cy = 0, trayR = 0, railY = 0, slots = [];
-  let balls = [], outs = [], order = [], sorted = [], t = 0, nextAt = 0, k = 0;
-  let mixing = false, raf = 0, last = 0, frame = 0, doneAt = -1, C = {};
+  // 구 반지름을 1로 둔 단위. RR: 안쪽 공 반지름, SW: 기둥 반폭
+  const RR = 0.1, SW = 0.07, G = 2.4, JET = 6.2, SWIRL = 7, E = 0.82, GAP_SEC = 4.2;
+  let W = 0, H = 0, R = 0, cx = 0, cy = 0, trayR = 0, capY = 0, capR = 0;
+  let trayL = 0, trayRt = 0, trayYL = 0, trayYR = 0, path = [], pathLen = 0;
+  let balls = [], outs = [], order = [], t = 0, nextAt = 0, k = 0;
+  let mixing = false, raf = 0, last = 0, frame = 0, doneAt = -1, C = {}, onLand = null, seq = 0;
 
   function readColors() {
     const cs = getComputedStyle(document.documentElement), g = (v) => cs.getPropertyValue(v).trim();
-    C = { glass: g("--glass"), hi: g("--glass-hi"), rim: g("--glass-rim"), shine: g("--glass-shine"),
+    C = { glass: g("--glass"), hi: g("--glass-hi"), rim: g("--glass-rim"), shine: g("--glass-shine"), card: g("--card"),
+      base: g("--base"), baseDark: g("--base-dark"), lid: g("--lid"), inset: g("--inset"), insetFg: g("--inset-fg"),
       ball: [null, g("--ball-y"), g("--ball-b"), g("--ball-r"), g("--ball-g"), g("--ball-n")] };
   }
+
+  // 부드러운 곡선 관: 꺾인 점들을 Catmull-Rom 으로 이어 촘촘한 점 목록으로
+  function buildPath(pts) {
+    const P = pts.map(([u, v]) => [cx + u * R, cy + v * R]), out = [];
+    for (let i = 0; i < P.length - 1; i++) {
+      const p0 = P[Math.max(0, i - 1)], p1 = P[i], p2 = P[i + 1], p3 = P[Math.min(P.length - 1, i + 2)];
+      for (let s = 0; s < 12; s++) {
+        const tt = s / 12, t2 = tt * tt, t3 = t2 * tt;
+        const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * tt + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+        out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+      }
+    }
+    out.push(P[P.length - 1]);
+    let L = 0; out[0][2] = 0;
+    for (let i = 1; i < out.length; i++) { L += Math.hypot(out[i][0] - out[i - 1][0], out[i][1] - out[i - 1][1]); out[i][2] = L; }
+    path = out; pathLen = L;
+  }
+  function pathAt(s) {
+    let i = 1; while (i < path.length - 1 && path[i][2] < s) i++;
+    const a = path[i - 1], b = path[i], f = Math.min(1, Math.max(0, (s - a[2]) / ((b[2] - a[2]) || 1)));
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+  }
+  const trayY = (x) => trayYR + (trayYL - trayYR) * (trayRt - x) / (trayRt - trayL);
+  const stopX = (i) => trayL + trayR * (1.15 + 2.08 * i);
+
   function layout() {
     W = cv.clientWidth || 320;
-    R = Math.min(W * 0.34, 160);
-    cx = W / 2; cy = R + 14;
-    const gap = Math.min(W / 6.4, 64);
-    trayR = Math.min(gap * 0.42, 24);
-    railY = cy + R + Math.max(trayR * 2.3, 36);
-    H = Math.ceil(railY + trayR + 14);
-    slots = [0, 1, 2, 3, 4, 5].map((i) => cx + (i - 2.5) * gap);
+    R = Math.min((W / 2 - 10) / 1.38, 150);
+    cx = W / 2; cy = 1.78 * R + 6;
+    capY = cy - 1.34 * R; capR = 0.22 * R;
+    trayR = 0.155 * R;
+    trayL = cx - 1.12 * R; trayRt = cx + 0.98 * R;
+    trayYL = cy + 1.76 * R; trayYR = cy + 1.66 * R;
+    H = Math.ceil(cy + 2.32 * R);
+    // 캡슐 오른쪽 출구 → 원판 바깥을 돌아 → S자로 꺾여 → 받침대 오른쪽 끝
+    buildPath([[0.16, -1.36], [0.48, -1.33], [0.86, -1.1], [1.16, -0.66], [1.27, -0.1], [1.22, 0.48], [1.06, 0.98], [0.92, 1.24], [1.1, 1.42], [1.06, 1.58], [trayRt / R - cx / R, (trayYR - cy) / R]]);
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -613,6 +672,8 @@ const Drum = (() => {
       if (!mixing) { b.vx *= 0.992; b.vy *= 0.992; }
       const sp = Math.hypot(b.vx, b.vy); if (sp > 3) { b.vx *= 3 / sp; b.vy *= 3 / sp; }
       b.x += b.vx * dt; b.y += b.vy * dt; b.a += (b.vx / RR) * dt;
+      // 가운데 기둥에 부딪힘
+      if (Math.abs(b.x) < SW + RR) { const sx = b.x >= 0 ? 1 : -1; b.x = sx * (SW + RR); if (b.vx * sx < 0) { b.vx = -b.vx * E; if (Math.abs(b.vx) > 0.9) Sfx.clack(0.4); } }
       const d = Math.hypot(b.x, b.y), lim = 1 - RR - 0.02;
       if (d > lim) {
         const nx = b.x / d, ny = b.y / d; b.x = nx * lim; b.y = ny * lim;
@@ -633,7 +694,7 @@ const Drum = (() => {
     }
   }
 
-  // 출구(구 바닥)에 가장 가까운 공에 이번 번호를 붙여 내보냄
+  // 기둥 아래 입구에 가장 가까운 공에 이번 번호를 붙여 빨아올림
   function extract() {
     const num = order[k];
     let best = balls[0], bd = Infinity;
@@ -643,75 +704,127 @@ const Drum = (() => {
     best.n = num;
     balls.splice(balls.indexOf(best), 1);
     const x = cx + best.x * R, y = cy + best.y * R;
-    outs.push({ n: num, slot: sorted.indexOf(num), st: "exit", p: 0, x0: x, y0: y, x, y, vy: 0, rad: RR * R, a: best.a });
+    outs.push({ n: num, i: k, st: "enter", p: 0, x0: x, y0: y, x, y, rad: RR * R, a: best.a, v: 0, s: 0 });
     k++; nextAt = t + GAP_SEC; Sfx.exit();
   }
 
   function moveOuts(dt) {
+    const ease = (p) => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2);
     for (const o of outs) {
-      if (o.st === "exit") {
-        o.p = Math.min(1, o.p + dt / 0.5); const e = o.p * o.p;
-        o.x = o.x0 + (cx - o.x0) * e; o.y = o.y0 + (cy + R - o.y0) * e;
-        if (o.p >= 1) { o.st = "drop"; o.vy = 40; }
-      } else if (o.st === "drop") {
-        o.vy += 520 * dt; o.y += o.vy * dt;
-        const f = Math.min(1, Math.max(0, (o.y - cy - R) / (railY - cy - R)));
-        o.rad = RR * R + (trayR - RR * R) * f;
-        if (o.y >= railY) { o.y = railY; o.rad = trayR; o.st = "roll"; o.x0 = o.x; o.p = 0; o.dur = 0.9 + Math.abs(slots[o.slot] - o.x) / 120; Sfx.land(); }
-      } else if (o.st === "roll") {
-        o.p = Math.min(1, o.p + dt / o.dur); const e = 1 - Math.pow(1 - o.p, 3);
-        const px = o.x; o.x = o.x0 + (slots[o.slot] - o.x0) * e; o.spd = Math.abs(o.x - px) / dt;
-        o.a = (o.x - slots[o.slot]) / o.rad; // 굴러간 거리만큼 회전, 도착하면 숫자가 똑바로 섬
-        if (o.p >= 1) { o.st = "done"; o.a = 0; o.spd = 0; Sfx.settle(o.slot); }
+      if (o.st === "enter") {
+        o.p = Math.min(1, o.p + dt / 0.4); const e = ease(o.p);
+        o.x = o.x0 + (cx - o.x0) * e; o.y = o.y0 + (cy + 0.9 * R - o.y0) * e;
+        if (o.p >= 1) { o.st = "rise"; o.p = 0; }
+      } else if (o.st === "rise") { // 기둥을 타고 위로
+        o.p = Math.min(1, o.p + dt / 1.1); const e = ease(o.p);
+        o.x = cx; o.y = cy + 0.9 * R + (capY - cy - 0.9 * R) * e; o.rad = R * (RR + 0.03 * e); o.a += dt * 6;
+        if (o.p >= 1) { o.st = "hold"; o.p = 0; Sfx.land(); }
+      } else if (o.st === "hold") { // 캡슐에서 잠시 멈춤 (클로즈업 화면에 번호)
+        o.p += dt; o.y = capY + Math.sin(o.p * 9) * 1.2 * (1 - Math.min(1, o.p)); o.a *= 0.85;
+        if (o.p >= 1.1) { o.st = "chute"; o.s = 0; o.v = 40; }
+      } else if (o.st === "chute") { // 옆 관을 따라 내려옴
+        o.v = Math.min(240, o.v + 380 * dt); o.s += o.v * dt;
+        const [x, y] = pathAt(o.s); o.x = x; o.y = y;
+        const f = Math.min(1, o.s / pathLen); o.rad = R * (RR + 0.03) + (trayR - R * (RR + 0.03)) * f;
+        o.a += (o.v / o.rad) * dt; o.spd = o.v;
+        if (o.s >= pathLen) { o.st = "tray"; Sfx.land(); }
+      } else if (o.st === "tray") { // 받침대 위를 왼쪽으로 굴러 앞 공 옆에 멈춤
+        const stop = stopX(o.i), gap = o.x - stop;
+        o.v = Math.max(18, Math.min(o.v, gap * 2.4)); o.x = Math.max(stop, o.x - o.v * dt); o.y = trayY(o.x);
+        o.rad = trayR; o.a = (o.x - stop) / trayR; o.spd = o.v;
+        if (o.x - stop < 0.4) { o.x = stop; o.y = trayY(stop); o.a = 0; o.spd = 0; o.st = "done"; Sfx.settle(o.i); onLand && onLand(o.i, o.n); }
       }
     }
   }
 
   function rrect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
-  function drawBall(x, y, rad, n, a) {
+  // 실제 추첨 공처럼: 바탕색 + 검은 곡선 무늬 + 흰 원 안의 번호
+  function drawBall(x, y, rad, n, a, label) {
     ctx.save(); ctx.translate(x, y);
     ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = C.ball[group(n)]; ctx.fill();
+    ctx.save(); ctx.clip(); ctx.rotate(a + n);
+    ctx.strokeStyle = "rgba(18,18,22,.88)"; ctx.lineWidth = rad * 0.3;
+    ctx.beginPath(); ctx.arc(-rad * 1.25, -rad * 0.2, rad * 1.05, -0.9, 0.9); ctx.stroke();
+    ctx.beginPath(); ctx.arc(rad * 1.25, rad * 0.2, rad * 1.05, Math.PI - 0.9, Math.PI + 0.9); ctx.stroke();
+    ctx.restore();
+    if (label) {
+      ctx.save(); ctx.rotate(a);
+      ctx.beginPath(); ctx.arc(0, 0, rad * 0.56, 0, Math.PI * 2); ctx.fillStyle = "#fbfbf7"; ctx.fill();
+      ctx.fillStyle = "#14161c"; ctx.font = `700 ${(rad * 0.66).toFixed(1)}px "IBM Plex Mono", ui-monospace, monospace`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(n, 0, rad * 0.05);
+      ctx.restore();
+    }
     const g = ctx.createRadialGradient(-rad * 0.35, -rad * 0.42, rad * 0.05, -rad * 0.1, -rad * 0.1, rad * 1.05);
-    g.addColorStop(0, "rgba(255,255,255,.7)"); g.addColorStop(0.42, "rgba(255,255,255,0)"); g.addColorStop(1, "rgba(0,0,0,.25)");
-    ctx.fillStyle = g; ctx.fill();
-    ctx.rotate(a);
-    ctx.fillStyle = "#fff"; ctx.shadowColor = "rgba(0,0,0,.4)"; ctx.shadowBlur = 2;
-    ctx.font = `600 ${Math.max(8, rad * 0.95).toFixed(1)}px "IBM Plex Mono", ui-monospace, monospace`;
-    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(n, 0, rad * 0.07);
+    g.addColorStop(0, "rgba(255,255,255,.75)"); g.addColorStop(0.4, "rgba(255,255,255,0)"); g.addColorStop(1, "rgba(0,0,0,.28)");
+    ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
     ctx.restore();
   }
+  // 투명한 관: 테두리 → 바탕 → 유리색 순서로 겹쳐 그림
+  function tube(points, w) {
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for (const [lw, col] of [[w + 3, C.rim], [w, C.card], [w, C.glass]]) {
+      ctx.beginPath(); points.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.lineWidth = lw; ctx.strokeStyle = col; ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+  }
+
   function draw() {
     if (frame++ % 30 === 0) readColors();
     ctx.clearRect(0, 0, W, H);
     ctx.lineWidth = 1.5;
-    // 공이 내려오는 관
-    const tw = trayR * 2.5, top = cy + R * 0.9;
-    rrect(cx - tw / 2, top, tw, railY - top, tw / 2); ctx.fillStyle = C.glass; ctx.fill(); ctx.strokeStyle = C.rim; ctx.stroke();
-    // 번호가 자리 잡는 받침대
-    const x1 = slots[0] - trayR * 1.35, x2 = slots[5] + trayR * 1.35;
-    rrect(x1, railY - trayR - 6, x2 - x1, trayR * 2 + 12, trayR + 6); ctx.fillStyle = C.glass; ctx.fill(); ctx.stroke();
-    ctx.setLineDash([3, 4]);
-    for (const sx of slots) { ctx.beginPath(); ctx.arc(sx, railY, trayR - 1, 0, Math.PI * 2); ctx.stroke(); }
-    ctx.setLineDash([]);
-    // 유리 구 몸통
+    const baseTop = cy + 1.98 * R;
+    // 파란 받침
+    const bg = ctx.createLinearGradient(0, baseTop, 0, H);
+    bg.addColorStop(0, C.base); bg.addColorStop(1, C.baseDark);
+    ctx.beginPath(); ctx.ellipse(cx, H - 0.1 * R, 1.25 * R, 0.1 * R, 0, 0, Math.PI); ctx.lineTo(cx - 1.25 * R, baseTop); ctx.lineTo(cx + 1.25 * R, baseTop); ctx.closePath();
+    ctx.fillStyle = bg; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx, baseTop, 1.25 * R, 0.16 * R, 0, 0, Math.PI * 2); ctx.fillStyle = C.base; ctx.fill();
+    ctx.strokeStyle = C.rim; ctx.stroke();
+    // 원판을 받치는 다리
+    for (const sx of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(cx + sx * 0.32 * R, cy + 1.05 * R); ctx.lineTo(cx + sx * 0.52 * R, cy + 1.05 * R);
+      ctx.lineTo(cx + sx * 0.72 * R, baseTop); ctx.lineTo(cx + sx * 0.46 * R, baseTop); ctx.closePath();
+      ctx.fillStyle = C.glass; ctx.fill(); ctx.strokeStyle = C.rim; ctx.stroke();
+    }
+    // 뒤쪽 아크릴 원판과 볼트
+    ctx.beginPath(); ctx.arc(cx, cy, 1.16 * R, 0, Math.PI * 2); ctx.fillStyle = C.glass; ctx.fill(); ctx.strokeStyle = C.rim; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, 1.09 * R, 0, Math.PI * 2); ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1;
+    for (let q = 0; q < 4; q++) {
+      const an = Math.PI / 4 + q * Math.PI / 2;
+      ctx.beginPath(); ctx.arc(cx + Math.cos(an) * 1.1 * R, cy + Math.sin(an) * 1.1 * R, 0.035 * R, 0, Math.PI * 2); ctx.fillStyle = C.rim; ctx.fill();
+    }
+    // 옆으로 내려오는 관과 앞쪽 받침대
+    tube(path.map((p) => [p[0], p[1]]), trayR * 2.25);
+    tube([[trayL + trayR, trayYL], [trayRt, trayYR]], trayR * 2.3);
+    ctx.beginPath(); ctx.moveTo(trayL + 2, trayYL - trayR * 1.2); ctx.lineTo(trayL + 2, trayYL + trayR * 1.2); ctx.lineWidth = 3; ctx.strokeStyle = C.rim; ctx.stroke(); ctx.lineWidth = 1.5;
+    // 구 몸통
     const g = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.05, cx, cy, R);
     g.addColorStop(0, C.hi); g.addColorStop(1, C.glass);
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
+    // 가운데 기둥과 캡슐로 이어지는 목
+    rrect(cx - SW * R, capY, 2 * SW * R, cy + R - capY, SW * R); ctx.fillStyle = C.glass; ctx.fill(); ctx.strokeStyle = C.rim; ctx.stroke();
     // 안의 공들
-    for (const b of balls) drawBall(cx + b.x * R, cy + b.y * R, RR * R, b.n, b.a);
-    // 테두리와 반사광
+    for (const b of balls) drawBall(cx + b.x * R, cy + b.y * R, RR * R, b.n, b.a, false);
+    // 구 테두리와 반사광
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.lineWidth = 2; ctx.strokeStyle = C.rim; ctx.stroke();
     ctx.lineCap = "round"; ctx.strokeStyle = C.shine;
-    ctx.lineWidth = R * 0.045; ctx.beginPath(); ctx.arc(cx, cy, R * 0.86, Math.PI * 1.1, Math.PI * 1.4); ctx.stroke();
-    ctx.lineWidth = R * 0.03; ctx.beginPath(); ctx.arc(cx, cy, R * 0.86, Math.PI * 1.46, Math.PI * 1.5); ctx.stroke();
+    ctx.lineWidth = R * 0.045; ctx.beginPath(); ctx.arc(cx, cy, R * 0.86, Math.PI * 1.1, Math.PI * 1.36); ctx.stroke();
+    ctx.lineWidth = R * 0.03; ctx.beginPath(); ctx.arc(cx, cy, R * 0.86, Math.PI * 1.62, Math.PI * 1.7); ctx.stroke();
     ctx.lineCap = "butt"; ctx.lineWidth = 1.5;
-    // 출구 고리
-    rrect(cx - tw * 0.62, cy + R - 5, tw * 1.24, 10, 5); ctx.fillStyle = C.rim; ctx.fill();
+    // 위쪽 캡슐과 흰 뚜껑
+    ctx.beginPath(); ctx.arc(cx, capY, capR, 0, Math.PI * 2); ctx.fillStyle = C.glass; ctx.fill(); ctx.strokeStyle = C.rim; ctx.stroke();
+    rrect(cx - capR * 0.75, capY - capR - 0.16 * R, capR * 1.5, 0.2 * R, 0.05 * R); ctx.fillStyle = C.lid; ctx.fill(); ctx.stroke();
     // 나온 공들
-    for (const o of outs) {
-      const done = o.st === "done";
-      drawBall(done ? slots[o.slot] : o.x, done ? railY : o.y, done ? trayR : o.rad, o.n, o.a);
-    }
+    for (const o of outs) drawBall(o.x, o.y, o.rad, o.n, o.a, o.st !== "enter" && o.st !== "rise" || o.p > 0.5);
+    // 왼쪽 위 클로즈업 화면 (방송 화면 분할처럼)
+    const s = Math.min(0.9 * R, 120), ix = 6, iy = 6;
+    rrect(ix, iy, s, s * 0.82, 8); ctx.fillStyle = C.inset; ctx.fill();
+    ctx.fillStyle = C.insetFg; ctx.font = `600 10px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText("LIVE  캡슐 카메라", ix + 8, iy + 7);
+    const cur = outs.find((o) => o.st === "hold") || outs.find((o) => o.st === "rise" && o.p > 0.7);
+    if (cur) drawBall(ix + s / 2, iy + s * 0.48, s * 0.27, cur.n, cur.st === "hold" ? 0 : cur.a, true);
+    else { ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(k >= 6 && doneAt >= 0 ? "추첨 끝" : "섞는 중", ix + s / 2, iy + s * 0.48); }
   }
 
   function tick(now) {
@@ -720,37 +833,44 @@ const Drum = (() => {
     if (k < 6 && t >= nextAt) extract();
     moveOuts(dt);
     if (k === 6 && doneAt < 0 && outs.every((o) => o.st === "done")) { doneAt = t; mixing = false; Sfx.finale(); }
-    Sfx.frame(mixing, outs.reduce((sum, o) => sum + (o.st === "roll" ? o.spd || 0 : 0), 0));
+    Sfx.frame(mixing, outs.reduce((sum, o) => sum + (o.st === "chute" || o.st === "tray" ? o.spd || 0 : 0), 0));
     draw();
-    if (doneAt >= 0 && t > doneAt + 5) { raf = 0; return; } // 다 끝나면 멈춰서 배터리 아낌
+    if (doneAt >= 0 && t > doneAt + 5) { raf = 0; return; }
     raf = requestAnimationFrame(tick);
   }
 
-  function start(nums, seedStr) {
-    sorted = nums.slice().sort((a, b) => a - b);
+  function start(nums, seedStr, landCb) {
+    onLand = landCb; seq++;
     const rand = mulberry32(seedFrom("draw-" + seedStr));
-    // 바깥 자리부터 채워야 굴러가는 공이 이미 놓인 공을 지나가지 않음
-    order = [0, 5, 1, 4, 2, 3].map((i) => sorted[i]);
+    // 실제 방송처럼 무작위 순서로 나옴. 받침대는 왼쪽부터 차므로 지나가며 겹치지 않음
+    order = nums.slice();
+    for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
     balls = [];
     for (let n = 1; n <= 45; n++) {
-      const ang = rand() * Math.PI, rad = 0.2 + rand() * 0.65;
+      const ang = rand() * Math.PI, rad = 0.25 + rand() * 0.6;
       balls.push({ n, x: Math.cos(ang) * rad, y: Math.sin(ang) * rad, vx: 0, vy: 0, a: rand() * 6 });
     }
     outs = []; k = 0; t = 0; nextAt = 1.8; mixing = true; doneAt = -1;
     Sfx.frame(false, 0);
     layout(); readColors();
-    cv.setAttribute("aria-label", "추첨기에서 나온 오늘의 번호: " + sorted.join(", "));
+    cv.setAttribute("aria-label", "추첨기에서 나온 오늘의 번호: " + order.join(", "));
     if (reduce.matches) {
-      mixing = false; balls = balls.filter((b) => !sorted.includes(b.n));
+      mixing = false; balls = balls.filter((b) => !order.includes(b.n));
       for (let i = 0; i < 400; i++) physics(1 / 60);
-      outs = sorted.map((n, i) => ({ n, slot: i, st: "done", a: 0 })); k = 6; doneAt = 0;
-      draw(); return;
+      outs = order.map((n, i) => ({ n, i, st: "done", x: stopX(i), y: trayY(stopX(i)), rad: trayR, a: 0 })); k = 6; doneAt = 0;
+      order.forEach((n, i) => onLand && onLand(i, n));
+      draw(); return order;
     }
     if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
+    return order;
   }
 
-  new ResizeObserver(() => { if (!sorted.length) return; layout(); if (!raf) draw(); }).observe(cv);
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readColors(); if (!raf && sorted.length) draw(); });
+  new ResizeObserver(() => {
+    if (!order.length) return; layout();
+    for (const o of outs) if (o.st === "done") { o.x = stopX(o.i); o.y = trayY(o.x); o.rad = trayR; }
+    if (!raf) draw();
+  }).observe(cv);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readColors(); if (!raf && order.length) draw(); });
   return { start };
 })();
 
@@ -877,6 +997,21 @@ $("news-reset").addEventListener("click", () => { newsCustom = null; $("news-inp
 
 let TODAY, REC;
 
+/** 추첨기를 돌리고, 공이 받침대에 놓일 때마다 방송 번호판을 채움 */
+function startDraw() {
+  const nums = REC.sim.top[0].c, sorted = nums.slice().sort((a, b) => a - b);
+  $("board-no").textContent = REC.target;
+  $("board-balls").innerHTML = '<span class="bslot"></span>'.repeat(6);
+  $("board-sorted").textContent = "추첨기가 공을 섞고 있습니다.";
+  let landed = 0;
+  Drum.start(nums, TODAY, (i, n) => {
+    const el = $("board-balls").children[i]; if (!el) return;
+    el.textContent = n; el.dataset.g = group(n); el.classList.add("on");
+    landed++;
+    $("board-sorted").textContent = landed < 6 ? `${landed}번째 공: ${n}` : `작은 순서로: ${sorted.join(" · ")}`;
+  });
+}
+
 function renderHeader() {
   const now = Date.now(); const n = nextDrawNo(now);
   const at = FIRST_DRAW_AT + (n - 1) * WEEK; const left = at - now;
@@ -888,7 +1023,7 @@ function renderToday() {
   const { top, avg, N, skipped } = REC.sim; const best = top[0];
   $("today-date").textContent = `${fmtDay(TODAY)} · ${REC.target}회 대상`;
   $("today-balls").textContent = "오늘의 번호: " + best.c.join(", ");
-  Drum.start(best.c, TODAY);
+  startDraw();
   $("today-score").innerHTML = `${pct(best.s.total)}<small>%</small>`;
   $("today-rank").textContent = `가상 조합 ${comma(N)}개 중 적합도 ${best.r}위 (평균 ${pct(avg, 1)}%)` + (best.r > 1 ? " · 더 높은 조합은 최근 7일 안에 이미 추천해서 건너뜀" : "");
   const meter = (label, v) => `<div class="meter"><span>${label}</span><span class="track"><span class="fill" style="width:${v.toFixed(1)}%;display:block"></span></span><span class="v num">${pct(v, 1)}%</span></div>`;
@@ -991,7 +1126,7 @@ function boot() {
   }, 50);
 }
 
-$("replay").addEventListener("click", () => { Sfx.unlock(); if (REC) Drum.start(REC.sim.top[0].c, TODAY); });
+$("replay").addEventListener("click", () => { Sfx.unlock(); if (REC) startDraw(); });
 const syncSound = () => { $("sound").setAttribute("aria-pressed", Sfx.isOn()); $("sound").textContent = Sfx.isOn() ? "소리 켜짐" : "소리 꺼짐"; };
 $("sound").addEventListener("click", () => { Sfx.toggle(); syncSound(); });
 syncSound();
