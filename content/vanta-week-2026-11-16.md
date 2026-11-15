@@ -18,9 +18,11 @@
 | 실제 앱 화면 캡처 | ✅ 완료 (실제 `normalize()` 결과 4개) |
 | MP4 렌더 (1080×1920, H.264/AAC, 20초) | ✅ 완료 · 디코딩 확인 · -14.9 LUFS |
 | 썸네일 · 캡션 · 대체 텍스트 | ✅ 완료 |
+| 캡션 | 질문 1개 규칙에 맞게 첫 줄을 평서문으로 수정 (예약본에 반영) |
 | Claude 검수 | ✅ APPROVE (체크리스트: `content/ep03/README.md`) |
 | GPT 검수 | ⏳ 대기 |
-| Metricool 09:00 예약 | ⛔ 양측 승인 전이라 안 함. 예약하려면 MP4의 공개 URL도 필요 |
+| Metricool 09:00 예약 | ✅ 대표 지시로 11/15 17:51 예약. ID `428702499` · uuid `4835137204290666619` · REEL · autoPublish=true · draft=false · isAiGenerated=true · 대체 텍스트·썸네일 포함 · PENDING. 미디어는 공개 raw URL을 Metricool이 받아 자체 서버로 복사함 |
+| 게시 확인 | ⏳ 11/16 09:05 이후 PUBLISHED와 공개 URL 확인 전에는 성공으로 보고하지 않음 |
 
 ## 대표 확정 사항 (2026-11-15)
 
