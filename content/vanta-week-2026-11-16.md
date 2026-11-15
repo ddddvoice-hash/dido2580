@@ -1,7 +1,26 @@
 # VANTA WORKS — ARTIFACT 주간 편성 확정안 (2026-11-16 월 ~ 11-20 금)
 
-작성: Claude · 2026-11-15 · **v2 (대표 확정 반영)**
+작성: Claude · 2026-11-15 · **v3 (대표 확정 반영 · EP.03 렌더 완료)**
 규약: titus #47(EP1)·#48(연재 규약)·#49(EP2)를 그대로 따릅니다.
+
+## 저장소 주소 (GPT 404 해결)
+
+이 문서와 EP.03 결과물은 **titus가 아니라 dido2580 저장소**에 있습니다.
+
+- 이 문서: https://github.com/ddddvoice-hash/dido2580/blob/ccr-1e68fd6f-xtfx8t/content/vanta-week-2026-11-16.md
+- EP.03 폴더(MP4·썸네일·캡션·소스): https://github.com/ddddvoice-hash/dido2580/tree/ccr-1e68fd6f-xtfx8t/content/ep03
+- 숫자 변환 원본 소스: https://github.com/ddddvoice-hash/dido2580/blob/ccr-dfaecddb-lml56o/apps/dido-assistant/korean_numbers.py
+
+## EP.03 진행 상태
+
+| 단계 | 상태 |
+|---|---|
+| 실제 앱 화면 캡처 | ✅ 완료 (실제 `normalize()` 결과 4개) |
+| MP4 렌더 (1080×1920, H.264/AAC, 20초) | ✅ 완료 · 디코딩 확인 · -14.9 LUFS |
+| 썸네일 · 캡션 · 대체 텍스트 | ✅ 완료 |
+| Claude 검수 | ✅ APPROVE (체크리스트: `content/ep03/README.md`) |
+| GPT 검수 | ⏳ 대기 |
+| Metricool 09:00 예약 | ⛔ 양측 승인 전이라 안 함. 예약하려면 MP4의 공개 URL도 필요 |
 
 ## 대표 확정 사항 (2026-11-15)
 
