@@ -27,3 +27,23 @@
 
 ## 비용 추정 (확인 필요)
 이미지 6장 + 5초 영상 6개. Runway 공시 단가 기준 대략 이미지 1장 5~8 크레딧, gen4_turbo 초당 5 크레딧 → 약 180~200 크레딧. 실제 차감은 생성 후 계정에서 확인.
+
+---
+
+## v2 (11/17) — 포스터 일치 최우선 방식 (디도 님 승인)
+
+원칙: AI에게 포스터를 다시 그리게 하지 않는다. **포스터 그림 자체를 첫 장면으로** 쓰고, 포스터에 없는 장면만 새로 만든다.
+
+| # | 장면 | 첫 장면 | 움직임 프롬프트 (생김새는 쓰지 않고 움직임만) |
+|---|---|---|---|
+| 1 | 레조넌스 | **포스터 잘라냄** `firstframes/shot1_mecha_720x1280.jpg` (지금 포스터에서 글자 피해 잘라 둠) | Slow push-in toward the golden mecha's glowing blue eye, the eye flares brighter, faint sparks drift upward, hair moves slightly in the wind |
+| 2 | 타이틀 배경 | **글자 없는 원본 필요**: 포스터 아래 도시·다리 부분 | Slow aerial drift toward the bridge, clouds move, city lights flicker on |
+| 3 | 크루 | **포스터 잘라냄** `firstframes/shot3_crew_720x1280.jpg` | The boy slowly lifts his gaze to the sky, the red scarf and hair flutter in the wind, gentle camera drift to the right |
+| 4 | 무타 (2초 무음) | **새로 생성** (참조: 포스터 하늘·도시 색) — 파형 몸통의 반투명 은빛 고래가 밤 도시 위에 떠 있음 | The whale drifts slowly, its body pulses once, then everything holds still |
+| 5 | 라이벌 | **새로 생성** (참조: 포스터에서 금색 로봇만 잘라 사용) — 왼쪽 금색 로봇, 오른쪽 흰 눈 두 줄의 검은 로봇 | Both mechas lunge toward each other, slight camera shake, sparks burst at the center |
+| 6 | 엔드 카드 | **글자 없는 원본 필요**: 포스터 전체 | Very slow pull-back revealing the whole poster scene, hair and clouds move gently |
+
+- 영상은 5초씩 만들되 편집에서 앞쪽 3~4초만 쓴다(뒤로 갈수록 원본과 멀어짐)
+- 큰 몸동작·고개 돌리기 금지(얼굴 무너짐 주원인). 카메라 이동과 바람 정도만
+- 편집 때 Claude가 모든 컷의 색 분포를 포스터에 맞춤(히스토그램 매칭)·입자감 통일, 첫 장면 대비 많이 변한 컷은 자르거나 뺀다
+- 새 이미지는 6장 → 2장(샷 4·5)으로 줄어든다
