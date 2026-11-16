@@ -11,6 +11,7 @@
 seg_json: [[시작초, 끝초], ...] 뽑을 구간
 """
 import base64
+import os
 import json
 import re
 import subprocess
@@ -68,7 +69,10 @@ def local_fonts(html: str, app: Path) -> str:
 def main(work: Path, segs):
     app = work / "app"
     app.mkdir(parents=True, exist_ok=True)
-    html = subprocess.run(["git", "-C", str(REPO), "show", f"{SRC_REF}:{SRC_PATH}"], capture_output=True, text=True, encoding="utf-8", check=True).stdout
+    if os.environ.get("ECHO_SRC_FILE"):  # 로컬 수정본(예: 테이프 라벨 날짜 변경본)으로 촬영
+        html = Path(os.environ["ECHO_SRC_FILE"]).read_text(encoding="utf-8")
+    else:
+        html = subprocess.run(["git", "-C", str(REPO), "show", f"{SRC_REF}:{SRC_PATH}"], capture_output=True, text=True, encoding="utf-8", check=True).stdout
     commit = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", SRC_REF], capture_output=True, text=True).stdout.strip()
     if "charset" not in html[:500].lower():  # 원본에 인코딩 선언이 없어 로컬 서버에서 한글이 깨짐
         html = '<meta charset="utf-8">\n' + html
