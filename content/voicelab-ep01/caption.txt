@@ -1,0 +1,13 @@
+이 통화 속 두 목소리는 모두 AI가 만든 음성입니다.
+
+목소리 A는 CosyVoice3, 목소리 B는 Qwen3-TTS 1.7B.
+공개된 한국어 대화 데이터셋에서 한 장면을 그대로 잘라 왔어요.
+두 목소리가 서로 다른 문장을 말해서, 어느 모델이 더 낫다는 비교는 아닙니다.
+
+어느 쪽이 더 사람 같았나요? 댓글로 A / B 남겨 주세요.
+
+음성 출처: Korean Full-Duplex Synthetic Dataset Preview (CC BY 4.0)
+huggingface.co/datasets/Wi-Fi/korean-full-duplex-synthetic-dataset-preview
+목소리 원천: Zeroth-Korean (CC BY 4.0) · 앞 18초를 잘라 음량만 맞췄습니다
+
+#AI음성 #TTS #VoiceLab #VANTAWORKS
