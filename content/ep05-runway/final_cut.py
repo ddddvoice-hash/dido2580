@@ -3,7 +3,8 @@
 이미지·영상 생성 없음(편집만). 소재:
   - 애니마틱 3배 해상도 렌더(record.py ECHO_SCALE=3) 세로 자르기: 테이프·장전 HUD·크루·렌의 눈
   - GPT 이미지 A 카나 / B 도시 / F 렌 뒷모습 (1088×1920 → 1080 폭으로 자름)
-  - Runway 무타·라이벌을 Claude가 보정한 시험본(muta_edit_test, rival_edit_test)
+  - Runway 무타를 Claude가 보정한 시험본(muta_edit_test)
+  - GPT 라이벌 키프레임 D(074cb00f) — 검은 기체 머리만 크롭한 ECU(편집 푸시인·눈 밝기)
   - 디도 님 녹음: H1·H2(허밍2), L1(대사 테이크2) — 비공개 저장소에서 꺼내 인자로 받음
   - 편집 그래픽: 글자 카드, 섬광·암전·금빛 입자, 기억 카운터, 자막, 타이틀
 타임라인: titus #34 6934663570 (30fps 900프레임)
@@ -18,7 +19,7 @@ import wave
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("pc", HERE / "pilot_cut.py")
@@ -92,7 +93,7 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
     SUN = (540 - 4, 615)  # B의 해 중심(1080 기준)
     A_C = (1080 - 500 - 4, 560)  # 반전 후 카나 얼굴 중심 근처
     clipframes = {}
-    for name in ("muta_edit_test", "rival_edit_test"):
+    for name in ("muta_edit_test",):
         d = work / name
         d.mkdir(exist_ok=True)
         for p in d.glob("*.png"):
@@ -145,9 +146,31 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
     for i in range(36):
         z = 1.0 + 3.0 * ease((i - 21) / 15)
         put(vcrop(hf(6, i), PUPIL[0], PUPIL[1], z, focus=PUPIL), "렌의 눈" if i == 0 else None)
-    # 480–569 D 라이벌 (백업 클립 보정본, 검은 기체 눈에서 빠져나옴)
-    for i, p in enumerate(clipframes["rival_edit_test"][:90]):
-        put(Image.open(p).convert("RGB"), "D 라이벌(백업 클립)" if i == 0 else None)
+    # 480–569 D 라이벌 — 검은 기체 머리 ECU (GPT 키프레임 074cb00f, 2026-11-17 B안)
+    #   가슴 발광·금색 기체가 안 보이게 머리만 크롭, 아주 느린 디지털 푸시인(2.4→2.9배),
+    #   눈 슬릿만 프레임 15→70에 걸쳐 한 번 서서히 밝아짐(반복 점멸 없음). 그림 자체는 고치지 않음.
+    D = Image.open(imgs / "D_rival_074cb00f.png").convert("RGB")
+    assert D.size == (1080, 1920)
+    Da = np.asarray(D).astype(np.float32)
+    lum = Da @ np.array([0.299, 0.587, 0.114], np.float32)
+    eye = np.zeros(lum.shape, np.float32)
+    ey0, ey1, ex0, ex1 = 400, 540, 600, 800  # 눈 슬릿 영역(측정: x 631–776, y 430–520)
+    eye[ey0:ey1, ex0:ex1] = np.clip((lum[ey0:ey1, ex0:ex1] - 150) / 60, 0, 1)
+    glow = np.asarray(Image.fromarray((eye * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(14))).astype(np.float32) / 255
+    core = np.asarray(Image.fromarray((eye * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(2))).astype(np.float32) / 255
+    TINT = np.array([200, 235, 255], np.float32)
+    for i in range(90):
+        k = ease((i - 15) / 55)  # 0 → 1 한 번
+        lit = Da + (glow * 0.55 * k)[..., None] * TINT + (core * 0.35 * k)[..., None] * (255 - Da)
+        src = Image.fromarray(np.clip(lit, 0, 255).astype(np.uint8))
+        z = ease(i / 89)
+        w = 450 - 80 * z                      # 창 폭 450 → 370 px
+        cx = 785 + (740 - 785) * z            # 머리 중심 → 눈 쪽으로
+        cy = 460 + (470 - 460) * z
+        h = w * 16 / 9
+        box = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+        assert box[1] >= 0 and box[3] <= 870 and box[0] >= 555, box  # 가슴 발광(y≥880)·금색 기체(x<555) 제외
+        put(src.transform((W, H), Image.EXTENT, box, Image.BICUBIC), "D 라이벌 — 검은 기체 눈 ECU" if i == 0 else None)
     # 570–571 섬광, 572–631 암전+입자 (정확히 2.000초 무음)
     for i in range(2):
         put(Image.new("RGB", (W, H), (255, 255, 255)), "섬광 2프레임" if i == 0 else None)
@@ -224,12 +247,13 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         add(g(a, a + 0.8), 11.6 + 0.8 * k, MUS)
     add(g(37.4, 38.6), 14.8, MUS)                            # 렌의 눈
     add(g(51.0, 54.0), 16.0, MUS)                            # 라이벌
-    add(g(46.3, 46.9), 19.0, MUS)                            # 충돌음 (이후 2초 무음)
+    add(g(46.3, 46.3 + 2 / FPS, fade=0.004), 570 / FPS, MUS)  # 충돌음: 섬광 2프레임에만, 572프레임에서 끊음
     add(mono(voice / "H2_허밍2_앞2.4초.wav"), 632 / FPS, 1.6)  # H2
     t = np.arange(int(0.03 * SR)) / SR                       # 카운터 째깍
     add(0.25 * np.sin(2 * np.pi * 1800 * t) * np.exp(-t * 120), 705 / FPS + 0.4)
     add(mono(voice / "L1_테이크2.wav"), 735 / FPS, 1.4)      # L1
     add(g(57.6, 59.8, fade=0.05), 834 / FPS, MUS)            # 타이틀: 마지막 화음 + 허밍 선율
+    mix[int(572 / FPS * SR):int(632 / FPS * SR)] = 0         # 암전 60프레임 = 정확히 2.000초 무음
     wav = work / "final_mix.wav"
     with wave.open(str(wav), "wb") as w:
         w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
