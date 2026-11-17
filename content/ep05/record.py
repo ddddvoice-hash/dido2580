@@ -74,6 +74,10 @@ def main(work: Path, segs):
     else:
         html = subprocess.run(["git", "-C", str(REPO), "show", f"{SRC_REF}:{SRC_PATH}"], capture_output=True, text=True, encoding="utf-8", check=True).stdout
     commit = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", SRC_REF], capture_output=True, text=True).stdout.strip()
+    sc = int(os.environ.get("ECHO_SCALE", "1"))  # 고해상도 렌더(그림은 같은 벡터 코드, 캔버스만 sc배)
+    if sc > 1:
+        html = html.replace('width="1280" height="720"', f'width="{1280*sc}" height="{720*sc}"')
+        html = html.replace("ctx.setTransform(1, 0, 0, 1, 0, 0);", f"ctx.setTransform({sc}, 0, 0, {sc}, 0, 0);")
     if "charset" not in html[:500].lower():  # 원본에 인코딩 선언이 없어 로컬 서버에서 한글이 깨짐
         html = '<meta charset="utf-8">\n' + html
     end = html.rindex("})();")
