@@ -112,11 +112,14 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         img.save(frames / f"{n:04d}.png", compress_level=1)
         n += 1
 
-    # 0–44 테이프 (원본 1.0–2.5초) — 오른쪽 릴로 파고듦
-    REEL = (728 * SC, 372 * SC)
+    # 0–44 암전 + 테이프 라벨 글자만 (애니마틱 릴 삭제 — 창작 QC #6950456358). 소리는 가이드 트랙의 테이프 삽입음 그대로
     for i in range(45):
-        z = 1.8 + 2.2 * ease((i - 30) / 15)  # 1.8배부터: 애니마틱 일본어 자막(아래쪽)이 화면에 걸리지 않게
-        put(vcrop(hf(0, i), REEL[0] - 150, REEL[1] - 160, z, focus=REEL), "테이프 릴" if i == 0 else None)
+        im = Image.new("RGB", (W, H), BLACK)
+        al = min(1, i / 12) * min(1, (44 - i) / 10)
+        d = ImageDraw.Draw(im)
+        c = tuple(int(v * al) for v in CREAM)
+        ctext(d, 940, "SHIRATORI · 2051.06.21 · SIDE A", f(44, 700), c)
+        put(im, "암전 + 테이프 라벨" if i == 0 else None)
     # 45–104 A 카나 — 아주 느린 밀기
     for i in range(60):
         put(still(A, 1.45 + 0.06 * ease(i / 59), A_C), "A 카나 + H1 허밍" if i == 0 else None)
@@ -131,46 +134,55 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         put(pc.card("노래 한 곡.", None, i, 30, False), "글자 카드" if i == 0 else None)
     for i in range(30):
         put(pc.card("기억 하나.", "기억", i, 30, True))
-    # 300–347 장전 HUD (원본 28.2–29.8초)
-    for i in range(48):
-        put(vcrop(hf(1, i), 640 * SC), "송 테이프 장전" if i == 0 else None)
-    # 348–443 크루 4명 0.8초씩 (인물 실루엣만 세로로, 이름은 편집 글자)
-    for seg, name in [(2, "REN"), (3, "SHIZU"), (4, "GEN"), (5, "CHICHI")]:
-        for i in range(24):
-            im = vcrop(hf(seg, i), 900 * SC)
-            d = ImageDraw.Draw(im)
-            d.text((70, 1380), name, font=f(170), fill=CREAM, stroke_width=6, stroke_fill=BLACK)
-            put(im, f"크루 {name}" if i == 0 else None)
-    # 444–479 렌의 눈 — 동공으로 파고듦
-    PUPIL = (640 * SC, 360 * SC)
+    # 300–569 표지 포스터 크롭 (크레딧 0, 표지 그림체 그대로). 포스터 941×1672, 박힌 글자 영역은 피해서 자름
+    P = Image.open(imgs / "poster_d84db6ac.png").convert("RGB")
+    assert P.size == (941, 1672)
+
+    def pcrop(cx, cy, w):
+        h = w * 16 / 9
+        box = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+        assert box[0] >= 0 and box[1] >= 0 and box[2] <= 941 and box[3] <= 1672, box
+        return P.transform((W, H), Image.EXTENT, box, Image.BICUBIC)
+
+    def plerp(a, b, k):
+        return tuple(x + (y - x) * k for x, y in zip(a, b))
+
+    # 크루: 0.8초씩 박자 컷, 각 컷 안에서 아주 느린 밀기(5%)
+    crew = [("KANA", (250, 372, 300), 36), ("REN", (500, 470, 380), 24), ("SHIZU", (130, 560, 260), 24),
+            ("GEN", (820, 600, 240), 24), ("CHICHI", (230, 585, 230), 24), ("SAX", (810, 460, 200), 12)]
+    for name, (cx, cy, w), cnt in crew:
+        for i in range(cnt):
+            put(pcrop(cx, cy, w * (1 - 0.05 * ease(i / max(1, cnt - 1)))), f"포스터 {name}" if i == 0 else None)
+    # 444–479 렌 → 오른눈 동공으로 파고듦(동공 517,412)
     for i in range(36):
-        z = 1.0 + 3.0 * ease((i - 21) / 15)
-        put(vcrop(hf(6, i), PUPIL[0], PUPIL[1], z, focus=PUPIL), "렌의 눈" if i == 0 else None)
-    # 480–569 D 라이벌 — 검은 기체 머리 ECU (GPT 키프레임 074cb00f, 2026-11-17 B안)
-    #   가슴 발광·금색 기체가 안 보이게 머리만 크롭, 아주 느린 디지털 푸시인(2.4→2.9배),
-    #   눈 슬릿만 프레임 15→70에 걸쳐 한 번 서서히 밝아짐(반복 점멸 없음). 그림 자체는 고치지 않음.
+        k = ease(i / 35)
+        cx, cy, w = plerp((500, 470, 380), (517, 412, 120), k)
+        put(pcrop(cx, cy, w), "렌의 눈(포스터)" if i == 0 else None)
+    # 480–539 금색 기체(포스터) — 눈(786,191)에서 빠져나오며 머리 전체로
+    for i in range(60):
+        k = ease(i / 59)
+        cx, cy, w = plerp((786, 191, 160), (700, 425, 360), k)
+        if cx - w / 2 < 650:  # 왼쪽 위 박힌 글자(x<650, y<100) 피함
+            cy = max(cy, w * 8 / 9 + 105)
+        put(pcrop(cx, cy, w), "금색 기체(포스터)" if i == 0 else None)
+    # 540–569 검은 기체 눈 1초 (074cb00f 크롭) — 눈이 한 번 서서히 밝아짐
     D = Image.open(imgs / "D_rival_074cb00f.png").convert("RGB")
-    assert D.size == (1080, 1920)
     Da = np.asarray(D).astype(np.float32)
     lum = Da @ np.array([0.299, 0.587, 0.114], np.float32)
     eye = np.zeros(lum.shape, np.float32)
-    ey0, ey1, ex0, ex1 = 400, 540, 600, 800  # 눈 슬릿 영역(측정: x 631–776, y 430–520)
-    eye[ey0:ey1, ex0:ex1] = np.clip((lum[ey0:ey1, ex0:ex1] - 150) / 60, 0, 1)
+    eye[400:540, 600:800] = np.clip((lum[400:540, 600:800] - 150) / 60, 0, 1)
     glow = np.asarray(Image.fromarray((eye * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(14))).astype(np.float32) / 255
     core = np.asarray(Image.fromarray((eye * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(2))).astype(np.float32) / 255
     TINT = np.array([200, 235, 255], np.float32)
-    for i in range(90):
-        k = ease((i - 15) / 55)  # 0 → 1 한 번
+    for i in range(30):
+        k = ease(i / 29)
         lit = Da + (glow * 0.55 * k)[..., None] * TINT + (core * 0.35 * k)[..., None] * (255 - Da)
-        src = Image.fromarray(np.clip(lit, 0, 255).astype(np.uint8))
-        z = ease(i / 89)
-        w = 450 - 80 * z                      # 창 폭 450 → 370 px
-        cx = 785 + (740 - 785) * z            # 머리 중심 → 눈 쪽으로
-        cy = 460 + (470 - 460) * z
-        h = w * 16 / 9
+        w = 400 - 40 * k
+        cx, cy, h = 740, 465, w * 16 / 9
         box = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
-        assert box[1] >= 0 and box[3] <= 870 and box[0] >= 555, box  # 가슴 발광(y≥880)·금색 기체(x<555) 제외
-        put(src.transform((W, H), Image.EXTENT, box, Image.BICUBIC), "D 라이벌 — 검은 기체 눈 ECU" if i == 0 else None)
+        assert box[1] >= 0 and box[3] <= 870 and box[0] >= 520, box
+        put(Image.fromarray(np.clip(lit, 0, 255).astype(np.uint8)).transform((W, H), Image.EXTENT, box, Image.BICUBIC),
+            "검은 기체 눈 1초" if i == 0 else None)
     # 570–571 섬광, 572–631 암전+입자 (정확히 2.000초 무음)
     for i in range(2):
         put(Image.new("RGB", (W, H), (255, 255, 255)), "섬광 2프레임" if i == 0 else None)
@@ -197,13 +209,13 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         if i >= 7:
             ctext(d, 1300, "…당신, 누구였더라?", f(64, 700), (255, 255, 255), stroke=5)
         put(im, "F 렌 뒷모습 + L1" if i == 0 else None)
-    # 789–833 A 카나(미소) + REN — MEMORY LOST
+    # 789–833 A 카나(미소) + 카나의 기억 — 렌 × (카나가 렌을 잊음)
     for i in range(45):
         im = still(A, 1.51, A_C)
         d = ImageDraw.Draw(im)
         if i >= 12:
-            ctext(d, 1420, "REN — MEMORY LOST", f(50, 700), RED, stroke=4)
-        put(im, "A 카나 미소 + REN — MEMORY LOST" if i == 0 else None)
+            ctext(d, 1420, "카나의 기억 — 렌 ×", f(50, 700), RED, stroke=4)
+        put(im, "A 카나 미소 + 카나의 기억 — 렌 ×" if i == 0 else None)
     # 834–899 타이틀
     for i in range(66):
         im = Image.new("RGB", (W, H), BLACK)
@@ -242,9 +254,9 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
     add(mono(voice / "H1_허밍2_앞2.0초.wav"), 1.5, 1.6)     # H1
     add(g(42.2, 44.7), 5.5, MUS)                             # 무타 럼블 → 무음
     add(g(5.0, 5.6), 10.0, MUS * 1.2)                        # 글자 사라짐 = 삽입음 + 브라스
-    add(g(28.2, 29.8), 10.0, MUS)                            # 장전
+    add(g(28.2, 29.8), 10.0, MUS)                            # (구 장전음) 포스터 카나 컷 아래
     for k, a in enumerate([11.4, 15.4, 17.4, 19.4]):         # 크루
-        add(g(a, a + 0.8), 11.6 + 0.8 * k, MUS)
+        add(g(a, a + 0.8), 336 / FPS + 0.8 * k, MUS)  # 포스터 크루 컷(REN 336프레임부터 0.8초 간격)에 맞춤
     add(g(37.4, 38.6), 14.8, MUS)                            # 렌의 눈
     add(g(51.0, 54.0), 16.0, MUS)                            # 라이벌
     add(g(46.3, 46.3 + 2 / FPS, fade=0.004), 570 / FPS, MUS)  # 충돌음: 섬광 2프레임에만, 572프레임에서 끊음
