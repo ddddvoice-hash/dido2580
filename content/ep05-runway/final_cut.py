@@ -352,8 +352,8 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         s = int(at_s * SR); e = min(len(music), s + len(sig))
         music[s:e] += sig[: e - s] * gain
 
-    addm(bg(0.0, 8.6, fi=1.2, fo=0.7), 0.0, BGM)  # 허밍이 먼저 들리게 1.2초에 걸쳐 들어옴, 끝은 B의 첫 타격 밑으로 0.7초 자연 감쇠(교차)
-    addm(bg(44.4, 55.5, fi=0.06, fo=0.004), 7.9, BGM)
+    addm(bg(0.0, 8.4, fi=1.2, fo=0.7), 0.0, BGM)  # 허밍이 먼저 들리게 1.2초에 걸쳐 들어옴, 끝은 B의 첫 타격 밑으로 0.7초 자연 감쇠(교차)
+    addm(bg(42.45, 53.75, fi=0.08, fo=0.004), 7.7, BGM)  # 11/18 재매핑: 49.7 상승 시작=14.95초 공명 각성, 50.9=16.15초 거대 메카 기동(최고조 진입)
     addm(bg(89.0, 89.0 + (30.0 - 21.49), fi=0.4, fo=0.8), 21.49, BGM)
     duck = np.ones(len(music), np.float32)  # 사람 허밍·대사 위로 음악을 낮춤(-6dB), 대치 구간 효과음 위로 -3dB
 
@@ -367,17 +367,11 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
     mix += music * duck[:, None]
     add(g(1.0, 3.5), 0.0, MUS * 0.7)                        # 테이프 히스 (허밍 밑에 깔림)
     add(mono(voice / "H1_허밍2_앞2.0초.wav"), 1.5, 1.6)     # H1
-    # 14.4–19.0초 대치·각성 효과음(최종안): 금속 구동·장갑 타격·마찰·잔향·충돌 — 단순 전자음 없음 (sfx.py). 11/18 검수: 음악이 앞서도록 -5dB, 합성 티 나는 구동음·상승음 제거
-    add(sfx.reverb(sfx.clang(1.0, 1.3), rt=1.8, wet=0.4), 440 / FPS, 0.12)   # 장갑 내부 맞물림
-    add(sfx.reverb(sfx.friction(1.2), rt=1.6, wet=0.3), 432 / FPS, 0.10)     # 미세한 금속 떨림
-    add(sfx.reverb(sfx.friction(1.0), rt=2.2, wet=0.4), 468 / FPS, 0.28)      # 금속 프레임 확장
-    add(sfx.reverb(sfx.boom(1.5), rt=2.6, wet=0.35), 486 / FPS, 0.31)        # 짧은 공명 저역(거대 메카 기동)
-    add(sfx.reverb(sfx.clang(1.4, 0.8), rt=2.6, wet=0.45), 498 / FPS, 0.28)   # 대치 진입
-    add(sfx.reverb(sfx.friction(2.4), rt=2.4, wet=0.4), 498 / FPS, 0.28)      # 무거운 금속 마찰
-    add(sfx.reverb(sfx.boom(1.0), rt=1.0, wet=0.2), 18.85, 0.28)               # 충돌 예고 저역
-    add(sfx.impact(0.6), 570 / FPS, 0.9)  # 충돌음(금속 합성): 섬광 2프레임에만, 572프레임에서 끊음
+    # 11/18 검수 "인위적인 금속 합성음 배제": 코드 합성 효과음 전부 제거. 대치·각성은 오케스트라 BGM만으로.
+    # 19.0초 섬광 충돌음 = 원곡에서 가장 강한 오케스트라 타격(46.5초)의 첫 2프레임 — 같은 곡의 소리라 이음새가 튀지 않음
+    add(bg(46.48, 46.48 + 2 / FPS, fi=0.002, fo=0.004), 570 / FPS, BGM * 1.3)
     add(mono(voice / "H2_허밍2_앞2.4초.wav"), 632 / FPS, 1.6)  # H2
-    add(sfx.clang(0.4, 2.2) * 0.35, 705 / FPS + 0.4)          # 카운터 째깍: 사인 삑 대신 작은 금속 타격
+    # 카운터 째깍 없음(합성음 배제) — 숫자 변화는 음악 위에서 시각으로만
     add(mono(voice / "L1_테이크2.wav"), 735 / FPS, 1.4)      # L1
     mix[int(572 / FPS * SR):int(632 / FPS * SR)] = 0         # 암전 60프레임 = 정확히 2.000초 무음
     wav = work / "final_mix.wav"
