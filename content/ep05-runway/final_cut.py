@@ -223,11 +223,16 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         cx, cy, w = (CU[j] + (FULL[j] - CU[j]) * k for j in range(3))
         img = ec(rsrc(round((2.2 + 2.8 * i / 47) * 24)), cx, cy, w)
         if i < 18:  # "K-07 각성" 표기: 522프레임 금속 타격과 함께, 과한 확대 없이 짧게
-            d = ImageDraw.Draw(img)
             a = min(1, i / 3) * min(1, (17 - i) / 4)
-            col = tuple(int(v * a) for v in GOLD)
-            ctext(d, 1640, "K-07  AWAKENED", f(46, 700), col)
-            ctext(d, 1706, "공명 각성 · 탑승 형태", f(34, 400), tuple(int(v * a) for v in CREAM))
+            arr = np.asarray(img).astype(np.float32)
+            band = np.clip((np.arange(H, dtype=np.float32) - 1480) / 260, 0, 1)[:, None, None] * 0.72 * a  # 아래쪽 어둠 띠
+            img = Image.fromarray(np.clip(arr * (1 - band), 0, 255).astype(np.uint8))
+            txt = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(txt)
+            for yy_, s_, fo_, co_ in ((1640, "K-07  AWAKENED", f(46, 700), GOLD), (1706, "공명 각성 · 탑승 형태", f(34, 400), CREAM)):
+                bx = d.textbbox((0, 0), s_, font=fo_)
+                d.text(((W - (bx[2] - bx[0])) / 2 - bx[0], yy_), s_, font=fo_, fill=co_ + (int(255 * a),),
+                       stroke_width=3, stroke_fill=BLACK + (int(255 * a),))
+            img = Image.alpha_composite(img.convert("RGBA"), txt).convert("RGB")
         put(img, "탑승형 거대 금색 → 전체 대치" if i == 0 else None)
     # 570–571 섬광, 572–631 암전+입자 (정확히 2.000초 무음)
     for i in range(2):
