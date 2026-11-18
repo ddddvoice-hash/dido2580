@@ -128,10 +128,10 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
     # 105–164 B 멈춘 도시 — 해에서 빠져나옴(릴 매치컷)
     for i in range(60):
         put(still(B, 1 + 3.0 * (1 - ease(i / 15)), SUN), "B 멈춘 도시 — 무음" if i == 0 else None)
-    # 165–239 C 무타 (보정본 75프레임)
-    for i, p in enumerate(clipframes["muta_edit_test"][:75]):
+    # 165–232 C 무타 (68프레임 — 11/18 글자 카드·크루를 BGM 타격에 맞추려 7프레임 단축)
+    for i, p in enumerate(clipframes["muta_edit_test"][:68]):
         put(Image.open(p).convert("RGB"), "C 무타" if i == 0 else None)
-    # 240–299 글자 카드
+    # 233–292 글자 카드 (233 = BGM 원곡 42.5초 타격)
     for i in range(30):
         put(pc.card("노래 한 곡.", None, i, 30, False), "글자 카드" if i == 0 else None)
     for i in range(30):
@@ -148,12 +148,12 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
     assert SH.size == (1920, 1088)
     SW = 1088 * 9 / 16  # 612
     cxs = [306, 716, 1137, 1614]  # 패널 중심(양끝은 화면 안으로 고정)
-    starts = [300, 336, 360, 384]
-    for fr in range(300, 432):
+    starts = [293, 329, 353, 377]  # 293 = BGM 원곡 44.51초 타격
+    for fr in range(293, 432):
         k = max(j for j, s in enumerate(starts) if fr >= s)
         s0 = starts[k]
         if k == 0:
-            cx = 306 + 40 * (1 - ease((fr - 300) / 35))  # 들어오며 감속
+            cx = 306 + 40 * (1 - ease((fr - 293) / 35))  # 들어오며 감속
             punch = 0.0
         else:
             m = ease((fr - s0) / 6)  # 6프레임 스냅
@@ -260,13 +260,13 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         i = fr - 498
         k = ease(i / 71)
         put(ec(rsrc(round((2.2 + 2.8 * i / 71) * 24)), 540, 960 - 60 * k, 1080 - 70 * k), "거대 금색 vs 검은 기체 대치" if i == 0 else None)
-    # 570–571 섬광, 572–631 암전+입자 (정확히 2.000초 무음)
+    # 570–571 섬광, 572–579 암전(충돌음 꼬리 0.27초), 580–639 암전+입자 (정확히 2.000초 무음)
     for i in range(2):
         put(Image.new("RGB", (W, H), (255, 255, 255)), "섬광 2프레임" if i == 0 else None)
-    for i in range(60):
-        put(particles_over(Image.new("RGB", (W, H), BLACK), i, 60, seed=3, count=30, alpha=0.18 * ease(i / 30)), "암전 2초" if i == 0 else None)
-    # 632–704 E 금빛 회복 — B와 같은 구도 + 금빛 입자
-    for i in range(73):
+    for i in range(68):
+        put(particles_over(Image.new("RGB", (W, H), BLACK), i, 68, seed=3, count=30, alpha=0.18 * ease(i / 34)), "암전(충돌 꼬리 + 2초 무음)" if i == 0 else None)
+    # 640–704 E 금빛 회복 — B와 같은 구도 + 금빛 입자 (65프레임)
+    for i in range(65):
         put(particles_over(still(B, 1.0 + 0.03 * i / 72, SUN), i, 73, count=110, alpha=1.0, big=True), "E 금빛 회복 + H2 허밍" if i == 0 else None)
     # 705–734 기억 카운터 (한 번)
     for i in range(30):
@@ -363,17 +363,29 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         env[:rr] = np.linspace(1, g, rr); env[-rr:] = np.linspace(g, 1, rr)
         s0 = max(0, s - rr); duck[s0:s0 + len(env)] = np.minimum(duck[s0:s0 + len(env)], env[: len(duck) - s0])
 
-    dk(1.5, 3.5, -6); dk(21.07, 23.5, -6); dk(24.5, 26.4, -6)  # 클라이맥스(14.4–19.0)는 덕킹 없음: 음악 스케일 유지
+    dk(1.5, 3.5, -6); dk(640 / FPS, 23.5, -6); dk(24.5, 26.4, -6)  # 클라이맥스(14.4–19.0)는 덕킹 없음: 음악 스케일 유지
     mix += music * duck[:, None]
     add(g(1.0, 3.5), 0.0, MUS * 0.7)                        # 테이프 히스 (허밍 밑에 깔림)
     add(mono(voice / "H1_허밍2_앞2.0초.wav"), 1.5, 1.6)     # H1
-    # 11/18 검수 "인위적인 금속 합성음 배제": 코드 합성 효과음 전부 제거. 대치·각성은 오케스트라 BGM만으로.
-    # 19.0초 섬광 충돌음 = 원곡에서 가장 강한 오케스트라 타격(46.5초)의 첫 2프레임 — 같은 곡의 소리라 이음새가 튀지 않음
-    add(bg(46.48, 46.48 + 2 / FPS, fi=0.002, fo=0.004), 570 / FPS, BGM * 1.3)
-    add(mono(voice / "H2_허밍2_앞2.4초.wav"), 632 / FPS, 1.6)  # H2
+    # 11/18 대표 선택 실녹음 효과음 (Mixkit Sound Effects Free License, 상업·SNS 사용 무료, 단독 재배포 금지)
+    #   2982 Industrial ambience hits / 2983 Factory hit with echo / 1429 Sci fi metal robot collapse
+    #   3188 War award hit / 3186 Opening a metal vault / 2958 Collapsing structure
+    sx = lambda i: mono(clips / "sfx" / f"{i}.wav")
+
+    def cut(x, a, b, fo=0.25):
+        y = x[int(a * SR):int(b * SR)].copy(); k = int(fo * SR); y[-k:] *= np.linspace(1, 0, k); return y
+
+    add(cut(sx(2982), 0.0, 1.9, 0.5), 14.4, 0.30)              # 14.4 대치: 거대 구조물의 금속 울림
+    add(cut(sx(2983), 0.0, 1.6, 0.6), 14.95 - 0.04, 0.45)       # 14.95 공명 각성: 넓은 공간의 금속 타격
+    add(cut(sx(1429), 0.0, 1.3, 0.4), 15.6, 0.30)              # 15.6 각성 브릿지: 장갑이 움직이며 결합
+    add(cut(sx(3188), 0.30, 2.2, 0.6), 16.15 - 0.10, 0.50)      # 16.15 거대 메카 기동: 묵직한 타격(공격 지점 정렬)
+    add(cut(sx(3186), 0.0, 1.6, 0.5), 16.6, 0.35)              # 16.6 대치: 거대 금속 질량
+    add(cut(sx(2958), 0.0, 1.44 + 10 / FPS, 0.06), 19.0 - 1.44, 0.55)  # 19.0 충돌: 붕괴음, 주 충격이 섬광에 오고 10프레임 뒤 무음
+    add(bg(46.48, 46.48 + 10 / FPS, fi=0.002, fo=0.05), 570 / FPS, BGM * 1.2)  # 오케스트라 타격도 10프레임으로
+    add(mono(voice / "H2_허밍2_앞2.4초.wav"), 640 / FPS, 1.6)  # H2
     # 카운터 째깍 없음(합성음 배제) — 숫자 변화는 음악 위에서 시각으로만
     add(mono(voice / "L1_테이크2.wav"), 735 / FPS, 1.4)      # L1
-    mix[int(572 / FPS * SR):int(632 / FPS * SR)] = 0         # 암전 60프레임 = 정확히 2.000초 무음
+    mix[int(580 / FPS * SR):int(640 / FPS * SR)] = 0         # 충돌 꼬리(570–579) 뒤 60프레임 = 정확히 2.000초 무음
     wav = work / "final_mix.wav"
     with wave.open(str(wav), "wb") as w:
         w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
