@@ -134,55 +134,53 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         put(pc.card("노래 한 곡.", None, i, 30, False), "글자 카드" if i == 0 else None)
     for i in range(30):
         put(pc.card("기억 하나.", "기억", i, 30, True))
-    # 300–569 표지 포스터 크롭 (크레딧 0, 표지 그림체 그대로). 포스터 941×1672, 박힌 글자 영역은 피해서 자름
-    P = Image.open(imgs / "poster_d84db6ac.png").convert("RGB")
-    assert P.size == (941, 1672)
-
-    def pcrop(cx, cy, w):
+    # 300–569 v4 (11/18 대표 지시): 포스터 크롭 폐기 → 캐릭터 시트 트럭 + 대치 컷(0f3a1613, 대표 지정)
+    def ecrop(img, cx, cy, w):
         h = w * 16 / 9
         box = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
-        assert box[0] >= 0 and box[1] >= 0 and box[2] <= 941 and box[3] <= 1672, box
-        return P.transform((W, H), Image.EXTENT, box, Image.BICUBIC)
+        assert box[0] >= -0.5 and box[1] >= -0.5 and box[2] <= img.width + 0.5 and box[3] <= img.height + 0.5, box
+        return img.transform((W, H), Image.EXTENT, box, Image.BICUBIC)
 
-    def plerp(a, b, k):
-        return tuple(x + (y - x) * k for x, y in zip(a, b))
-
-    # 크루: 0.8초씩 박자 컷, 각 컷 안에서 아주 느린 밀기(5%)
-    crew = [("KANA", (250, 372, 300), 36), ("REN", (500, 470, 380), 24), ("SHIZU", (130, 560, 260), 24),
-            ("GEN", (820, 600, 240), 24), ("CHICHI", (230, 585, 230), 24), ("SAX", (810, 460, 200), 12)]
-    for name, (cx, cy, w), cnt in crew:
-        for i in range(cnt):
-            put(pcrop(cx, cy, w * (1 - 0.05 * ease(i / max(1, cnt - 1)))), f"포스터 {name}" if i == 0 else None)
-    # 444–479 렌 → 오른눈 동공으로 파고듦(동공 517,412)
-    for i in range(36):
-        k = ease(i / 35)
-        cx, cy, w = plerp((500, 470, 380), (517, 412, 120), k)
-        put(pcrop(cx, cy, w), "렌의 눈(포스터)" if i == 0 else None)
-    # 480–539 금색 기체(포스터) — 눈(786,191)에서 빠져나오며 머리 전체로
-    for i in range(60):
-        k = ease(i / 59)
-        cx, cy, w = plerp((786, 191, 160), (700, 425, 360), k)
-        if cx - w / 2 < 650:  # 왼쪽 위 박힌 글자(x<650, y<100) 피함
-            cy = max(cy, w * 8 / 9 + 105)
-        put(pcrop(cx, cy, w), "금색 기체(포스터)" if i == 0 else None)
-    # 540–569 검은 기체 눈 1초 (074cb00f 크롭) — 눈이 한 번 서서히 밝아짐
-    D = Image.open(imgs / "D_rival_074cb00f.png").convert("RGB")
-    Da = np.asarray(D).astype(np.float32)
-    lum = Da @ np.array([0.299, 0.587, 0.114], np.float32)
-    eye = np.zeros(lum.shape, np.float32)
-    eye[400:540, 600:800] = np.clip((lum[400:540, 600:800] - 150) / 60, 0, 1)
-    glow = np.asarray(Image.fromarray((eye * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(14))).astype(np.float32) / 255
-    core = np.asarray(Image.fromarray((eye * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(2))).astype(np.float32) / 255
-    TINT = np.array([200, 235, 255], np.float32)
-    for i in range(30):
-        k = ease(i / 29)
-        lit = Da + (glow * 0.55 * k)[..., None] * TINT + (core * 0.35 * k)[..., None] * (255 - Da)
-        w = 400 - 40 * k
-        cx, cy, h = 740, 465, w * 16 / 9
-        box = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
-        assert box[1] >= 0 and box[3] <= 870 and box[0] >= 520, box
-        put(Image.fromarray(np.clip(lit, 0, 255).astype(np.uint8)).transform((W, H), Image.EXTENT, box, Image.BICUBIC),
-            "검은 기체 눈 1초" if i == 0 else None)
+    # 300–431 크루: 시트(1920×1088) 위 가로 트럭, 336·360·384에 박자 스냅(가이드 트랙 스탭과 같은 프레임)
+    SH = Image.open(imgs / "sheet_clean_c6f70a29.png").convert("RGB")
+    assert SH.size == (1920, 1088)
+    SW = 1088 * 9 / 16  # 612
+    cxs = [306, 716, 1137, 1614]  # 패널 중심(양끝은 화면 안으로 고정)
+    starts = [300, 336, 360, 384]
+    for fr in range(300, 432):
+        k = max(j for j, s in enumerate(starts) if fr >= s)
+        s0 = starts[k]
+        if k == 0:
+            cx = 306 + 40 * (1 - ease((fr - 300) / 35))  # 들어오며 감속
+            punch = 0.0
+        else:
+            m = ease((fr - s0) / 6)  # 6프레임 스냅
+            cx = cxs[k - 1] + (cxs[k] - cxs[k - 1]) * m
+            punch = 0.04 * (1 - ease((fr - s0 - 6) / 14)) if fr - s0 >= 6 else 0.04 * m
+        if k == 3 and fr >= 408:
+            punch = 0.03 * ease((fr - 408) / 23)  # 마지막 패널은 천천히 밀기
+        w = SW / (1 + punch)
+        cx = min(max(cx, w / 2), 1920 - w / 2)
+        put(ecrop(SH, cx, 544, w), f"시트 패널 {k + 1}" if fr == s0 else None)
+    # 432–479 대치 컷: 금색 기체 머리에서 빠지며 뒤의 검은 기체를 드러냄(움직임 하나: 뒤로 빠지기)
+    FO = Image.open(imgs / "face_off_a1ab35b5.png").convert("RGB")
+    assert FO.size == (1088, 1920)
+    for i in range(48):
+        k = ease(i / 47)
+        cx, cy, w = 300 + (544 - 300) * k, 1000 + (960 - 1000) * k, 520 + (1080 - 520) * k
+        put(ecrop(FO, cx, cy, w), "대치 컷 — 금색 기체에서 빠지기" if i == 0 else None)
+    # 480–569 라이벌 Runway 클립(1c76703d, 대표 지정) — 첫 불꽃 구간(광과민)은 버리고 2.0초 이후의 정지 대치만,
+    # 두 기체 사이 경계로 아주 느리게 밀다가 570 섬광으로 충돌
+    rv = work / "rival_src"
+    rv.mkdir(exist_ok=True)
+    for p_ in rv.glob("*.png"):
+        p_.unlink()
+    subprocess.run(["ffmpeg", "-v", "error", "-i", str(clips / "rival_runway_1c76703d.mp4"), str(rv / "%03d.png")], check=True)
+    rframes = sorted(rv.glob("*.png"))
+    assert len(rframes) == 121
+    for i in range(90):
+        src = Image.open(rframes[min(120, round((2.0 + i / 30) * 24))]).convert("RGB").resize((W, H), Image.LANCZOS)
+        put(still(src, 1.0 + 0.06 * ease(i / 89), (W / 2, H * 0.45)), "라이벌 대치(Runway, 2초 이후)" if i == 0 else None)
     # 570–571 섬광, 572–631 암전+입자 (정확히 2.000초 무음)
     for i in range(2):
         put(Image.new("RGB", (W, H), (255, 255, 255)), "섬광 2프레임" if i == 0 else None)
