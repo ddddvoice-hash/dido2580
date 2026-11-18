@@ -80,3 +80,25 @@ def reverb(x, rt=2.2, wet=0.35, pre=0.02):
         y = y / (np.abs(y).max() + 1e-9) * np.abs(x).max()
         out.append((1 - wet) * np.pad(x, (0, len(ir) - 1)) + wet * y)
     return np.stack(out, 1).astype(np.float32)
+
+
+def swell(dur):
+    """각성 상승음: 역재생 잔향처럼 차오르는 잡음 + 금속 공명이 위로 미끄러짐(순음 없음)."""
+    n = int(dur * SR); t = np.arange(n) / SR
+    rise = (t / dur) ** 2.2
+    out = np.zeros(n, np.float32)
+    for c in (180, 410, 760, 1320):
+        # 공명 중심이 1.6배까지 올라감 — 짧은 블록마다 필터
+        blk = 4800
+        for s in range(0, n, blk):
+            e = min(n, s + blk)
+            f = c * (1 + 0.6 * (s / n))
+            out[s:e] += _bands(RNG.normal(0, 1, e - s), [(f, 6 + f * 0.01, 1.0)]) / np.sqrt(c / 180)
+    air = _bands(RNG.normal(0, 1, n), [(5000, 3000, 0.3)])
+    return _norm((out + air) * rise, 0.85)
+
+
+def boom(dur=2.5):
+    """거대화 순간: 아주 낮은 쿵 + 긴 꼬리."""
+    n = int(dur * SR)
+    return _norm(_bands(RNG.normal(0, 1, n), [(32, 8, 1.6), (55, 12, 0.9), (110, 25, 0.3)]) * _env(n, 0.004, 0.9), 0.95)

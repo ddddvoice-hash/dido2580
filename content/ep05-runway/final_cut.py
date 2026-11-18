@@ -164,9 +164,43 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         w = SW / (1 + punch)
         cx = min(max(cx, w / 2), 1920 - w / 2)
         put(ecrop(SH, cx, 544, w), f"시트 패널 {k + 1}" if fr == s0 else None)
-    # 432–569 대치 — 대표 결정(11/18): 각진 로봇형(라이벌 Runway 1c76703d) 한 디자인으로 통일, 정지 대치 컷 a1ab35b5 제외.
-    # 한 숏: 432–479 금색 기체 클로즈업(거의 고정) → 480–569 같은 영상 안에서 전체 대치 구도로 빠짐 → 570 섬광.
-    # 원본 1.0–5.0초를 4.6초에 펼침(첫 1초 불꽃 = 광과민 구간 제외). 원본 720×1280 → 1080×1920 기준 좌표.
+    # 432–569 대치 + 각성 변신 (11/18 대표 설정): 각성 전 금색 기체 = 사람 크기 인간형(정지 대치 컷 a1ab35b5),
+    # 노래에 공명해 각성하면 거대화 → 렌이 탑승하는 탑승형(라이벌 Runway 1c76703d의 각진 기체). 디자인 차이 = 변신 전후.
+    FO = Image.open(imgs / "face_off_a1ab35b5.png").convert("RGB")
+    assert FO.size == (1088, 1920)
+
+    def ec(img, cx, cy, w):
+        h = w * 16 / 9
+        cx = min(max(cx, w / 2), img.width - w / 2); cy = min(max(cy, h / 2), img.height - h / 2)
+        return img.transform((W, H), Image.EXTENT, (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2), Image.BICUBIC)
+
+    # 432–467 (1.2s) 작은 인간형 금색 기체에서 빠지며 뒤의 거대한 검은 기체를 드러냄 — 크기 대비
+    for i in range(36):
+        k = ease(i / 35)
+        put(ec(FO, 300 + 244 * k, 1000 - 40 * k, 560 + 520 * k), "대치: 각성 전 인간형 금색 vs 거대 검은 기체" if i == 0 else None)
+    # 468–491 (0.8s) 각성 — 머리 고리와 가슴 코어가 서서히 차오름(점멸 없음, 단조 증가)
+    Fa = np.asarray(FO).astype(np.float32)
+    lum = Fa @ np.array([0.299, 0.587, 0.114], np.float32)
+    core = ((Fa[..., 2] > Fa[..., 0] + 25) & (lum > 120)).astype(np.float32)
+    core[:700] = 0; core[1300:] = 0; core[:, 500:] = 0  # 작은 금색 기체의 고리·가슴 코어만
+    cm = Image.fromarray((core * 255).astype(np.uint8))
+    g1 = np.asarray(cm.filter(ImageFilter.GaussianBlur(10))).astype(np.float32) / 255
+    g2 = np.asarray(cm.filter(ImageFilter.GaussianBlur(45))).astype(np.float32) / 255
+    WARM = np.array([255, 214, 120], np.float32)
+    for i in range(24):
+        k = ease(i / 23)
+        img = Fa + (g1 * 0.9 * k)[..., None] * (255 - Fa) + (g2 * 1.6 * k)[..., None] * WARM * 0.6
+        put(ec(Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)), 300, 980, 600 - 60 * k), "각성: 공명 코어 점화" if i == 0 else None)
+    # 492–503 (0.4s) 렌 인서트 — 금빛이 얼굴에 비침(탑승자 = 렌)
+    SH = Image.open(imgs / "sheet_clean_c6f70a29.png").convert("RGB")
+    ren = np.asarray(SH.transform((W, H), Image.EXTENT, (555, 160, 855, 693), Image.BICUBIC)).astype(np.float32)
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    rim = np.clip(1.2 - np.hypot((xx - W) / W, yy / H), 0, 1) ** 2  # 오른쪽 위 역광
+    for i in range(12):
+        k = 0.5 + 0.5 * ease(i / 11)
+        img = ren * (1 - 0.25 * k) + (rim * k)[..., None] * WARM * 0.75
+        put(Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)), "렌(탑승자) 인서트" if i == 0 else None)
+    # 504–521 (0.6s) 거대화 — 금빛이 화면을 채웠다가 걷히며 탑승형 거대 금색 기체가 드러남(밝기 단조 변화, 단계당 20 미만)
     rv = work / "rival_src"
     rv.mkdir(exist_ok=True)
     for p_ in rv.glob("*.png"):
@@ -174,19 +208,27 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
     subprocess.run(["ffmpeg", "-v", "error", "-i", str(clips / "rival_runway_1c76703d.mp4"), str(rv / "%03d.png")], check=True)
     rframes = sorted(rv.glob("*.png"))
     assert len(rframes) == 121
-    CU, FULL = (255, 700, 510), (540, 960, 1080)  # 클로즈업: 금색 기체 머리~가슴, 가운데 경계선(x≈534)은 화면 밖
-    for i in range(138):
-        src = Image.open(rframes[min(120, round((1.0 + 4.0 * i / 137) * 24))]).convert("RGB").resize((W, H), Image.LANCZOS)
-        if i < 48:
-            cx, cy, w = CU[0], CU[1], CU[2] - 20 * ease(i / 47)  # 아주 미세한 다가감(4%)
-        else:
-            k = ease((i - 48) / 89)
-            st = (CU[0], CU[1], CU[2] - 20)
-            cx, cy, w = (st[j] + (FULL[j] - st[j]) * k for j in range(3))
-        h = w * 16 / 9
-        cx = min(max(cx, w / 2), W - w / 2); cy = min(max(cy, h / 2), H - h / 2)
-        put(src.transform((W, H), Image.EXTENT, (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2), Image.BICUBIC),
-            "금색 기체 클로즈업(라이벌 영상)" if i == 0 else ("전체 대치 구도로 빠짐" if i == 48 else None))
+    rsrc = lambda j: Image.open(rframes[min(120, j)]).convert("RGB").resize((W, H), Image.LANCZOS)
+    CU, FULL = (255, 700, 490), (540, 960, 1080)
+    last_ren = np.clip(ren * 0.75 + rim[..., None] * WARM * 0.75, 0, 255)
+    for i in range(18):
+        giant = np.asarray(ec(rsrc(round((1.6 + i / 30) * 24)), *CU)).astype(np.float32)
+        veil = np.sin(np.pi * min(1.0, i / 17)) ** 0.7 * 0.55  # 금빛 장막: 0→0.55→0
+        base = last_ren if i < 6 else giant
+        img = base * (1 - veil) + WARM * veil
+        put(Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)), "거대화: 금빛 장막" if i == 0 else None)
+    # 522–569 (1.6s) 탑승형 금색 기체 클로즈업 → 전체 대치 구도로 빠짐 → 570 섬광
+    for i in range(48):
+        k = ease(i / 47)
+        cx, cy, w = (CU[j] + (FULL[j] - CU[j]) * k for j in range(3))
+        img = ec(rsrc(round((2.2 + 2.8 * i / 47) * 24)), cx, cy, w)
+        if i < 18:  # "K-07 각성" 표기: 522프레임 금속 타격과 함께, 과한 확대 없이 짧게
+            d = ImageDraw.Draw(img)
+            a = min(1, i / 3) * min(1, (17 - i) / 4)
+            col = tuple(int(v * a) for v in GOLD)
+            ctext(d, 1640, "K-07  AWAKENED", f(46, 700), col)
+            ctext(d, 1706, "공명 각성 · 탑승 형태", f(34, 400), tuple(int(v * a) for v in CREAM))
+        put(img, "탑승형 거대 금색 → 전체 대치" if i == 0 else None)
     # 570–571 섬광, 572–631 암전+입자 (정확히 2.000초 무음)
     for i in range(2):
         put(Image.new("RGB", (W, H), (255, 255, 255)), "섬광 2프레임" if i == 0 else None)
@@ -263,11 +305,12 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
     add(g(28.2, 29.8), 10.0, MUS)                            # (구 장전음) 포스터 카나 컷 아래
     for k, a in enumerate([11.4, 15.4, 17.4, 19.4]):         # 크루
         add(g(a, a + 0.8), 336 / FPS + 0.8 * k, MUS)  # 포스터 크루 컷(REN 336프레임부터 0.8초 간격)에 맞춤
-    # 14.4–19.0초 대치: 금속 효과음만(저가형 전자음 금지) — sfx.py
-    add(sfx.reverb(sfx.servo(1.7), rt=1.6, wet=0.3), 432 / FPS, 0.55)          # 클로즈업: 구동음이 올라옴
-    add(sfx.reverb(sfx.clang(1.4), rt=2.4, wet=0.45), 480 / FPS, 0.6)         # 빠지기 시작: 장갑이 맞물리는 금속 타격
-    add(sfx.reverb(sfx.friction(3.0), rt=2.2, wet=0.35), 480 / FPS, 0.6)      # 전체 구도: 육중한 마찰이 쌓임
-    add(sfx.reverb(sfx.servo(2.2), rt=2.0, wet=0.35), 500 / FPS, 0.35)
+    # 14.4–19.0초 대치·각성: 금속 효과음(저가형 전자음 금지) — sfx.py
+    add(sfx.reverb(sfx.friction(1.2), rt=2.0, wet=0.35), 432 / FPS, 0.45)    # 대치: 거대 기체의 묵직한 금속음
+    add(sfx.reverb(sfx.swell(1.2), rt=2.4, wet=0.4), 468 / FPS, 0.6)        # 각성: 공명이 차오름
+    add(sfx.reverb(sfx.boom(2.5), rt=3.0, wet=0.35), 504 / FPS, 0.75)       # 거대화
+    add(sfx.reverb(sfx.clang(1.4), rt=2.4, wet=0.45), 522 / FPS, 0.6)       # 탑승형 장갑 잠김
+    add(sfx.reverb(sfx.servo(1.6), rt=2.0, wet=0.35), 522 / FPS, 0.4)       # 구동
     add(sfx.impact(0.6), 570 / FPS, 0.9)  # 충돌음(금속 합성): 섬광 2프레임에만, 572프레임에서 끊음
     add(mono(voice / "H2_허밍2_앞2.4초.wav"), 632 / FPS, 1.6)  # H2
     t = np.arange(int(0.03 * SR)) / SR                       # 카운터 째깍
