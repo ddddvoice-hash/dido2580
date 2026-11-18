@@ -25,6 +25,8 @@ HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("pc", HERE / "pilot_cut.py")
 pc = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(pc)
+sys.path.insert(0, str(HERE))
+import sfx  # noqa: E402
 FONT = {w: str(HERE.parent / "ep03" / "app" / "fonts" / f"nsk-{w}.ttf") for w in (400, 700, 900)}
 
 W, H, FPS, SR = 1080, 1920, 30, 48000
@@ -156,21 +158,15 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         else:
             m = ease((fr - s0) / 6)  # 6프레임 스냅
             cx = cxs[k - 1] + (cxs[k] - cxs[k - 1]) * m
-            punch = 0.04 * (1 - ease((fr - s0 - 6) / 14)) if fr - s0 >= 6 else 0.04 * m
+            punch = 0.0  # 확대 없이 스냅 이동만
         if k == 3 and fr >= 408:
-            punch = 0.03 * ease((fr - 408) / 23)  # 마지막 패널은 천천히 밀기
+            punch = 0.0
         w = SW / (1 + punch)
         cx = min(max(cx, w / 2), 1920 - w / 2)
         put(ecrop(SH, cx, 544, w), f"시트 패널 {k + 1}" if fr == s0 else None)
-    # 432–479 대치 컷: 금색 기체 머리에서 빠지며 뒤의 검은 기체를 드러냄(움직임 하나: 뒤로 빠지기)
-    FO = Image.open(imgs / "face_off_a1ab35b5.png").convert("RGB")
-    assert FO.size == (1088, 1920)
-    for i in range(48):
-        k = ease(i / 47)
-        cx, cy, w = 300 + (544 - 300) * k, 1000 + (960 - 1000) * k, 520 + (1080 - 520) * k
-        put(ecrop(FO, cx, cy, w), "대치 컷 — 금색 기체에서 빠지기" if i == 0 else None)
-    # 480–569 라이벌 Runway 클립(1c76703d, 대표 지정) — 첫 불꽃 구간(광과민)은 버리고 2.0초 이후의 정지 대치만,
-    # 두 기체 사이 경계로 아주 느리게 밀다가 570 섬광으로 충돌
+    # 432–569 대치 — 대표 결정(11/18): 각진 로봇형(라이벌 Runway 1c76703d) 한 디자인으로 통일, 정지 대치 컷 a1ab35b5 제외.
+    # 한 숏: 432–479 금색 기체 클로즈업(거의 고정) → 480–569 같은 영상 안에서 전체 대치 구도로 빠짐 → 570 섬광.
+    # 원본 1.0–5.0초를 4.6초에 펼침(첫 1초 불꽃 = 광과민 구간 제외). 원본 720×1280 → 1080×1920 기준 좌표.
     rv = work / "rival_src"
     rv.mkdir(exist_ok=True)
     for p_ in rv.glob("*.png"):
@@ -178,9 +174,19 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
     subprocess.run(["ffmpeg", "-v", "error", "-i", str(clips / "rival_runway_1c76703d.mp4"), str(rv / "%03d.png")], check=True)
     rframes = sorted(rv.glob("*.png"))
     assert len(rframes) == 121
-    for i in range(90):
-        src = Image.open(rframes[min(120, round((2.0 + i / 30) * 24))]).convert("RGB").resize((W, H), Image.LANCZOS)
-        put(still(src, 1.0 + 0.06 * ease(i / 89), (W / 2, H * 0.45)), "라이벌 대치(Runway, 2초 이후)" if i == 0 else None)
+    CU, FULL = (255, 700, 510), (540, 960, 1080)  # 클로즈업: 금색 기체 머리~가슴, 가운데 경계선(x≈534)은 화면 밖
+    for i in range(138):
+        src = Image.open(rframes[min(120, round((1.0 + 4.0 * i / 137) * 24))]).convert("RGB").resize((W, H), Image.LANCZOS)
+        if i < 48:
+            cx, cy, w = CU[0], CU[1], CU[2] - 20 * ease(i / 47)  # 아주 미세한 다가감(4%)
+        else:
+            k = ease((i - 48) / 89)
+            st = (CU[0], CU[1], CU[2] - 20)
+            cx, cy, w = (st[j] + (FULL[j] - st[j]) * k for j in range(3))
+        h = w * 16 / 9
+        cx = min(max(cx, w / 2), W - w / 2); cy = min(max(cy, h / 2), H - h / 2)
+        put(src.transform((W, H), Image.EXTENT, (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2), Image.BICUBIC),
+            "금색 기체 클로즈업(라이벌 영상)" if i == 0 else ("전체 대치 구도로 빠짐" if i == 48 else None))
     # 570–571 섬광, 572–631 암전+입자 (정확히 2.000초 무음)
     for i in range(2):
         put(Image.new("RGB", (W, H), (255, 255, 255)), "섬광 2프레임" if i == 0 else None)
@@ -221,8 +227,10 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         a = ease(i / 12)
         c = lambda col: tuple(int(BLACK[k] + (col[k] - BLACK[k]) * a) for k in range(3))
         ctext(d, 820, "ECHO CANARY", f(130), c(CREAM))
-        d.rectangle([340, 990, 740, 996], fill=c(GOLD))
-        ctext(d, 1030, "잔향의 카나리아", f(66, 700), c(GOLD))
+        b2 = ease((i - 36) / 6) if i >= 36 else 0.0  # 870프레임(29.0초) 재즈 강세에 한글 타이틀
+        c2 = lambda col: tuple(int(BLACK[k] + (col[k] - BLACK[k]) * b2) for k in range(3))
+        d.rectangle([340, 990, 740, 996], fill=c2(GOLD))
+        ctext(d, 1030, "잔향의 카나리아", f(66, 700), c2(GOLD))
         put(im, "타이틀" if i == 0 else None)
     assert n == 900, n
 
@@ -255,9 +263,12 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
     add(g(28.2, 29.8), 10.0, MUS)                            # (구 장전음) 포스터 카나 컷 아래
     for k, a in enumerate([11.4, 15.4, 17.4, 19.4]):         # 크루
         add(g(a, a + 0.8), 336 / FPS + 0.8 * k, MUS)  # 포스터 크루 컷(REN 336프레임부터 0.8초 간격)에 맞춤
-    add(g(37.4, 38.6), 14.8, MUS)                            # 렌의 눈
-    add(g(51.0, 54.0), 16.0, MUS)                            # 라이벌
-    add(g(46.3, 46.3 + 2 / FPS, fade=0.004), 570 / FPS, MUS)  # 충돌음: 섬광 2프레임에만, 572프레임에서 끊음
+    # 14.4–19.0초 대치: 금속 효과음만(저가형 전자음 금지) — sfx.py
+    add(sfx.reverb(sfx.servo(1.7), rt=1.6, wet=0.3), 432 / FPS, 0.55)          # 클로즈업: 구동음이 올라옴
+    add(sfx.reverb(sfx.clang(1.4), rt=2.4, wet=0.45), 480 / FPS, 0.6)         # 빠지기 시작: 장갑이 맞물리는 금속 타격
+    add(sfx.reverb(sfx.friction(3.0), rt=2.2, wet=0.35), 480 / FPS, 0.6)      # 전체 구도: 육중한 마찰이 쌓임
+    add(sfx.reverb(sfx.servo(2.2), rt=2.0, wet=0.35), 500 / FPS, 0.35)
+    add(sfx.impact(0.6), 570 / FPS, 0.9)  # 충돌음(금속 합성): 섬광 2프레임에만, 572프레임에서 끊음
     add(mono(voice / "H2_허밍2_앞2.4초.wav"), 632 / FPS, 1.6)  # H2
     t = np.arange(int(0.03 * SR)) / SR                       # 카운터 째깍
     add(0.25 * np.sin(2 * np.pi * 1800 * t) * np.exp(-t * 120), 705 / FPS + 0.4)
