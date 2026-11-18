@@ -188,7 +188,9 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         al = lay.split()[3]
         glow = Image.new("RGBA", (W, H), GOLD + (0,)); glow.putalpha(al.filter(ImageFilter.GaussianBlur(14)).point(lambda v: int(v * 0.35 * a)))
         lay.putalpha(al.point(lambda v: int(v * a)))
-        out = img.convert("RGBA"); out.alpha_composite(glow); out.alpha_composite(lay)
+        shade = Image.new("RGBA", (W, H), (10, 8, 6, 0))  # 금색 장갑 위 대비 확보: 부드러운 어두운 그림자
+        shade.putalpha(al.filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.GaussianBlur(18)).point(lambda v: int(min(255, v * 1.4) * 0.6 * a)))
+        out = img.convert("RGBA"); out.alpha_composite(shade); out.alpha_composite(glow); out.alpha_composite(lay)
         return out.convert("RGB")
 
     def tenv(fr, start, n_in=4, hold=10, n_out=4):
