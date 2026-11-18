@@ -300,7 +300,7 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         a = ease(i / 12)
         c = lambda col: tuple(int(BLACK[k] + (col[k] - BLACK[k]) * a) for k in range(3))
         ctext(d, 820, "ECHO CANARY", f(130), c(CREAM))
-        b2 = ease((i - 36) / 6) if i >= 36 else 0.0  # 870프레임(29.0초) 재즈 강세에 한글 타이틀
+        b2 = ease((i - 26) / 6) if i >= 26 else 0.0  # 860프레임(28.65초) BGM 강세에 한글 타이틀
         c2 = lambda col: tuple(int(BLACK[k] + (col[k] - BLACK[k]) * b2) for k in range(3))
         d.rectangle([340, 990, 740, 996], fill=c2(GOLD))
         ctext(d, 1030, "잔향의 카나리아", f(66, 700), c2(GOLD))
@@ -329,13 +329,44 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
         return p
 
     MUS = 0.8
+    # BGM: Runway 오리지널 오케스트라 〈ECHO CANARY — Resonance Awakening〉(GPT 생성 b7ca285e, mp3 sha 70d5175e, 100.26초)
+    # 가이드 재즈(코드 합성)는 테이프 히스만 남기고 전부 교체. 원곡 구간 매핑(타격점을 컷에 맞춤):
+    #   A 원곡 0.0–7.9초  → 영상 0.0–7.9초 (정적·긴장, 허밍 아래 덕킹)
+    #   B 원곡 44.4–55.5초 → 영상 7.9–19.0초 (44.51 타격 = 8.0초 글자 카드, 46.5 타격 = 10.0초 크루, 51.3 고조 = 14.8초 공명 각성)
+    #   19.0–21.0초 완전 무음 / C 원곡 89.0초~ → 영상 21.49초~ (애가풍 잔향, 95.31 = 27.8초 타이틀, 96.16 = 28.65초 한글 타이틀)
+    with wave.open(str(clips / "bgm_70d5175e.wav")) as w:
+        assert w.getframerate() == SR and w.getnchannels() == 2
+        bgm = np.frombuffer(w.readframes(w.getnframes()), np.int16).reshape(-1, 2).astype(np.float32) / 32768
+
+    def bg(a, b, fi=0.02, fo=0.02):
+        p = bgm[int(a * SR):int(b * SR)].copy()
+        k1, k2 = int(fi * SR), int(fo * SR)
+        p[:k1] *= np.linspace(0, 1, k1)[:, None]
+        p[-k2:] *= np.linspace(1, 0, k2)[:, None]
+        return p
+
+    BGM = 0.55
+    music = np.zeros_like(mix)
+
+    def addm(sig, at_s, gain):
+        s = int(at_s * SR); e = min(len(music), s + len(sig))
+        music[s:e] += sig[: e - s] * gain
+
+    addm(bg(0.0, 7.95, fi=0.3, fo=0.08), 0.0, BGM)
+    addm(bg(44.4, 55.5, fi=0.06, fo=0.004), 7.9, BGM)
+    addm(bg(89.0, 89.0 + (30.0 - 21.49), fi=0.4, fo=0.8), 21.49, BGM)
+    duck = np.ones(len(music), np.float32)  # 사람 허밍·대사 위로 음악을 낮춤(-6dB), 대치 구간 효과음 위로 -3dB
+
+    def dk(a, b, gdb, r=0.15):
+        g = 10 ** (gdb / 20); s, e, rr = int(a * SR), int(b * SR), int(r * SR)
+        env = np.ones(e - s + 2 * rr, np.float32) * g
+        env[:rr] = np.linspace(1, g, rr); env[-rr:] = np.linspace(g, 1, rr)
+        s0 = max(0, s - rr); duck[s0:s0 + len(env)] = np.minimum(duck[s0:s0 + len(env)], env[: len(duck) - s0])
+
+    dk(1.5, 3.5, -6); dk(14.4, 19.0, -3); dk(21.07, 23.5, -6); dk(24.5, 26.4, -6)
+    mix += music * duck[:, None]
     add(g(1.0, 3.5), 0.0, MUS * 0.7)                        # 테이프 히스 (허밍 밑에 깔림)
     add(mono(voice / "H1_허밍2_앞2.0초.wav"), 1.5, 1.6)     # H1
-    add(g(42.2, 44.7), 5.5, MUS)                             # 무타 럼블 → 무음
-    add(g(5.0, 5.6), 10.0, MUS * 1.2)                        # 글자 사라짐 = 삽입음 + 브라스
-    add(g(28.2, 29.8), 10.0, MUS)                            # (구 장전음) 포스터 카나 컷 아래
-    for k, a in enumerate([11.4, 15.4, 17.4, 19.4]):         # 크루
-        add(g(a, a + 0.8), 336 / FPS + 0.8 * k, MUS)  # 포스터 크루 컷(REN 336프레임부터 0.8초 간격)에 맞춤
     # 14.4–19.0초 대치·각성 효과음(최종안): 금속 구동·장갑 타격·마찰·잔향·충돌 — 단순 전자음 없음 (sfx.py)
     add(sfx.reverb(sfx.servo(1.3), rt=1.8, wet=0.3), 432 / FPS, 0.45)        # 낮은 금속 구동음
     add(sfx.reverb(sfx.clang(1.0, 1.3), rt=1.8, wet=0.4), 440 / FPS, 0.22)   # 장갑 내부 맞물림
@@ -349,10 +380,8 @@ def main(hires, imgs, voice, clips, guide_wav, work, out):
     add(sfx.reverb(sfx.boom(1.0), rt=1.0, wet=0.2), 18.85, 0.5)               # 충돌 예고 저역
     add(sfx.impact(0.6), 570 / FPS, 0.9)  # 충돌음(금속 합성): 섬광 2프레임에만, 572프레임에서 끊음
     add(mono(voice / "H2_허밍2_앞2.4초.wav"), 632 / FPS, 1.6)  # H2
-    t = np.arange(int(0.03 * SR)) / SR                       # 카운터 째깍
-    add(0.25 * np.sin(2 * np.pi * 1800 * t) * np.exp(-t * 120), 705 / FPS + 0.4)
+    add(sfx.clang(0.4, 2.2) * 0.35, 705 / FPS + 0.4)          # 카운터 째깍: 사인 삑 대신 작은 금속 타격
     add(mono(voice / "L1_테이크2.wav"), 735 / FPS, 1.4)      # L1
-    add(g(57.6, 59.8, fade=0.05), 834 / FPS, MUS)            # 타이틀: 마지막 화음 + 허밍 선율
     mix[int(572 / FPS * SR):int(632 / FPS * SR)] = 0         # 암전 60프레임 = 정확히 2.000초 무음
     wav = work / "final_mix.wav"
     with wave.open(str(wav), "wb") as w:
